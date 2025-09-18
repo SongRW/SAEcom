@@ -427,7 +427,12 @@ if (animExtremeToggle) {
 }
 // ===== 动画 & 粒子效果 =====
 let fxLayer = null;
+let fxEmitActive = 0;
+let fxPile = null; // { left, right, baseY, binW, count, heights: Float32Array }
 let fxCanvas, fxCtx, fxDPR = 1, fxRunning = false, fxParticles = [];
+let fxLastEmitAt = 0;
+const FX_HOLD_AFTER_EMIT_MS = 3000;
+const FX_FADE_MS_EXTREME = 1600;
 function ensureFxLayer() {
     if (!fxLayer) {
         fxLayer = document.getElementById('fxLayer');
@@ -506,45 +511,100 @@ function startFxLoop() {
         fxCtx.setTransform(fxDPR, 0, 0, fxDPR, 0, 0);
         fxCtx.clearRect(0, 0, fxCanvas.width / fxDPR, fxCanvas.height / fxDPR);
 
-        // 每帧计算落地点与工作区边界
+        // 边界
         const bp = document.getElementById('bottomPanel')?.getBoundingClientRect();
-        const landY = (bp ? bp.top : window.innerHeight - 190);
-
         const wsr = document.getElementById('workspace')?.getBoundingClientRect();
+        const landY = (bp ? bp.top : window.innerHeight - 190);
         const boundLeft = wsr ? wsr.left : 0;
         const boundRight = wsr ? wsr.right : window.innerWidth;
         const boundTop = wsr ? wsr.top : 0;
 
-        const g = 1800; // px/s^2
+        // 仅在“更惊人的动画”开启时启用堆栈
+        if (settings.animExtreme) {
+            const binW = 4;
+            const pileLeft = boundLeft;
+            const pileRight = boundRight;
+            const count = Math.max(1, Math.floor((pileRight - pileLeft) / binW));
+            if (!fxPile || fxPile.count !== count || fxPile.left !== pileLeft || fxPile.right !== pileRight || fxPile.baseY !== landY) {
+                fxPile = {
+                    left: pileLeft,
+                    right: pileRight,
+                    baseY: landY,
+                    binW,
+                    count,
+                    heights: new Float32Array(count)
+                };
+            }
+        } else {
+            fxPile = null;
+        }
+
+        // —— 极致模式的“统一延时淡出”判定 —— 
+        const extremeHold = settings.animExtreme && (fxEmitActive > 0 || (now - fxLastEmitAt < FX_HOLD_AFTER_EMIT_MS));
+        const extremeFadeT = Math.max(0, now - (fxLastEmitAt + FX_HOLD_AFTER_EMIT_MS)); // 距开始淡出的毫秒数
+        const extremeFadeK = settings.animExtreme
+            ? Math.max(0, 1 - (extremeFadeT / FX_FADE_MS_EXTREME))
+            : 1; // 1→0
+
+        const g = 1800;
 
         fxParticles = fxParticles.filter(p => {
             if (!p.landed) {
-                // 受力移动
+                // 受力
                 p.vy += g * dt;
                 p.x += p.vx * dt;
                 p.y += p.vy * dt;
 
-                // 左/右/上反弹（限制在 workspace 内）
+                // 左/右/上反弹
                 if (p.x - p.size < boundLeft) { p.x = boundLeft + p.size; p.vx = -p.vx * 0.55; }
                 if (p.x + p.size > boundRight) { p.x = boundRight - p.size; p.vx = -p.vx * 0.55; }
                 if (p.y - p.size < boundTop) { p.y = boundTop + p.size; p.vy = -p.vy * 0.55; }
 
-                // 底部“落地”
-                if (p.y + p.size >= landY) {
-                    p.y = landY - p.size;
-                    p.vy = 0;
-                    p.landed = true;
-                    p.landTime = now;
+                // 触底
+                if (p.y + p.size >= landY - 0.5) {
+                    if (settings.animExtreme && fxPile) {
+                        const idx = Math.max(0, Math.min(fxPile.count - 1, Math.floor((p.x - fxPile.left) / fxPile.binW)));
+                        const hC = fxPile.heights[idx] || 0;
+                        const hL = idx > 0 ? fxPile.heights[idx - 1] : hC;
+                        const hR = idx < fxPile.count - 1 ? fxPile.heights[idx + 1] : hC;
+                        const avgNeighbor = (hL + hC + hR) / 3;
+                        const packing = 1.05;
+                        const newTopH = Math.max(hC, avgNeighbor) + p.size * packing;
+
+                        p.y = fxPile.baseY - newTopH + p.size * (packing - 1);
+                        p.vy = 0;
+                        p.vx = 0;              // 极致模式：落地即静止，不再漂移
+                        p.landed = true;
+                        p.landTime = now;
+                        fxPile.heights[idx] = newTopH;
+                    } else {
+                        p.y = landY - p.size;
+                        p.vy = 0;
+                        p.landed = true;
+                        p.landTime = now;
+                    }
                 }
             } else {
-                // 落地后的水平衰减与淡出
-                p.vx *= 0.94;
-                p.x += p.vx * dt;
-                const t = (now - p.landTime) / 1000;
-                p.alpha = Math.max(0, 1 - t / 1.0);
+                // —— 已着陆 —— 
+                if (settings.animExtreme) {
+                    // 极致模式：静止堆积，不做水平滑移
+                    p.vx = 0; // 防御式清零
+                    // 延时淡出：最后一次发射 3 秒内不降 alpha，之后统一按极致淡出曲线
+                    p.alpha = extremeHold ? 1 : extremeFadeK;
+
+                } else {
+                    // 普通模式：略微滑移 + 个人淡出
+                    p.vx *= 0.92;
+                    p.x += p.vx * dt;
+                    if (p.x - p.size < boundLeft) p.x = boundLeft + p.size;
+                    if (p.x + p.size > boundRight) p.x = boundRight - p.size;
+
+                    const t = (now - p.landTime) / 1000;
+                    p.alpha = Math.max(0, 1 - t / 1.0);
+                }
             }
 
-            // 绘制粒子 + 尾迹
+            // 绘制（落地后不画长尾，避免“漂浮感”）
             const grd = fxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 1.6);
             grd.addColorStop(0, `rgba(255,220,130,${0.9 * p.alpha})`);
             grd.addColorStop(0.5, `rgba(255,190,70,${0.7 * p.alpha})`);
@@ -554,12 +614,8 @@ function startFxLoop() {
             fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             fxCtx.fill();
 
-            let tailK = 1;
-            if (p.landed) {
-                const t150 = (now - p.landTime) / 150;
-                tailK = Math.max(0, 1 - t150);
-            }
-            if (tailK > 0.02) {
+            if (!p.landed) {
+                const tailK = 1;
                 fxCtx.strokeStyle = `rgba(255,200,80,${0.8 * p.alpha * tailK})`;
                 fxCtx.lineWidth = Math.max(1, p.size * 0.4 * tailK);
                 fxCtx.beginPath();
@@ -568,16 +624,20 @@ function startFxLoop() {
                 fxCtx.stroke();
             }
 
-            // 存活判定
+            // 存活
             return p.alpha > 0 && p.x > -50 && p.x < window.innerWidth + 50;
         });
 
-        if (fxParticles.length === 0) { fxRunning = false; return; }
+        // 全部消失 → 关闭循环并重置堆
+        if (fxParticles.length === 0) { fxRunning = false; fxPile = null; return; }
+
         requestAnimationFrame(loop);
     };
 
     requestAnimationFrame(loop);
 }
+
+
 
 function goldenSparksBurst(dir = +1) {
     if (!settings.anim) return;
@@ -633,9 +693,16 @@ function goldenBurstAtRect(rect, count = 160) {
 }
 function emitBurstDuring(rect, ms = 900, every = 70, base = 32, spread = 28) {
     const end = performance.now() + ms;
+    fxEmitActive++;
     const tick = () => {
         const now = performance.now();
-        if (now > end) return;
+        if (now > end) {
+            fxEmitActive = Math.max(0, fxEmitActive - 1);
+            if (settings.animExtreme && fxEmitActive === 0) {
+                fxLastEmitAt = performance.now();
+            }
+            return;
+        }
 
         const n = base + ((Math.random() * spread) | 0);
         goldenBurstAtRect(rect, n);
@@ -661,6 +728,8 @@ function triggerExtremeSerialToggleFx() {
         const r = p.getBoundingClientRect();
         emitBurstDuring(r, 900, 70, 28, 18);
     });
+
+    startFxLoop();
 }
 
 function spawnRipple(x, y) {
