@@ -1625,3 +1625,21 @@ dialog.sys-modal::backdrop{
 .sys-modal :focus{
   outline: none;
 }
+.pane.fx-spin {
+  animation: pane-spin-multi 0.9s cubic-bezier(.2,1,.2,1) 1;
+  transform-origin: 50% 50%;
+}
+@keyframes pane-spin-multi {
+  0%   { transform: rotate(0deg)    scale(1);    }
+  20%  { transform: rotate(360deg)  scale(1.02); }
+  60%  { transform: rotate(720deg)  scale(1.04); }
+  100% { transform: rotate(1080deg) scale(1);    }
+}
+
+@keyframes pane-spin-fast {
+  0%   { transform: rotate(0deg) scale(1); }
+  20%  { transform: rotate(16deg) scale(1.02); }
+  45%  { transform: rotate(-12deg) scale(1.04); }
+  70%  { transform: rotate(6deg) scale(1.02); }
+  100% { transform: rotate(0deg) scale(1); }
+}

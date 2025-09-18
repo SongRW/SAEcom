@@ -17,6 +17,7 @@ const dlgSettings = document.getElementById('dlgSettings');
 const settingsClose = document.getElementById('settingsClose');
 const settingsOk = document.getElementById('settingsOk');
 const fullscreenToggle = $('#fullscreenToggle');
+const animExtremeToggle = document.getElementById('animExtremeToggle');
 const nightToggle = $('#nightToggle');
 const animToggle = $('#animToggle');
 const LOG_MAX_CHARS = 1000000;
@@ -257,7 +258,7 @@ function startCmdDrag(e, tr, handle) {
     let topLimitAbs, bottomLimitAbs;
     if (rows.length) {
         const firstRect = rows[0].getBoundingClientRect();
-        const lastRect  = rows[rows.length - 1].getBoundingClientRect();
+        const lastRect = rows[rows.length - 1].getBoundingClientRect();
         topLimitAbs = firstRect.top;
         bottomLimitAbs = lastRect.bottom;
     } else {
@@ -266,13 +267,13 @@ function startCmdDrag(e, tr, handle) {
         bottomLimitAbs = wr.bottom;
     }
     CMD_DND.boundsY = {
-        top:    topLimitAbs - hostRect.top,
+        top: topLimitAbs - hostRect.top,
         bottom: bottomLimitAbs - hostRect.top
     };
     CMD_DND.boundsAbs = { top: topLimitAbs, bottom: bottomLimitAbs };
 
     float.style.left = Math.round(CMD_DND.baseLeft) + 'px';
-    float.style.top  = Math.round(e.clientY - hostRect.top - CMD_DND.offsetY) + 'px';
+    float.style.top = Math.round(e.clientY - hostRect.top - CMD_DND.offsetY) + 'px';
     float.style.zIndex = '2147483647';
 
     const table = document.createElement('table');
@@ -318,12 +319,12 @@ function moveCmdDrag(e) {
 
     let ny = e.clientY - hostRect.top - CMD_DND.offsetY;
 
-    const minY = (CMD_DND.boundsY && Number.isFinite(CMD_DND.boundsY.top))    ? CMD_DND.boundsY.top : ny;
+    const minY = (CMD_DND.boundsY && Number.isFinite(CMD_DND.boundsY.top)) ? CMD_DND.boundsY.top : ny;
     const maxY = (CMD_DND.boundsY && Number.isFinite(CMD_DND.boundsY.bottom)) ? (CMD_DND.boundsY.bottom - (CMD_DND.rowH || 0)) : ny;
     ny = Math.max(minY, Math.min(maxY, ny));
 
     CMD_DND.floatEl.style.left = Math.round(nx) + 'px';
-    CMD_DND.floatEl.style.top  = Math.round(ny) + 'px';
+    CMD_DND.floatEl.style.top = Math.round(ny) + 'px';
 
     const cy = Math.max(
         (CMD_DND.boundsAbs?.top ?? e.clientY) + 1,
@@ -380,6 +381,7 @@ function loadSettings() {
             fullscreen: !!s.fullscreen,
             dark: !!s.dark,
             anim: !!s.anim,
+            animExtreme: !!s.animExtreme,
         };
     } catch { return { mute: false, dark: false, anim: false }; }
 }
@@ -401,6 +403,7 @@ btnSettings.addEventListener('click', () => {
     if (fullscreenToggle) fullscreenToggle.checked = !!settings.fullscreen;
     if (nightToggle) nightToggle.checked = !!settings.dark;
     if (animToggle) animToggle.checked = !!settings.anim;
+    if (animExtremeToggle) animExtremeToggle.checked = !!settings.animExtreme;
     dlgSettings.showModal();
 });
 settingsClose.addEventListener('click', () => dlgSettings.close());
@@ -416,6 +419,12 @@ if (nightToggle) nightToggle.addEventListener('change', () => {
 if (animToggle) animToggle.addEventListener('change', () => {
     settings.anim = animToggle.checked; saveSettings(); applyFx(settings.anim);
 });
+if (animExtremeToggle) {
+    animExtremeToggle.addEventListener('change', () => {
+        settings.animExtreme = animExtremeToggle.checked;
+        saveSettings();
+    });
+}
 // ===== 动画 & 粒子效果 =====
 let fxLayer = null;
 let fxCanvas, fxCtx, fxDPR = 1, fxRunning = false, fxParticles = [];
@@ -481,23 +490,46 @@ function ensureFxCanvas() {
     }
 }
 function startFxLoop() {
+    ensureFxCanvas();
     if (fxRunning) return;
     fxRunning = true;
+
     let last = performance.now();
+
     const loop = (now) => {
         if (!fxRunning) return;
+
         const dt = Math.min(0.033, (now - last) / 1000);
         last = now;
+
+        // 画布复位 & 清屏
         fxCtx.setTransform(fxDPR, 0, 0, fxDPR, 0, 0);
         fxCtx.clearRect(0, 0, fxCanvas.width / fxDPR, fxCanvas.height / fxDPR);
+
+        // 每帧计算落地点与工作区边界
         const bp = document.getElementById('bottomPanel')?.getBoundingClientRect();
         const landY = (bp ? bp.top : window.innerHeight - 190);
+
+        const wsr = document.getElementById('workspace')?.getBoundingClientRect();
+        const boundLeft = wsr ? wsr.left : 0;
+        const boundRight = wsr ? wsr.right : window.innerWidth;
+        const boundTop = wsr ? wsr.top : 0;
+
         const g = 1800; // px/s^2
+
         fxParticles = fxParticles.filter(p => {
             if (!p.landed) {
+                // 受力移动
                 p.vy += g * dt;
                 p.x += p.vx * dt;
                 p.y += p.vy * dt;
+
+                // 左/右/上反弹（限制在 workspace 内）
+                if (p.x - p.size < boundLeft) { p.x = boundLeft + p.size; p.vx = -p.vx * 0.55; }
+                if (p.x + p.size > boundRight) { p.x = boundRight - p.size; p.vx = -p.vx * 0.55; }
+                if (p.y - p.size < boundTop) { p.y = boundTop + p.size; p.vy = -p.vy * 0.55; }
+
+                // 底部“落地”
                 if (p.y + p.size >= landY) {
                     p.y = landY - p.size;
                     p.vy = 0;
@@ -505,11 +537,14 @@ function startFxLoop() {
                     p.landTime = now;
                 }
             } else {
+                // 落地后的水平衰减与淡出
                 p.vx *= 0.94;
                 p.x += p.vx * dt;
                 const t = (now - p.landTime) / 1000;
                 p.alpha = Math.max(0, 1 - t / 1.0);
             }
+
+            // 绘制粒子 + 尾迹
             const grd = fxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 1.6);
             grd.addColorStop(0, `rgba(255,220,130,${0.9 * p.alpha})`);
             grd.addColorStop(0.5, `rgba(255,190,70,${0.7 * p.alpha})`);
@@ -518,6 +553,7 @@ function startFxLoop() {
             fxCtx.beginPath();
             fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             fxCtx.fill();
+
             let tailK = 1;
             if (p.landed) {
                 const t150 = (now - p.landTime) / 150;
@@ -531,16 +567,18 @@ function startFxLoop() {
                 fxCtx.lineTo(p.x, p.y);
                 fxCtx.stroke();
             }
+
+            // 存活判定
             return p.alpha > 0 && p.x > -50 && p.x < window.innerWidth + 50;
         });
-        if (fxParticles.length === 0) {
-            fxRunning = false;
-            return;
-        }
+
+        if (fxParticles.length === 0) { fxRunning = false; return; }
         requestAnimationFrame(loop);
     };
+
     requestAnimationFrame(loop);
 }
+
 function goldenSparksBurst(dir = +1) {
     if (!settings.anim) return;
     ensureFxCanvas();
@@ -571,6 +609,60 @@ function goldenSparksBurst(dir = +1) {
     const target = document.getElementById('workspace') || document.body;
     target.classList.remove('fx-shake-strong'); void target.offsetWidth; target.classList.add('fx-shake-strong');
 }
+function goldenBurstAtRect(rect, count = 160) {
+    if (!settings.anim) return;
+    ensureFxCanvas();
+
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    for (let i = 0; i < count; i++) {
+        const speed = 520 + Math.random() * 620;
+        const angle = Math.random() * Math.PI * 2;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed * 0.85 - 60;
+        fxParticles.push({
+            x: cx, y: cy, vx, vy,
+            size: 1.6 + Math.random() * 2.4,
+            alpha: 1,
+            landed: false,
+            landTime: 0
+        });
+    }
+    startFxLoop();
+}
+function emitBurstDuring(rect, ms = 900, every = 70, base = 32, spread = 28) {
+    const end = performance.now() + ms;
+    const tick = () => {
+        const now = performance.now();
+        if (now > end) return;
+
+        const n = base + ((Math.random() * spread) | 0);
+        goldenBurstAtRect(rect, n);
+        setTimeout(tick, every);
+    };
+    setTimeout(tick, 0);
+}
+
+function triggerExtremeSerialToggleFx() {
+    if (!settings.animExtreme) return;
+
+    const panes = Array
+        .from(document.querySelectorAll('.pane'))
+        .filter(p => p.offsetParent !== null && p.offsetWidth > 0 && p.offsetHeight > 0);
+
+    panes.forEach(p => {
+        p.classList.remove('fx-spin');
+        void p.offsetWidth;
+        p.classList.add('fx-spin');
+    });
+
+    panes.forEach(p => {
+        const r = p.getBoundingClientRect();
+        emitBurstDuring(r, 900, 70, 28, 18);
+    });
+}
+
 function spawnRipple(x, y) {
     if (!settings.anim) return;
     ensureFxLayer();
@@ -1226,6 +1318,7 @@ function createPane(portPath, name) {
         }
         refreshPanelList();
         window.api.config.save(exportPanelsConfig());
+        triggerExtremeSerialToggleFx();
     });
 
     const btnHex = el.querySelector('.btnHex');
@@ -1318,8 +1411,8 @@ function createPane(portPath, name) {
 
         const leftMin = SIDEBAR_COLLAPSED_W + board_margin;
 
-        const maxLeft = Math.max(leftMin, wsW - el.offsetWidth)-2;
-        const maxTop = Math.max(0, wsH - el.offsetHeight)-2;
+        const maxLeft = Math.max(leftMin, wsW - el.offsetWidth) - 2;
+        const maxTop = Math.max(0, wsH - el.offsetHeight) - 2;
 
         let newLeft = startLeft + dx;
         let newTop = startTop + dy;
@@ -1497,6 +1590,7 @@ function refreshPanelList() {
 
             refreshPanelList();
             window.api.config.save(exportPanelsConfig());
+            triggerExtremeSerialToggleFx();
         };
 
         const nameEl = document.createElement('span');
