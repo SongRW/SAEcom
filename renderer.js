@@ -232,7 +232,7 @@ function startCmdDrag(e, tr, handle) {
     CMD_DND.offsetX = e.clientX - rect.left;
     CMD_DND.offsetY = e.clientY - rect.top;
     CMD_DND.lastIndex = -1;
-
+    CMD_DND.rowH = rect.height;
     document.body.classList.add('cmd-dragging');
 
     const ph = document.createElement('tr');
@@ -245,15 +245,34 @@ function startCmdDrag(e, tr, handle) {
     float.className = 'cmd-drag-float';
     float.style.width = rect.width + 'px';
 
-    // 在对话框内部绝对定位，坐标相对对话框
     const host = document.getElementById('dlgCmdEdit') || document.body;
     const hostRect = host.getBoundingClientRect();
     CMD_DND.hostEl = host;
     CMD_DND.hostRect = hostRect;
 
-    // 初始就放到鼠标处（对话框坐标系）
-    float.style.left = (e.clientX - hostRect.left - CMD_DND.offsetX) + 'px';
-    float.style.top  = (e.clientY - hostRect.top  - CMD_DND.offsetY) + 'px';
+    CMD_DND.baseLeft = rect.left - hostRect.left;
+
+    const wrap = document.querySelector('#dlgCmdEdit .cmd-table-wrap');
+    const rows = Array.from(cmdTableBody.querySelectorAll('tr')).filter(r => r !== ph);
+    let topLimitAbs, bottomLimitAbs;
+    if (rows.length) {
+        const firstRect = rows[0].getBoundingClientRect();
+        const lastRect  = rows[rows.length - 1].getBoundingClientRect();
+        topLimitAbs = firstRect.top;
+        bottomLimitAbs = lastRect.bottom;
+    } else {
+        const wr = (wrap ? wrap.getBoundingClientRect() : hostRect);
+        topLimitAbs = wr.top;
+        bottomLimitAbs = wr.bottom;
+    }
+    CMD_DND.boundsY = {
+        top:    topLimitAbs - hostRect.top,
+        bottom: bottomLimitAbs - hostRect.top
+    };
+    CMD_DND.boundsAbs = { top: topLimitAbs, bottom: bottomLimitAbs };
+
+    float.style.left = Math.round(CMD_DND.baseLeft) + 'px';
+    float.style.top  = Math.round(e.clientY - hostRect.top - CMD_DND.offsetY) + 'px';
     float.style.zIndex = '2147483647';
 
     const table = document.createElement('table');
@@ -286,20 +305,34 @@ function startCmdDrag(e, tr, handle) {
 function moveCmdDrag(e) {
     CMD_DND.lastMouseY = e.clientY;
     autoScrollCheck(e.clientY);
-    if (!CMD_DND.active) return; 
+    if (!CMD_DND.active) return;
+
     let hostRect = CMD_DND.hostRect;
     if (!hostRect || !CMD_DND.hostEl) {
         CMD_DND.hostEl = document.getElementById('dlgCmdEdit') || document.body;
         hostRect = CMD_DND.hostEl.getBoundingClientRect();
         CMD_DND.hostRect = hostRect;
     }
-    const nx = e.clientX - hostRect.left - CMD_DND.offsetX;
-    const ny = e.clientY - hostRect.top  - CMD_DND.offsetY;
+
+    const nx = CMD_DND.baseLeft;
+
+    let ny = e.clientY - hostRect.top - CMD_DND.offsetY;
+
+    const minY = (CMD_DND.boundsY && Number.isFinite(CMD_DND.boundsY.top))    ? CMD_DND.boundsY.top : ny;
+    const maxY = (CMD_DND.boundsY && Number.isFinite(CMD_DND.boundsY.bottom)) ? (CMD_DND.boundsY.bottom - (CMD_DND.rowH || 0)) : ny;
+    ny = Math.max(minY, Math.min(maxY, ny));
+
     CMD_DND.floatEl.style.left = Math.round(nx) + 'px';
     CMD_DND.floatEl.style.top  = Math.round(ny) + 'px';
-    const idx = calcInsertIndex(e.clientY);
+
+    const cy = Math.max(
+        (CMD_DND.boundsAbs?.top ?? e.clientY) + 1,
+        Math.min(e.clientY, (CMD_DND.boundsAbs?.bottom ?? e.clientY) - 1)
+    );
+    const idx = calcInsertIndex(cy);
     placePlaceholderAt(idx);
 }
+
 
 function endCmdDrag(force = false) {
     if (!CMD_DND.active && !force) return;
@@ -685,7 +718,7 @@ const btnRefreshPorts = $('#btnRefreshPorts');
 const btnScriptStop = $('#btnScriptStop');
 let currentRunId = null;
 const SIDEBAR_COLLAPSED_W = 56;
-const LEFT_GUTTER = 12;
+const board_margin = 2;
 const activeLabel = $('#activePanelLabel');
 const selPort = $('#selPort');
 const baud = $('#baud');
@@ -1283,17 +1316,17 @@ function createPane(portPath, name) {
         const wsW = ws.clientWidth;
         const wsH = ws.clientHeight;
 
-        const leftMin = SIDEBAR_COLLAPSED_W + LEFT_GUTTER;
+        const leftMin = SIDEBAR_COLLAPSED_W + board_margin;
 
-        const maxLeft = Math.max(leftMin, wsW - el.offsetWidth);
-        const maxTop = Math.max(0, wsH - el.offsetHeight);
+        const maxLeft = Math.max(leftMin, wsW - el.offsetWidth)-2;
+        const maxTop = Math.max(0, wsH - el.offsetHeight)-2;
 
         let newLeft = startLeft + dx;
         let newTop = startTop + dy;
 
         if (newLeft < leftMin) newLeft = leftMin;
         if (newLeft > maxLeft) newLeft = maxLeft;
-        if (newTop < 0) newTop = 0;
+        if (newTop < 2) newTop = 2;
         if (newTop > maxTop) newTop = maxTop;
 
         el.style.left = `${newLeft}px`;
@@ -1330,7 +1363,7 @@ function createPane(portPath, name) {
         const wsW = ws.clientWidth, wsH = ws.clientHeight;
         const minW = 200, minH = 120;
 
-        const leftMin = (sidebarEl?.offsetWidth || SIDEBAR_COLLAPSED_W) + LEFT_GUTTER;
+        const leftMin = (sidebarEl?.offsetWidth || SIDEBAR_COLLAPSED_W) + board_margin;
         const topMin = 0;
 
         let dx = e.clientX - rs.sx;
@@ -2206,7 +2239,7 @@ function clampAllPanesToWorkspace() {
     const wsW = ws.clientWidth;
     const wsH = ws.clientHeight;
     const sideW = sidebarEl?.offsetWidth || SIDEBAR_COLLAPSED_W;
-    const leftMin = sideW + LEFT_GUTTER;
+    const leftMin = sideW + board_margin;
 
     document.querySelectorAll('.pane').forEach(el => {
         let left = parseInt(el.style.left || '0', 10) || 0;

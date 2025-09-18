@@ -48,6 +48,8 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    minWidth: 800,
+    minHeight: 500,
     autoHideMenuBar: true,
     titleBarStyle: process.platform === 'win32' ? 'hidden' : undefined,
     titleBarOverlay: process.platform === 'win32' ? { color: '#f5f7fa', symbolColor: '#1f2937', height: 30 } : undefined,
