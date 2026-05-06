@@ -214,25 +214,14 @@ class FlowEditor {
       return null;
     }
 
-    // 获取容器位置
-    const containerRect = this.container.getBoundingClientRect();
+    // 用 precanvas 的真实屏幕位置（已含 CSS transform）直接算画布坐标
+    // 不依赖 canvas_x（zoom 后可能不准确）
+    const precanvasRect = this.editor.precanvas.getBoundingClientRect();
     const zoom = this.editor.zoom || 1;
-    const canvas_x = this.editor.canvas_x || 0;
-    const canvas_y = this.editor.canvas_y || 0;
+    const nodeX = Math.max(0, (x - precanvasRect.left) / zoom);
+    const nodeY = Math.max(0, (y - precanvasRect.top) / zoom);
 
-    // 计算相对于容器的坐标
-    const relX = x - containerRect.left;
-    const relY = y - containerRect.top;
-
-    // 转换到画布内部坐标
-    // canvas_x 是负值（表示向左偏移），-canvas_x 是画布显示区域的左上角在画布坐标系中的位置
-    const nodeX = Math.max(0, -canvas_x + relX / zoom);
-    const nodeY = Math.max(0, -canvas_y + relY / zoom);
-
-    console.log('Drop at screen:', x, y);
-    console.log('Container at:', containerRect.left, containerRect.top);
-    console.log('Relative:', relX, relY);
-    console.log('Canvas offset:', canvas_x, canvas_y);
+    console.log('Drop at screen:', x, y, 'Precanvas left:', precanvasRect.left, 'Zoom:', zoom);
     console.log('Node position:', nodeX, nodeY);
 
     // 生成节点 HTML
