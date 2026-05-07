@@ -62,16 +62,11 @@ contextBridge.exposeInMainWorld('api', {
       if (!arg) return null;
       return decodeURIComponent(arg.split('=')[1]);
     },
-    saveLog: (name, content) => ipcRenderer.invoke('panel:saveLog', { name, content }),
-    sendEcho: (id, text, hex) => ipcRenderer.send('panel:echo', { id, text, hex }),
-    onEcho: (cb) => ipcRenderer.on('panel:echo', (_e, payload) => cb(payload))
+    saveLog: (name, content) => ipcRenderer.invoke('panel:saveLog', { name, content })
   },
   config: {
     load: () => ipcRenderer.invoke('config:load'),
-    save: (panels) => ipcRenderer.send('config:save', panels),
-    export: (localStorageData) => ipcRenderer.invoke('config:export', localStorageData),
-    import: () => ipcRenderer.invoke('config:import'),
-    applyImport: (data) => ipcRenderer.invoke('config:applyImport', data)
+    save: (panels) => ipcRenderer.send('config:save', panels)
   },
   commands: {
     load: () => ipcRenderer.invoke('commands:load'),
@@ -99,11 +94,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   app: {
     getVersion: () => ipcRenderer.invoke('app:version'),
-    checkUpdate: () => ipcRenderer.send('app:checkUpdate'),
-    onUpdateProgress: (cb) => ipcRenderer.on('update:progress', (_e, p) => cb(p)),
-    onUpdateError: (cb) => ipcRenderer.on('update:error', (_e, p) => cb(p)),
-    cancelUpdate: () => ipcRenderer.send('update:cancel'),
-    restart: () => ipcRenderer.invoke('app:restart')
+    checkUpdate: () => ipcRenderer.send('app:checkUpdate')
   },
   changelog: {
     open: () => ipcRenderer.send('changelog:open'),

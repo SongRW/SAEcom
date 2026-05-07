@@ -82,7 +82,8 @@ btnHide.addEventListener('click', () => {
 });
 
 btnDock.addEventListener('click', () => {
-    window.api.panel.requestDock(portId, JSON.stringify(chunks));
+    const text = displayEl.innerText || displayEl.textContent || '';
+    window.api.panel.requestDock(portId, text);
     window.close();
 });
 
@@ -103,6 +104,10 @@ function redraw() {
             span.textContent = c.text;
         } else {
             let content = (viewMode === 'hex') ? c.hex : c.text;
+            if (viewMode === 'hex') {
+                 content = content.replace(/\n /g, '\n'); 
+                 if (content.endsWith('\n ')) content = content.slice(0, -1);
+            }
             span.textContent = content;
         }
         frag.appendChild(span);
@@ -137,9 +142,11 @@ function formatAndAppend(bytes) {
     catch { textBody = String.fromCharCode(...bytes); }
     const textStr = `[${ts}] ${textBody}`;
     
-    let hexBody = Array.from(bytes).map(b =>
-        b.toString(16).padStart(2, '0').toUpperCase()
-    ).join(' ');
+    let hexBody = Array.from(bytes).map(b => {
+        const h = b.toString(16).padStart(2, '0').toUpperCase();
+        return (b === 10) ? (h + '\n') : h;
+    }).join(' ').replace(/\n /g, '\n');
+    if (!hexBody.endsWith('\n')) hexBody += ' ';
     const hexStr = `[${ts}] ${hexBody}`;
 
     const chunk = { text: textStr, hex: hexStr, isEcho: false };
@@ -199,18 +206,6 @@ window.api.tcp?.onData?.(({ id, bytes }) => {
     if (id === portId) formatAndAppend(bytes);
 });
 
-window.api.panel?.onEcho?.(({ id, text, hex }) => {
-    if (id !== portId) return;
-    const chunk = { text, hex, isEcho: true };
-    chunks.push(chunk);
-
-    const span = document.createElement('span');
-    span.className = 'echo-line';
-    span.textContent = (viewMode === 'hex') ? hex : text;
-    displayEl.appendChild(span);
-    displayEl.scrollTop = displayEl.scrollHeight;
-});
-
 inputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -243,25 +238,14 @@ btnSend.addEventListener('click', async () => {
             appendSysText(`\n[系统] 发送失败：${res.error}\n`);
         } else if (echoSendEl && echoSendEl.checked) {
             const ts = nowTs();
-            const echoText = `[${ts}] ${raw}\n`;
+            const echoText = `[${ts}]\n${raw}\n`;
             
-            let echoHex;
-            if (mode === 'hex') {
-                const clean = raw.replace(/[\s,]/g, '');
-                const hexBody = clean.match(/.{2}/g).map(h => h.toUpperCase()).join(' ');
-                echoHex = `[${ts}] ${hexBody}\n`;
-            } else {
-                const bytes = new TextEncoder().encode(raw);
-                const hexBody = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-                echoHex = `[${ts}] ${hexBody}\n`;
-            }
-
-            const chunk = { text: echoText, hex: echoHex, isEcho: true };
+            const chunk = { text: echoText, hex: echoText, isEcho: true };
             chunks.push(chunk);
             
             const span = document.createElement('span');
             span.className = 'echo-line';
-            span.textContent = (viewMode === 'hex') ? echoHex : echoText;
+            span.textContent = echoText;
             displayEl.appendChild(span);
             displayEl.scrollTop = displayEl.scrollHeight;
         }

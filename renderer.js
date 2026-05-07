@@ -17,6 +17,7 @@ const sidebarEl = $('#sidebar');
 const btnSettings = document.getElementById('btnSettings');
 const dlgSettings = document.getElementById('dlgSettings');
 const settingsClose = document.getElementById('settingsClose');
+const settingsOk = document.getElementById('settingsOk');
 const fullscreenToggle = $('#fullscreenToggle');
 const animExtremeToggle = document.getElementById('animExtremeToggle');
 const nightToggle = $('#nightToggle');
@@ -559,6 +560,7 @@ btnSettings.addEventListener('click', () => {
     dlgSettings.showModal();
 });
 settingsClose.addEventListener('click', () => dlgSettings.close());
+settingsOk.addEventListener('click', () => dlgSettings.close());
 if (fullscreenToggle) fullscreenToggle.addEventListener('change', () => {
     settings.fullscreen = fullscreenToggle.checked;
     saveSettings();
@@ -618,70 +620,6 @@ if (charEncodingSelect) {
         saveSettings();
     });
 }
-
-// 导出配置
-const btnExportConfig = document.getElementById('btnExportConfig');
-const btnImportConfig = document.getElementById('btnImportConfig');
-
-if (btnExportConfig) {
-    btnExportConfig.addEventListener('click', async () => {
-        const localStorageData = {
-            appSettings: localStorage.getItem('appSettings'),
-            cmdGroupsMeta: localStorage.getItem('cmdGroupsMeta'),
-            listOrder: localStorage.getItem('listOrder')
-        };
-        const result = await window.api.config.export(localStorageData);
-        if (result.canceled) return;
-        if (result.ok) {
-            uiAlert('配置已导出到：\n' + result.filePath, { title: '导出成功' });
-        } else {
-            uiAlert('导出失败：' + result.error, { title: '导出失败' });
-        }
-    });
-}
-
-if (btnImportConfig) {
-    btnImportConfig.addEventListener('click', async () => {
-        const confirm = await uiConfirm(
-            '导入配置将覆盖当前的所有设置、命令列表和面板配置。\n\n确定要继续吗？',
-            { title: '导入配置', okText: '继续导入', cancelText: '取消', danger: true }
-        );
-        if (!confirm) return;
-
-        const result = await window.api.config.import();
-        if (result.canceled) return;
-        if (!result.ok) {
-            uiAlert('导入失败：' + result.error, { title: '导入失败' });
-            return;
-        }
-
-        // 应用配置到主进程
-        const applyResult = await window.api.config.applyImport(result.data);
-        if (!applyResult.ok) {
-            uiAlert('应用配置失败：' + applyResult.error, { title: '导入失败' });
-            return;
-        }
-
-        // 应用 localStorage 数据
-        if (result.data.localStorage) {
-            const ls = result.data.localStorage;
-            if (ls.appSettings) {
-                localStorage.setItem('appSettings', ls.appSettings);
-            }
-            if (ls.cmdGroupsMeta) {
-                localStorage.setItem('cmdGroupsMeta', ls.cmdGroupsMeta);
-            }
-            if (ls.listOrder) {
-                localStorage.setItem('listOrder', ls.listOrder);
-            }
-        }
-
-        uiAlert('配置已导入，软件将自动重启。', { title: '导入成功' }).then(() => {
-            window.api.app.restart();
-        });
-    });
-}
-
 // ===== 动画 & 粒子效果 =====
 let fxLayer = null;
 let fxEmitActive = 0;
@@ -1526,7 +1464,7 @@ function nowTs() {
         + `${pad(d.getMilliseconds(), 3)}`;
 }
 
-function echoIfEnabled(id, text, mode = 'text') {
+function echoIfEnabled(id, text) {
     const pane = state.panes.get(id);
     if (!pane) return;
 
@@ -1534,36 +1472,21 @@ function echoIfEnabled(id, text, mode = 'text') {
     if (!echo || !echo.checked) return;
 
     const ts = nowTs();
-    const tsPrefix = (settings.txTimestamp !== false ? `[${ts}] ` : '');
-    const addText = tsPrefix + text + '\n';
-
-    let hexBody;
-    if (mode === 'hex') {
-        const clean = text.replace(/[\s,]/g, '');
-        hexBody = clean.match(/.{2}/g).map(h => h.toUpperCase()).join(' ');
-    } else {
-        const bytes = new TextEncoder().encode(text);
-        hexBody = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-    }
-    const addHex = tsPrefix + hexBody + '\n';
+    const addText = (settings.txTimestamp !== false ? `[${ts}] ` : '') + text + '\n';
 
     pane.textBuffer += addText;
-    pane.hexBuffer += addHex;
-    pane.chunks.push({ text: addText, hex: addHex, isEcho: true });
+    pane.hexBuffer += addText;
+    pane.chunks.push({ text: addText, hex: addText, isEcho: true });
     
     if (pane.logging && pane.logging.active) {
         handleRealtimeLog(pane, addText);
     }
     trimPane(pane);
 
-    const piece = (pane.viewMode === 'hex') ? addHex : addText;
     const el = document.createElement('span');
     el.className = 'echo-line';
-    el.textContent = piece;
+    el.textContent = addText;
     appendNodeTail(pane, el);
-
-    // sync echo to popout panel if exists
-    try { window.api.panel.sendEcho(id, addText, addHex); } catch {}
 }
 
 function updateLogBtnUI(pane) {
@@ -2824,11 +2747,13 @@ function refreshPanelList() {
 
 function formatBytes(bytes, mode = 'text') {
     if (mode === 'hex') {
-        let str = Array.from(bytes).map(b =>
-            b.toString(16).padStart(2, '0').toUpperCase()
-        ).join(' ');
+        let str = Array.from(bytes).map(b => {
+            const h = b.toString(16).padStart(2, '0').toUpperCase();
+            return (b === 10) ? `${h}\n` : h;
+        }).join(' ').replace(/\n /g, '\n');
 
-        return str + '\n';
+        if (!str.endsWith('\n')) str += ' ';
+        return str;
     }
     const enc = (settings && settings.charEncoding) ? settings.charEncoding : 'utf-8';
     try { return new TextDecoder(enc, { fatal: false }).decode(bytes); }
@@ -2873,11 +2798,9 @@ window.api.serial.onData(({ id, bytes }) => {
                 const nl = '\n';
                 if(pane.logging?.active) window.api.logger.append(pane.logging.path, nl).catch(()=>{});
                 pane.textBuffer += nl;
-                pane.chunks.push({ text: nl, hex: '', isEcho: false });
+                pane.hexBuffer += nl;
+                pane.chunks.push({ text: nl, hex: nl, isEcho: false });
                 appendTextTail(pane, nl);
-            }
-            if (!pane.hexBuffer.endsWith('\n')) {
-                pane.hexBuffer += '\n';
             }
             g.open = false;
             g.timer = null;
@@ -2888,12 +2811,9 @@ window.api.serial.onData(({ id, bytes }) => {
             const nl = '\n';
             if(pane.logging?.active) window.api.logger.append(pane.logging.path, nl).catch(()=>{});
             pane.textBuffer += nl;
-            pane.chunks.push({ text: nl, hex: '', isEcho: false });
-            appendTextTail(pane, nl);
-        }
-        if (!pane.hexBuffer.endsWith('\n')) {
-            const nl = '\n';
             pane.hexBuffer += nl;
+            pane.chunks.push({ text: nl, hex: nl, isEcho: false });
+            appendTextTail(pane, nl);
         }
     }
 
@@ -2938,11 +2858,9 @@ window.api.tcp.onData(({ id, bytes }) => {
                 if(pane.logging?.active) window.api.logger.append(pane.logging.path, nl).catch(()=>{});
 
                 pane.textBuffer += nl;
-                pane.chunks.push({ text: nl, hex: '', isEcho: false });
+                pane.hexBuffer += nl;
+                pane.chunks.push({ text: nl, hex: nl, isEcho: false });
                 appendTextTail(pane, nl);
-            }
-            if (!pane.hexBuffer.endsWith('\n')) {
-                pane.hexBuffer += '\n';
             }
             g.open = false;
             g.timer = null;
@@ -2954,11 +2872,9 @@ window.api.tcp.onData(({ id, bytes }) => {
             if(pane.logging?.active) window.api.logger.append(pane.logging.path, nl).catch(()=>{});
 
             pane.textBuffer += nl;
-            pane.chunks.push({ text: nl, hex: '', isEcho: false });
+            pane.hexBuffer += nl;
+            pane.chunks.push({ text: nl, hex: nl, isEcho: false });
             appendTextTail(pane, nl);
-        }
-        if (!pane.hexBuffer.endsWith('\n')) {
-            pane.hexBuffer += '\n';
         }
     }
 });
@@ -2969,9 +2885,9 @@ function showData(id, bytes) {
     const ts = nowTs();
     const textStr = formatBytes(bytes, 'text');
     const hexStr = formatBytes(bytes, 'hex');
-    const tsPrefix = (settings.rxTimestamp !== false) ? `[${ts}] ` : '';
+    const tsPrefix = (settings.rxTimestamp !== false) ? `[${ts}]\n` : '';
     const addText = tsPrefix + textStr + '\n';
-    const addHex = tsPrefix + hexStr;
+    const addHex = tsPrefix + hexStr + '\n';
 
     pane.textBuffer += addText;
     pane.hexBuffer += addHex;
@@ -2994,7 +2910,7 @@ function redrawPane(id) {
     const frag = document.createDocumentFragment();
     let acc = '';
     for (const c of (pane.chunks || [])) {
-        const s = c.isEcho ? c.text : ((mode === 'hex') ? c.hex : c.text);
+        const s = (mode === 'hex') ? c.hex : c.text;
         if (c.isEcho) {
             if (acc) { frag.appendChild(document.createTextNode(acc)); acc = ''; }
             const span = document.createElement('span');
@@ -3095,19 +3011,17 @@ window.api.panel.onDockRequest(({ id, html }) => {
     const pane = state.panes.get(id);
     const body = pane.el.querySelector('.body');
 
-    let restoredChunks;
-    try { restoredChunks = JSON.parse(html || '[]'); } catch { restoredChunks = null; }
-    if (!Array.isArray(restoredChunks) || restoredChunks.length === 0) {
-        // fallback: treat as plain text (compat with old popout)
-        restoredChunks = html ? [{ text: html, hex: html, isEcho: false }] : [];
-    }
+    const text = html || '';
 
-    pane.chunks = restoredChunks;
+    pane.textBuffer = text;
+    pane.hexBuffer = text;
+    pane.chunks = [{ text, hex: text, isEcho: false }];
 
-    pane.textBuffer = restoredChunks.map(c => c.text || '').join('');
-    pane.hexBuffer = restoredChunks.map(c => c.hex || '').join('');
-
-    redrawPane(id);
+    body.innerHTML = '';
+    const tn = document.createTextNode(text);
+    body.appendChild(tn);
+    pane.bodyTextNode = tn;
+    pane.tailTextNode = tn;
 
     pane.autoScroll = true;
     body.scrollTop = body.scrollHeight;
@@ -3250,7 +3164,7 @@ btnSend.addEventListener('click', async () => {
             log('发送失败：' + res.error);
             return;
         }
-        echoIfEnabled(id, data, mode);
+        echoIfEnabled(id, data);
     } finally {
         const refocus = () => {
             try {
@@ -3605,14 +3519,14 @@ async function sendCommand(cmd, cardEl) {
         }
         const timer = setInterval(async () => {
             const res = await doWrite(cmd.data || '', cmd.mode || 'text', append);
-            if (res.ok) echoIfEnabled(id, cmd.data || '', cmd.mode || 'text');
+            if (res.ok) echoIfEnabled(id, cmd.data || '');
         }, ms);
         state.cmdIntervalMap.set(cmd.id, timer);
         if (cardEl) cardEl.classList.add('auto');
     } else {
         const res = await doWrite(cmd.data || '', cmd.mode || 'text', append);
         if (!res.ok) return alert('发送失败：' + res.error);
-        echoIfEnabled(id, cmd.data || '', cmd.mode || 'text');
+        echoIfEnabled(id, cmd.data || '');
     }
 }
 
@@ -5691,37 +5605,6 @@ async function refreshScriptList() {
     // 清空按钮事件
     if (btnOutputClear) {
         btnOutputClear.onclick = clearScriptOutput;
-    }
-
-    // 输出面板拖拽调整大小
-    const outputResizeHandle = document.getElementById('outputResizeHandle');
-    const scriptOutputPanel = document.getElementById('scriptOutputPanel');
-    if (outputResizeHandle && scriptOutputPanel) {
-        let isResizing = false;
-        let startY = 0;
-        let startHeight = 0;
-
-        outputResizeHandle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startY = e.clientY;
-            startHeight = scriptOutputPanel.offsetHeight;
-            outputResizeHandle.classList.add('dragging');
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const deltaY = startY - e.clientY; // 向上拖增大高度
-            const newHeight = Math.max(80, Math.min(300, startHeight + deltaY));
-            scriptOutputPanel.style.height = newHeight + 'px';
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                outputResizeHandle.classList.remove('dragging');
-            }
-        });
     }
 
     async function refreshScriptList() {
