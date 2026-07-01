@@ -1,0 +1,96 @@
+import type { ReteGraphNode } from '@shared/types'
+import type { EmitContext } from '@/features/script-editor/codegen/context'
+import { data, delimiter, getInputVar, getInputVars, jsString, outVar, valueAsNumber, valueAsString } from '@/features/script-editor/codegen/emit/shared'
+
+const numericOps: Record<string, string> = {
+  '加': '+',
+  '减': '-',
+  '乘': '*',
+  '除': '/',
+  '取余': '%',
+  '异或': '^',
+  '与': '&',
+  '或': '|'
+}
+
+const crcFns: Record<string, string> = {
+  CRC8: 'crc8',
+  CRC16: 'crc16',
+  'CRC16-CCITT': 'crc16ccitt',
+  CRC32: 'crc32',
+  '校验和': 'checksum'
+}
+
+export function emitTransform(ctx: EmitContext, node: ReteGraphNode, indent: string): string {
+  const variable = outVar(node)
+  ctx.varMap.set(String(node.id), variable)
+  return `${indent}var ${variable} = ${expressionFor(ctx, node)};\n`
+}
+
+function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
+  const config = data(node)
+  const input = getInputVar(ctx, node)
+  const inputs = getInputVars(ctx, node)
+
+  switch (node.key) {
+    case 'transform-hex':
+      return config.direction === '文本→HEX' ? `textToHex(${input})` : `hexToText(${input})`
+    case 'transform-base64':
+      return config.operation === '解码' ? `atob(${input})` : `btoa(${input})`
+    case 'transform-encoding':
+      return `convertEncoding(${input}, ${jsString(valueAsString(config.from, 'utf8'))}, ${jsString(valueAsString(config.to, 'utf8'))})`
+    case 'transform-byteorder':
+      return `swapBytes(${input}, ${config.size === '4字节' ? 4 : 2})`
+    case 'transform-case':
+      return config.case === '转小写' ? `${input}.toLowerCase()` : `${input}.toUpperCase()`
+
+    case 'split-delimiter':
+      return `${input}.split(${jsString(delimiter(config))})`
+    case 'split-length':
+      return `chunkString(${input}, ${valueAsNumber(config.length, 2)})`
+    case 'split-regex':
+      return `${input}.match(new RegExp(${jsString(valueAsString(config.pattern))}, ${jsString(valueAsString(config.flags, 'g'))})) || []`
+    case 'split-substring': {
+      const start = valueAsNumber(config.start, 0)
+      const end = config.end === '末尾' || config.end === undefined || config.end === '' ? `${input}.length` : valueAsNumber(config.end, 0)
+      return `${input}.substring(${start}, ${end})`
+    }
+    case 'split-trimbytes':
+      return `${input}.slice(${valueAsNumber(config.head, 0)}, ${input}.length - ${valueAsNumber(config.tail, 0)})`
+
+    case 'numeric-base':
+      return `convertBase(${input}, ${jsString(valueAsString(config.from, '十进制'))}, ${jsString(valueAsString(config.to, '十六进制'))})`
+    case 'numeric-join':
+      return `bytesToNumber(${input}, ${jsString(valueAsString(config.type, 'uint16'))}, ${jsString(valueAsString(config.order, '大端'))})`
+    case 'numeric-calc': {
+      const right = getInputVar(ctx, node, 'right', valueAsString(config.operand2, '0'))
+      return `${getInputVar(ctx, node, 'left', input)} ${numericOps[valueAsString(config.operator, '加')] || '+'} ${right}`
+    }
+    case 'numeric-crc':
+      return `${crcFns[valueAsString(config.algorithm, 'CRC16')] || 'crc16'}(${input})`
+    case 'numeric-length':
+      return config.type === '字节数' ? `Buffer.byteLength(${input})` : `${input}.length`
+
+    case 'string-concat':
+      return `${getInputVar(ctx, node, 'left', inputs[0] || '""')} + ${jsString(valueAsString(config.separator))} + ${getInputVar(ctx, node, 'right', inputs[1] || '""')}`
+    case 'string-replace':
+      return config.all === '否'
+        ? `${input}.replace(${jsString(valueAsString(config.search))}, ${jsString(valueAsString(config.replace))})`
+        : `${input}.replaceAll(${jsString(valueAsString(config.search))}, ${jsString(valueAsString(config.replace))})`
+    case 'string-trim':
+      if (config.position === '左侧') return `${input}.trimStart()`
+      if (config.position === '右侧') return `${input}.trimEnd()`
+      if (config.position === '全部') return `${input}.replace(/\\s/g, '')`
+      return `${input}.trim()`
+    case 'string-find':
+      if (config.return === '位置索引') return `${input}.indexOf(${jsString(valueAsString(config.search))})`
+      if (config.return === '匹配次数') return `(${input}.match(new RegExp(${jsString(valueAsString(config.search))}, "g")) || []).length`
+      return `${input}.includes(${jsString(valueAsString(config.search))})`
+    case 'string-template': {
+      const template = valueAsString(config.template, '设备{1}: 值{2}, 状态{3}').replace(/\{(\d+)\}/g, (_, n) => `\${${inputs[Number(n) - 1] || '""'}}`)
+      return `\`${template.replace(/`/g, '\\`')}\``
+    }
+    default:
+      return input
+  }
+}

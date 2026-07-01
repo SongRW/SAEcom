@@ -1,0 +1,173 @@
+/* changelog 独立窗主题：保留 legacy --c-* 蓝色变量（保视觉身份，不统一到 shadcn oklch） */
+:root {
+  --c-primary: #409eff;
+  --c-text: #303133;
+  --c-muted: #909399;
+  --c-bg: #ffffff;
+  --c-card-bg: #ffffff;
+  --c-card-hover: #f9fbff;
+  --c-border: #ebeef5;
+  --c-code-bg: #f4f4f5;
+  --c-shadow: rgba(0, 0, 0, 0.08);
+
+  --c-scrollbar: #d8dee9;
+  --c-scrollbar-hover: #c0c7d6;
+}
+
+:root.theme-dark {
+  --c-primary: #66b1ff;
+  --c-text: #e5eaf3;
+  --c-muted: #a3a6ad;
+  --c-bg: #141414;
+  --c-card-bg: #141414;
+  --c-card-hover: #1f1f1f;
+  --c-border: #2c2c2c;
+  --c-code-bg: #2b2b2b;
+  --c-shadow: rgba(0, 0, 0, 0.4);
+
+  --c-scrollbar: #3a4354;
+  --c-scrollbar-hover: #4a5568;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-scrollbar);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-scrollbar-hover);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.changelog-root {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--c-text);
+  background: var(--c-bg);
+  margin: 0;
+  padding: 20px 30px;
+  font-size: 14px;
+  transition: background-color 0.2s, color 0.2s;
+  height: 100%;
+  overflow-y: overlay;
+  box-sizing: border-box;
+}
+
+.changelog-content {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.changelog-content.loaded {
+  opacity: 1;
+}
+
+.changelog-placeholder {
+  color: var(--c-muted);
+}
+
+.version-card {
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid transparent;
+  position: relative;
+}
+
+.version-card:hover {
+  background-color: var(--c-card-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px var(--c-shadow);
+  border-color: var(--c-border);
+}
+
+.version-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15px;
+  bottom: 15px;
+  width: 4px;
+  background: var(--c-primary);
+  border-radius: 0 4px 4px 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.version-card:hover::before {
+  opacity: 1;
+}
+
+.changelog-content h1,
+.changelog-content h2 {
+  font-weight: 600;
+  margin: 10px 0;
+  color: var(--c-primary);
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: 8px;
+}
+
+.changelog-content h1 {
+  font-size: 24px;
+}
+
+.changelog-content h2 {
+  font-size: 20px;
+}
+
+.changelog-content h3 {
+  color: var(--c-primary);
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.2;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.changelog-content ul {
+  padding-left: 20px;
+  margin: 5px 0;
+}
+
+.changelog-content li {
+  margin-bottom: 4px;
+  color: var(--c-text);
+}
+
+.tag-line {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-muted);
+  margin-top: 10px;
+  margin-bottom: 4px;
+  background: var(--c-code-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.changelog-content code {
+  padding: 2px 6px;
+  font-size: 0.9em;
+  background-color: var(--c-code-bg);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.changelog-content blockquote {
+  margin: 10px 0;
+  padding: 5px 15px;
+  border-left: 4px solid var(--c-border);
+  color: var(--c-muted);
+}

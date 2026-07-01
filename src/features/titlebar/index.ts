@@ -1,0 +1,8 @@
+export { TitleBarChrome } from '@/features/titlebar/TitleBarChrome'
+export type { TitleBarChromeProps } from '@/features/titlebar/TitleBarChrome'
+export { ConnectionBadge, computeBadgeState } from '@/features/titlebar/ConnectionBadge'
+export type { BadgeState } from '@/features/titlebar/ConnectionBadge'
+export { WindowControls } from '@/features/titlebar/WindowControls'
+export { useWindowControls } from '@/features/titlebar/useWindowControls'
+export { detectPlatform, isMac } from '@/features/titlebar/platform'
+export type { Platform } from '@/features/titlebar/platform'

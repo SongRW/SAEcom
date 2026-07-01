@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "SAEcom",
+    "title": "SAEcom"
+  },
+  "common": {
+    "loading": "Loading...",
+    "send": "Send",
+    "close": "Close",
+    "open": "Open",
+    "confirm": "OK",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "copy": "Copy",
+    "error": "Error"
+  },
+  "about": {
+    "windowTitle": "About",
+    "author": "Author",
+    "authorName": "Satone",
+    "email": "Email",
+    "emailAction": "Click to send email",
+    "github": "GitHub Repository",
+    "githubAction": "View source",
+    "blog": "Blog / Discussion",
+    "blogAction": "Visit homepage",
+    "checkUpdate": "🔄 Check for updates",
+    "checking": "🔄 Checking…",
+    "viewChangelog": "📜 Changelog",
+    "copyright": "Satone © 2025",
+    "renderFailed": "About window failed to render:"
+  },
+  "changelog": {
+    "windowTitle": "Changelog",
+    "placeholder": "Loading...",
+    "renderFailed": "Changelog failed to render:"
+  },
+  "settings": {
+    "dialog": {
+      "title": "Settings"
+    },
+    "nav": {
+      "general": "General",
+      "appearance": "Appearance",
+      "serial": "Serial",
+      "shortcuts": "Shortcuts",
+      "about": "About"
+    },
+    "general": {
+      "title": "General",
+      "subtitle": "Interface behavior & action confirmations",
+      "fullscreen": "Fullscreen mode",
+      "confirmClear": "Confirm before clear",
+      "confirmDelete": "Confirm before delete",
+      "resetAll": "Reset all to defaults"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Theme & display",
+      "darkMode": "Dark mode",
+      "fontSize": "Font size",
+      "longCommandThreshold": "Long command threshold (chars)",
+      "language": "Interface language"
+    },
+    "serial": {
+      "title": "Serial",
+      "subtitle": "Send/receive display & encoding",
+      "rxTimestamp": "Receive timestamp",
+      "txTimestamp": "Send timestamp",
+      "echoSend": "Send echo",
+      "charEncoding": "Character encoding",
+      "bufferTime": "Receive buffer (ms)",
+      "encoding": {
+        "utf8": "UTF-8",
+        "gbk": "GBK / GB2312",
+        "gb18030": "GB18030",
+        "big5": "Big5 (Traditional Chinese)",
+        "shiftJis": "Shift-JIS (Japanese)",
+        "eucKr": "EUC-KR (Korean)",
+        "iso88591": "ISO-8859-1 (Latin-1)",
+        "ascii": "ASCII"
+      }
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "subtitle": "Keyboard shortcuts",
+      "item": {
+        "sidebar": "Toggle sidebar",
+        "settings": "Open settings",
+        "theme": "Toggle dark mode",
+        "fullscreen": "Toggle fullscreen",
+        "close": "Close settings"
+      }
+    },
+    "about": {
+      "title": "About",
+      "subtitle": "App info",
+      "appName": "Application name",
+      "version": "Version",
+      "description": "Description",
+      "descriptionValue": "Multi-panel serial assistant built with Electron",
+      "autoCheckUpdate": "Check for updates on startup",
+      "checkUpdate": "Check for updates",
+      "newVersionTooltip": "New version available, click to view details",
+      "openChangelog": "Open changelog"
+    },
+    "language": {
+      "zh-CN": "简体中文",
+      "en-US": "English"
+    }
+  },
+  "titlebar": {
+    "connection": {
+      "connected": "{{name}} connected",
+      "disconnected": "Disconnected"
+    }
+  },
+  "mainWindow": {
+    "sidebar": {
+      "title": "Serial window",
+      "operation": "Actions",
+      "newPanel": "New panel",
+      "panels": "Panels",
+      "about": "About",
+      "hasUpdate": "Update available",
+      "settings": "Settings",
+      "page": {
+        "serial": "Serial",
+        "commands": "Commands",
+        "script": "Script"
+      }
+    },
+    "bottomNav": {
+      "scriptEditor": "Script editor",
+      "openScriptEditor": "Open script editor"
+    },
+    "panelOverview": {
+      "empty": "No panels yet — click \"New panel\" in the sidebar to create one",
+      "count": "{{count}} panels · click to focus"
+    }
+  },
+  "activePanel": {
+    "emptyHint": "Select a panel first (click a panel in the workspace, or pick one from the sidebar list)",
+    "currentPanel": "Current panel:",
+    "addNote": "Add note",
+    "exportFile": "Export to file",
+    "limitOn": "Click to enable a data-row limit to prevent memory overflow",
+    "limitOff": "Only the latest {{count}} rows are kept — click to configure",
+    "setLimit": "Set displayed data rows",
+    "liveSave": "Live save",
+    "stopSave": "Stop saving",
+    "oscilloscope": "Oscilloscope",
+    "baudRate": "Baud rate:",
+    "dataBits": "Data bits:",
+    "stopBits": "Stop bits:",
+    "parity": "Parity:",
+    "sharePort": "Share port:",
+    "stopShare": "Stop sharing",
+    "shareAsTcp": "Share as TCP",
+    "sharedAs": "Shared:",
+    "copyShareAddr": "Copy share address",
+    "copy": "Copy",
+    "bufferTime": "Buffer (ms):",
+    "appendEnding": "Send ending:",
+    "appendNone": "None",
+    "sendAsHex": "Send as HEX",
+    "echoSend": "Echo send",
+    "sendRaw": "Raw",
+    "fileName": "File name:",
+    "fileNamePlaceholder": "Or drag a file here…",
+    "pickFile": "Pick file",
+    "sending": "Sending…",
+    "sendFile": "Send file",
+    "sendProtocol": "Send protocol:",
+    "noteTitle": "Note",
+    "noteDesc": "Enter a note name (leave blank to clear, ≤15 chars)",
+    "limitTitle": "Set retained data rows",
+    "limitDesc": "Enter the number of latest rows to keep (when recording logs, this overrides the default 100-row limit)",
+    "closeLimit": "Disable limit",
+    "copied": "Copied {{addr}}",
+    "needOpenPort": "Please pick a file first",
+    "sys": {
+      "exported": "[System] Data exported",
+      "exportFail": "[Error] Export failed: {{msg}}",
+      "notOpen": "[System] Serial port not open",
+      "shareStopped": "[System] TCP share stopped",
+      "shareInvalid": "[Error] Invalid share port",
+      "shared": "[System] Shared as TCP :{{port}}",
+      "shareFail": "[Error] Share toggle failed: {{msg}}",
+      "copyFail": "[Error] Copy failed: {{addr}}",
+      "pickFail": "[Error] Pick file failed: {{msg}}",
+      "filePickFirst": "[Error] Please pick a file first",
+      "dropFail": "[Error] Drag-drop path failed: {{msg}}",
+      "portNotOpen": "[Error] Port not open",
+      "writeError": "[Error] {{msg}}",
+      "parseError": "[Error] {{msg}}",
+      "ymodem": "[YModem] {{msg}}",
+      "fileProgress": "[File] Progress: {{progress}}%",
+      "fileDone": "[File] Send complete",
+      "fileFail": "[Error] File send failed: {{msg}}"
+    }
+  },
+  "oscilloscope": {
+    "realtime": "Live",
+    "pause": "Pause",
+    "clear": "Clear",
+    "backToRealtime": "Back to live",
+    "rateUnit": "pts/s",
+    "windowTitle": "Oscilloscope · {{title}}",
+    "windowLabel": "Time window",
+    "estimateHint": "Estimated by current sample rate and channel count",
+    "window": {
+      "30s": "30s",
+      "1m": "1m",
+      "5m": "5m",
+      "10m": "10m",
+      "30m": "30m"
+    }
+  }
+}

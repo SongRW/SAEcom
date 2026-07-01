@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>串口助手 (React 预览)</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #root {
+            height: 100%;
+        }
+    </style>
+    <!--
+      冷启动防闪烁（FOUC）：在 React 挂载前同步读取持久化设置，提前应用主题类与字号。
+      否则深色模式启动时先以浅色绘制，React 挂载后再切深色 → 明显闪白。
+      设置项的「单一真源」是 localStorage['appSettings']（与 settings store 一致）。
+    -->
+    <script>
+        (function () {
+            try {
+                var raw = localStorage.getItem('appSettings')
+                var s = raw ? JSON.parse(raw) : {}
+                var el = document.documentElement
+                if (s.dark) { el.classList.add('dark'); el.classList.add('theme-dark') }
+                var fs = Number(s.fontSize)
+                if (fs > 0) el.style.setProperty('--font-size-base', fs + 'px')
+            } catch (e) { /* 容错：解析失败则用默认浅色 */ }
+        })()
+    </script>
+</head>
+
+<body>
+    <!-- React 主窗口挂载点（双轨并行：此入口独立于 legacy src/index.html） -->
+    <div id="root"></div>
+
+    <!-- Web 预览安全网：非 Electron 环境下注入 window.api shim（Electron 中 preload 已注入，此文件自动跳过） -->
+    <script src="/src/shared/dev/mock-api.ts"></script>
+
+    <script type="module" src="./mainwindow.tsx"></script>
+</body>
+
+</html>

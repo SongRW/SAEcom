@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>脚本编辑器</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #root {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <!-- Web 预览安全网：非 Electron 环境下注入 window.api shim（Electron 中 preload 已注入，此文件自动跳过） -->
+    <script src="/src/shared/dev/mock-api.ts"></script>
+    <script type="module" src="./script-editor.tsx"></script>
+</body>
+
+</html>

@@ -1,0 +1,21 @@
+/* 示波器容器。uPlot 自身样式由 uplot/dist/uPlot.min.css 提供。
+   这里只覆盖背景/尺寸，全部用 CSS 变量，零硬编码颜色。 */
+.scope-chart-container {
+  width: 100%;
+  height: 100%;
+  background: var(--background);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* uPlot 画布填满容器 */
+.scope-chart-container .uplot {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 悬停十字线颜色用主题 */
+.scope-chart-container .u-cursor-x,
+.scope-chart-container .u-cursor-y {
+  stroke: var(--primary) !important;
+}

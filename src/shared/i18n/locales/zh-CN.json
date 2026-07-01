@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "SAEcom",
+    "title": "SAEcom"
+  },
+  "common": {
+    "loading": "加载中...",
+    "send": "发送",
+    "close": "关闭",
+    "open": "打开",
+    "confirm": "确定",
+    "cancel": "取消",
+    "delete": "删除",
+    "save": "保存",
+    "copy": "复制",
+    "error": "错误"
+  },
+  "about": {
+    "windowTitle": "关于",
+    "author": "作者",
+    "authorName": "Satone",
+    "email": "联系邮箱",
+    "emailAction": "点击发送邮件",
+    "github": "Github 仓库",
+    "githubAction": "查看源码",
+    "blog": "博客 / 讨论",
+    "blogAction": "访问主页",
+    "checkUpdate": "🔄 检查更新",
+    "checking": "🔄 检查中…",
+    "viewChangelog": "📜 更新日志",
+    "copyright": "Satone © 2025",
+    "renderFailed": "关于窗口渲染失败："
+  },
+  "changelog": {
+    "windowTitle": "更新日志",
+    "placeholder": "加载中...",
+    "renderFailed": "更新日志渲染失败："
+  },
+  "settings": {
+    "dialog": {
+      "title": "设置"
+    },
+    "nav": {
+      "general": "通用",
+      "appearance": "外观",
+      "serial": "串口",
+      "shortcuts": "快捷键",
+      "about": "关于"
+    },
+    "general": {
+      "title": "通用",
+      "subtitle": "界面行为与操作确认",
+      "fullscreen": "全屏模式",
+      "confirmClear": "清除前确认",
+      "confirmDelete": "删除前确认",
+      "resetAll": "重置全部为默认"
+    },
+    "appearance": {
+      "title": "外观",
+      "subtitle": "主题与显示",
+      "darkMode": "夜间模式",
+      "fontSize": "字体大小",
+      "longCommandThreshold": "长命令阈值(字符)",
+      "language": "界面语言"
+    },
+    "serial": {
+      "title": "串口",
+      "subtitle": "收发显示与编码",
+      "rxTimestamp": "接收时间戳",
+      "txTimestamp": "发送时间戳",
+      "echoSend": "发送回显",
+      "charEncoding": "字符编码",
+      "bufferTime": "接收缓冲(ms)",
+      "encoding": {
+        "utf8": "UTF-8",
+        "gbk": "GBK / GB2312",
+        "gb18030": "GB18030",
+        "big5": "Big5（繁体中文）",
+        "shiftJis": "Shift-JIS（日文）",
+        "eucKr": "EUC-KR（韩文）",
+        "iso88591": "ISO-8859-1（Latin-1）",
+        "ascii": "ASCII"
+      }
+    },
+    "shortcuts": {
+      "title": "快捷键",
+      "subtitle": "键盘快捷操作",
+      "item": {
+        "sidebar": "切换侧边栏",
+        "settings": "打开设置",
+        "theme": "切换夜间模式",
+        "fullscreen": "切换全屏",
+        "close": "关闭设置"
+      }
+    },
+    "about": {
+      "title": "关于",
+      "subtitle": "应用信息",
+      "appName": "应用名称",
+      "version": "版本",
+      "description": "描述",
+      "descriptionValue": "基于Electron开发的多面板串口助手",
+      "autoCheckUpdate": "启动时自动检查更新",
+      "checkUpdate": "检查更新",
+      "newVersionTooltip": "发现新版本，点击查看更新内容",
+      "openChangelog": "打开更新日志"
+    },
+    "language": {
+      "zh-CN": "简体中文",
+      "en-US": "English"
+    }
+  },
+  "titlebar": {
+    "connection": {
+      "connected": "{{name}} 已连接",
+      "disconnected": "未连接"
+    }
+  },
+  "mainWindow": {
+    "sidebar": {
+      "title": "串口窗口",
+      "operation": "操作",
+      "newPanel": "新建面板",
+      "panels": "面板",
+      "about": "关于",
+      "hasUpdate": "有更新",
+      "settings": "设置",
+      "page": {
+        "serial": "串口",
+        "commands": "命令",
+        "script": "脚本"
+      }
+    },
+    "bottomNav": {
+      "scriptEditor": "脚本编辑器",
+      "openScriptEditor": "打开脚本编辑器"
+    },
+    "panelOverview": {
+      "empty": "暂无面板，在侧栏点击「新建面板」创建",
+      "count": "共 {{count}} 个面板 · 点击聚焦"
+    }
+  },
+  "activePanel": {
+    "emptyHint": "请先选中一个面板（在工作区点击面板，或从侧边栏列表选择）",
+    "currentPanel": "当前面板：",
+    "addNote": "添加备注",
+    "exportFile": "导出为文件",
+    "limitOn": "点击开启数据条数限制，防止内存溢出",
+    "limitOff": "当前只保留最新 {{count}} 条数据，点击设置",
+    "setLimit": "设置数据显示条数",
+    "liveSave": "实时保存",
+    "stopSave": "停止保存",
+    "oscilloscope": "示波器",
+    "baudRate": "波特率：",
+    "dataBits": "数据位：",
+    "stopBits": "停止位：",
+    "parity": "校验：",
+    "sharePort": "共享端口：",
+    "stopShare": "停止共享",
+    "shareAsTcp": "共享为 TCP",
+    "sharedAs": "已共享：",
+    "copyShareAddr": "复制共享地址",
+    "copy": "复制",
+    "bufferTime": "接收缓冲(ms):",
+    "appendEnding": "发送结尾：",
+    "appendNone": "无结尾",
+    "sendAsHex": "以HEX格式发送",
+    "echoSend": "发送回显",
+    "sendRaw": "直接发送",
+    "fileName": "文件名：",
+    "fileNamePlaceholder": "也可直接拖拽文件到此处…",
+    "pickFile": "选择文件",
+    "sending": "发送中…",
+    "sendFile": "发送文件",
+    "sendProtocol": "发送协议：",
+    "noteTitle": "备注",
+    "noteDesc": "输入备注名（留空清除，≤15字）",
+    "limitTitle": "设置数据保留条数",
+    "limitDesc": "请输入要保留的最新数据行数：(录制日志时，此设置优先级高于默认的100条限制)",
+    "closeLimit": "关闭限制",
+    "copied": "已复制 {{addr}}",
+    "needOpenPort": "请先选择文件",
+    "sys": {
+      "exported": "[系统] 已导出数据",
+      "exportFail": "[错误] 导出失败：{{msg}}",
+      "notOpen": "[系统] 未打开串口",
+      "shareStopped": "[系统] 已停止 TCP 共享",
+      "shareInvalid": "[错误] 共享端口无效",
+      "shared": "[系统] 已共享为 TCP :{{port}}",
+      "shareFail": "[错误] 共享切换失败：{{msg}}",
+      "copyFail": "[错误] 复制失败：{{addr}}",
+      "pickFail": "[错误] 选文件失败：{{msg}}",
+      "filePickFirst": "[错误] 请先选择文件",
+      "dropFail": "[错误] 拖放取路径失败：{{msg}}",
+      "portNotOpen": "[错误] 端口未打开",
+      "writeError": "[错误] {{msg}}",
+      "parseError": "[错误] {{msg}}",
+      "ymodem": "[YModem] {{msg}}",
+      "fileProgress": "[文件] 进度: {{progress}}%",
+      "fileDone": "[文件] 发送完成",
+      "fileFail": "[错误] 文件发送失败：{{msg}}"
+    }
+  },
+  "oscilloscope": {
+    "realtime": "实时",
+    "pause": "暂停",
+    "clear": "清空",
+    "backToRealtime": "回到实时",
+    "rateUnit": "pts/s",
+    "windowTitle": "示波器 · {{title}}",
+    "windowLabel": "时间窗",
+    "estimateHint": "按当前采样率与通道数预估",
+    "window": {
+      "30s": "30秒",
+      "1m": "1分钟",
+      "5m": "5分钟",
+      "10m": "10分钟",
+      "30m": "30分钟"
+    }
+  }
+}
