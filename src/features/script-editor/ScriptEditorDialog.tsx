@@ -35,6 +35,7 @@ import {
   groupNodesForPalette,
   nextDefaultScriptName,
   normalizeScriptName,
+  stripScriptExtension,
   type OverwriteSource
 } from '@/features/script-editor/viewModel'
 import {
@@ -109,7 +110,8 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   const [saveAsOpen, setSaveAsOpen] = useState(false)
   const [createNameOpen, setCreateNameOpen] = useState(false)
   const [confirmOverwrite, setConfirmOverwrite] = useState<{ name: string; source: OverwriteSource } | null>(null)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [renameTarget, setRenameTarget] = useState<string | null>(null)
   const serialPanelOptions = useMemo(() => buildSerialPanelOptions(serialPanels), [serialPanels])
   const serialPortOptions = useMemo(() => buildSerialPortOptions(serialPorts, serialPanels), [serialPanels, serialPorts])
 
@@ -300,20 +302,62 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   }
 
   async function deleteScript() {
-    // 删除前先确认（对齐 PaneContextMenu 的删除确认）
+    // 工具栏入口：作用于活动脚本（右键入口在 ScriptList 里直接 setDeleteTarget）
     if (!activeScriptName) return
-    setDeleteConfirmOpen(true)
+    setDeleteTarget(activeScriptName)
   }
 
   async function execDelete() {
-    if (!activeScriptName) return
-    await getIPC().scripts.delete(activeScriptName)
-    setActiveScriptName(null)
-    setGraph(createEmptyGraphState())
-    setLegacyCode('')
-    setSelectedNodeIds([])
-    setUiState(closeConfig)
+    const target = deleteTarget
+    if (!target) return
+    await getIPC().scripts.delete(target)
+    // 仅当删的是活动脚本时才清空画布（删别的脚本不影响当前编辑）
+    if (target === activeScriptName) {
+      setActiveScriptName(null)
+      setGraph(createEmptyGraphState())
+      setLegacyCode('')
+      setSelectedNodeIds([])
+      setUiState(closeConfig)
+    }
+    setDeleteTarget(null)
     await refreshScripts()
+  }
+
+  function renameScript() {
+    // 工具栏入口：作用于活动脚本（右键入口在 ScriptList 里直接 setRenameTarget）
+    if (!activeScriptName) return
+    setRenameTarget(activeScriptName)
+  }
+
+  async function execRename(newName: string) {
+    // PromptDialog 的 onConfirm 会同步 close() → setRenameTarget(null)，故先捕获 oldName。
+    const oldName = renameTarget
+    if (!oldName) return
+    if (newName === oldName) return
+    const res = await getIPC().scripts.rename(oldName, newName)
+    if (!res.ok) {
+      toast.error(`重命名失败：${res.error || '未知错误'}`)
+      return
+    }
+    // 重命名的是活动脚本 → 同步活动名（画布内容不变，下次保存写到新名）
+    if (oldName === activeScriptName) setActiveScriptName(newName)
+    await refreshScripts()
+  }
+
+  async function exportScript() {
+    // 工具栏入口：作用于活动脚本（右键入口在 ScriptList 里直接调 exportScriptAs）
+    if (!activeScriptName) return
+    await exportScriptAs(activeScriptName)
+  }
+
+  async function exportScriptAs(name: string) {
+    const res = await getIPC().scripts.exportScript(name)
+    if (res.ok) {
+      toast.success(`已导出：${res.filePath}`)
+    } else if (!res.canceled) {
+      toast.error(`导出失败：${res.error || '未知错误'}`)
+    }
+    // 用户取消保存对话框 → 静默
   }
 
   /** 覆盖确认通过后：根据来源决定建空脚本（新建命名）或写入当前内容（保存/另存为）。 */
@@ -519,12 +563,15 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
       </AlertDialogContent>
     </AlertDialog>
 
-    <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+    <AlertDialog
+      open={deleteTarget !== null}
+      onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>删除脚本</AlertDialogTitle>
           <AlertDialogDescription>
-            确定删除脚本「{activeScriptName}」吗？此操作不可撤销。
+            确定删除脚本「{deleteTarget}」吗？此操作不可撤销。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -533,6 +580,22 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <PromptDialog
+      open={renameTarget !== null}
+      onOpenChange={(open) => { if (!open) setRenameTarget(null) }}
+      title="重命名脚本"
+      description="请输入新的脚本名称"
+      defaultValue={renameTarget ? stripScriptExtension(renameTarget) : ''}
+      onConfirm={async (v) => {
+        const newName = normalizeScriptName(v)
+        if (!newName) {
+          toast.warning('脚本名无效（不能为空或含非法字符）')
+          return
+        }
+        await execRename(newName)
+      }}
+    />
     </>
   )
 
@@ -547,6 +610,8 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
           saveDisabled={!!scriptError}
           onNew={createScript}
           onSave={saveScript}
+          onRename={renameScript}
+          onExport={exportScript}
           onDelete={deleteScript}
           onRun={runScript}
           onStop={stopScript}
@@ -587,6 +652,9 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
                   await selectScript(name)
                   setUiState(closeSidePanel)
                 }}
+                onRename={(name) => setRenameTarget(name)}
+                onDelete={(name) => setDeleteTarget(name)}
+                onExport={(name) => { void exportScriptAs(name) }}
               />
             </ScriptEditorSidePanel>
           ) : null}
