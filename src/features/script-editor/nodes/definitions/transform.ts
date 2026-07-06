@@ -19,5 +19,6 @@ export const TRANSFORM_NODES = {
   ]),
   'transform-case': b.def('transform-case', 'transform', '大小写转换', [b.dataIn()], [b.dataOut()], [
     b.selectControl('case', '转换', ['转大写', '转小写'], '转大写')
-  ])
+  ]),
+  'transform-object': b.def('transform-object', 'transform', '对象', [], [b.dataOut()], [])
 }

@@ -28,7 +28,7 @@ describe('Rete setup skeleton', () => {
   it('creates DOM-free runtime metadata from the typed node registry', () => {
     const runtime = createScriptEditorRuntime()
 
-    expect(runtime.nodeCount).toBe(50)
+    expect(runtime.nodeCount).toBe(51)
     expect(runtime.categoryKeys).toContain('compare')
     expect(runtime.socketKeys).toEqual(['dataSocket', 'boolSocket', 'flowSocket', 'triggerSocket'])
   })
