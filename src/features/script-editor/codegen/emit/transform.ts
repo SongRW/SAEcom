@@ -90,6 +90,19 @@ function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
       const template = valueAsString(config.template, '设备{1}: 值{2}, 状态{3}').replace(/\{(\d+)\}/g, (_, n) => `\${${inputs[Number(n) - 1] || '""'}}`)
       return `\`${template.replace(/`/g, '\\`')}\``
     }
+    case 'transform-object': {
+      const rawKeys = config.keys
+      const keys = Array.isArray(rawKeys) ? (rawKeys as Array<{ id: string; name: string }>) : []
+      const pairs = keys
+        .map((entry) => {
+          const trimmed = String(entry?.name ?? '').trim()
+          if (!trimmed) return null
+          const val = getInputVar(ctx, node, `key_${entry.id}`, 'null')
+          return `${jsString(trimmed)}: ${val}`
+        })
+        .filter((p): p is string => p !== null)
+      return `{ ${pairs.join(', ')} }`
+    }
     default:
       return input
   }

@@ -625,4 +625,64 @@ describe('Rete script editor codegen', () => {
     expect(code).toContain('[OK]')
     expect(code).toContain('[TO]')
   })
+
+  it('generates object literal from transform-object keys', () => {
+    const nodes = [
+      { id: 'src1', key: 'input-manual', data: { content: 'a', mode: 'text' } },
+      { id: 'src2', key: 'input-manual', data: { content: 'b', mode: 'text' } },
+      {
+        id: 'obj',
+        key: 'transform-object',
+        data: {
+          keys: [
+            { id: 'k1', name: 'temperature' },
+            { id: 'k2', name: '湿度' }
+          ]
+        }
+      }
+    ]
+    const connections = [
+      { source: 'src1', sourceOutput: 'out', target: 'obj', targetInput: 'key_k1' },
+      { source: 'src2', sourceOutput: 'out', target: 'obj', targetInput: 'key_k2' }
+    ]
+    const code = generateCodeFromRete(graph(nodes, connections))
+    expect(code).toContain('"temperature": _out_src1')
+    expect(code).toContain('"湿度": _out_src2')
+  })
+
+  it('skips empty-named keys in transform-object', () => {
+    const nodes = [
+      { id: 'src1', key: 'input-manual', data: { content: 'a', mode: 'text' } },
+      {
+        id: 'obj',
+        key: 'transform-object',
+        data: { keys: [{ id: 'k1', name: '' }, { id: 'k2', name: 'ok' }] }
+      }
+    ]
+    const connections = [
+      { source: 'src1', sourceOutput: 'out', target: 'obj', targetInput: 'key_k1' },
+      { source: 'src1', sourceOutput: 'out', target: 'obj', targetInput: 'key_k2' }
+    ]
+    const code = generateCodeFromRete(graph(nodes, connections))
+    expect(code).toContain('"ok": _out_src1')
+    expect(code).not.toContain('"": ')
+  })
+
+  it('uses null for unconnected transform-object ports', () => {
+    const nodes = [
+      {
+        id: 'obj',
+        key: 'transform-object',
+        data: { keys: [{ id: 'k1', name: 'x' }] }
+      }
+    ]
+    const code = generateCodeFromRete(graph(nodes, []))
+    expect(code).toContain('"x": null')
+  })
+
+  it('generates empty object when transform-object has no keys', () => {
+    const nodes = [{ id: 'obj', key: 'transform-object', data: { keys: [] } }]
+    const code = generateCodeFromRete(graph(nodes, []))
+    expect(code).toContain('var _out_obj = {  };')
+  })
 })
