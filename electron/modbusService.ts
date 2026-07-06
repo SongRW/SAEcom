@@ -85,3 +85,39 @@ function normalizeData(r: any): any[] {
   if (Array.isArray(r?.array)) return r.array
   return []
 }
+
+export interface WriteParams {
+  slaveId: number
+  functionCode: 5 | 6 | 15 | 16
+  startAddress: number
+  values: number[]
+}
+
+export async function writeOnce(entry: ModbusClientEntry, params: WriteParams): Promise<void> {
+  const c = entry.client
+  c.setID(params.slaveId)
+  c.setTimeout(2000)
+  const { functionCode: fc, startAddress: addr, values } = params
+  switch (fc) {
+    case 5: {
+      if (values.length !== 1) throw new Error('单写线圈(FC5)需要恰好 1 个值')
+      await c.writeCoil(addr, !!values[0])
+      return
+    }
+    case 6: {
+      if (values.length !== 1) throw new Error('单写寄存器(FC6)需要恰好 1 个值')
+      await c.writeRegister(addr, Number(values[0]))
+      return
+    }
+    case 15: {
+      await c.writeCoils(addr, values.map((v) => !!v))
+      return
+    }
+    case 16: {
+      await c.writeRegisters(addr, values.map((v) => Number(v)))
+      return
+    }
+    default:
+      throw new Error(`不支持的功能码: ${fc}`)
+  }
+}
