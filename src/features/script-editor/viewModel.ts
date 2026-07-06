@@ -34,6 +34,11 @@ export function normalizeScriptName(name: string): string | null {
   return trimmed.endsWith('.js') ? trimmed : `${trimmed}.js`
 }
 
+/** 去掉 .js 后缀用于重命名弹窗预填：Foo.js → Foo。无后缀原样返回。 */
+export function stripScriptExtension(name: string): string {
+  return name.replace(/\.js$/i, '')
+}
+
 /** 生成下一个默认脚本名：Script_1.js、Script_2.js……跳过已占用的编号，回填空缺。 */
 export function nextDefaultScriptName(existing: string[]): string {
   const taken = new Set(existing)

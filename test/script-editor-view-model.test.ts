@@ -7,7 +7,8 @@ import {
   fitGraphToView,
   groupNodesForPalette,
   nextDefaultScriptName,
-  normalizeScriptName
+  normalizeScriptName,
+  stripScriptExtension
 } from '../src/features/script-editor/viewModel'
 
 describe('script editor view model', () => {
@@ -117,5 +118,20 @@ describe('nextDefaultScriptName', () => {
 
   it('ignores unrelated files', () => {
     expect(nextDefaultScriptName(['notes.js', 'Script_1.js'])).toBe('Script_2.js')
+  })
+})
+
+describe('stripScriptExtension', () => {
+  it('去掉末尾 .js 后缀', () => {
+    expect(stripScriptExtension('Foo.js')).toBe('Foo')
+  })
+  it('无 .js 后缀时原样返回', () => {
+    expect(stripScriptExtension('Foo')).toBe('Foo')
+  })
+  it('只去掉末尾 .js，保留中间的点', () => {
+    expect(stripScriptExtension('a.b.js')).toBe('a.b')
+  })
+  it('大写 .JS 后缀也去掉（大小写不敏感）', () => {
+    expect(stripScriptExtension('Foo.JS')).toBe('Foo')
   })
 })
