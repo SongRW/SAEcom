@@ -1016,7 +1016,10 @@ ipcMain.handle('scripts:rename', (_e, { oldName, newName }) => {
   const next = path.join(scriptsDir, safeScriptName(newName))
   if (!fs.existsSync(old)) return { ok: false, error: '源脚本不存在' }
   if (old === next) return { ok: true }
-  if (fs.existsSync(next)) return { ok: false, error: '该名称已存在' }
+  // 仅大小写差异（如 Script_1.js → SCRIPT_1.js）：区分大小写的 FS 上是合法改名，
+  // 大小写不敏感的 FS（Windows/macOS 默认）上是 no-op；两种情况都应放行而非判为重名。
+  const caseOnly = old.toLowerCase() === next.toLowerCase()
+  if (!caseOnly && fs.existsSync(next)) return { ok: false, error: '该名称已存在' }
   try { fs.renameSync(old, next); return { ok: true } }
   catch (e) { return { ok: false, error: String((e as Error)?.message || e) } }
 })
