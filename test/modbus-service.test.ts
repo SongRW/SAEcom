@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readOnce, writeOnce, applyPolls, modbusClients, setModbusBroadcaster, setModbusClientFactory, ensureModbusOpen, closeModbus } from '../electron/modbusService'
+import { readOnce, writeOnce, applyPolls, modbusClients, setModbusBroadcaster, setModbusClientFactory, ensureModbusOpen, closeModbus, translateModbusError } from '../electron/modbusService'
 
 // 一个最小 mock client，模拟 modbus-serial 的方法签名
 function makeMockClient() {
@@ -288,5 +288,38 @@ describe('ensureModbusOpen / closeModbus', () => {
     expect(fakeClient.close).toHaveBeenCalled()
     expect(modbusClients.has('p1')).toBe(false)
     expect(events.some((e) => e.type === 'close')).toBe(true)
+  })
+})
+
+describe('translateModbusError', () => {
+  it('modbusCode 2 翻译为"非法地址(02)"', () => {
+    expect(translateModbusError({ modbusCode: 2, message: 'Modbus exception 2' })).toBe('从站异常：非法地址(02)')
+  })
+
+  it('modbusCode 1/3/4 分别翻译', () => {
+    expect(translateModbusError({ modbusCode: 1 })).toBe('从站异常：非法功能码(01)')
+    expect(translateModbusError({ modbusCode: 3 })).toBe('从站异常：非法值(03)')
+    expect(translateModbusError({ modbusCode: 4 })).toBe('从站异常：从站故障(04)')
+  })
+
+  it('未知 modbusCode 数字也走从站异常分支（带原始码）', () => {
+    expect(translateModbusError({ modbusCode: 6 })).toBe('从站异常：代码(06)')
+  })
+
+  it('普通 Error（无 modbusCode）回退到 message', () => {
+    expect(translateModbusError(new Error('timeout'))).toBe('timeout')
+  })
+
+  it('Node 网络/ socket 错误的字符串 code 不被误判为从站异常', () => {
+    // 关键：e.code='ETIMEDOUT' 是字符串，不应进从站异常分支
+    const netErr: any = new Error('connect ETIMEDOUT')
+    netErr.code = 'ETIMEDOUT'
+    expect(translateModbusError(netErr)).toBe('connect ETIMEDOUT')
+    expect(translateModbusError(netErr)).not.toMatch(/从站异常/)
+  })
+
+  it('旧属性名 modbusExceptionCode 已废弃——不再被读取', () => {
+    // 回归保护：modbus-serial v8 用 modbusCode，旧猜测的 modbusExceptionCode 不应触发翻译
+    expect(translateModbusError({ modbusExceptionCode: 2, message: 'x' })).toBe('x')
   })
 })

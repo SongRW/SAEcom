@@ -158,10 +158,13 @@ export function applyPolls(panelId: string, blocks: ModbusBlock[]) {
   }
 }
 
-// 把 modbus-serial / Modbus 异常翻译成可读中文消息
+// 把 modbus-serial / Modbus 异常翻译成可读中文消息。
+// modbus-serial (v8) 把从站异常码挂在 error.modbusCode（见 node_modules/modbus-serial/index.js）。
+// 注意：不能用 e.code 兜底——Node 网络/ socket 错误的 code 是字符串（如 'ETIMEDOUT'），
+// 会被误判为从站异常，违背"连接级 vs 请求级"错误分级。
 export function translateModbusError(e: any): string {
-  const code = e?.modbusExceptionCode ?? e?.code
-  if (code != null) {
+  const code = e?.modbusCode
+  if (typeof code === 'number') {
     const map: Record<number, string> = {
       1: '非法功能码(01)', 2: '非法地址(02)', 3: '非法值(03)', 4: '从站故障(04)',
     }
