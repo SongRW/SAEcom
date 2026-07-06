@@ -1,4 +1,4 @@
-import { describe, it, expectTypeOf } from 'vitest'
+import { describe, it, expect, expectTypeOf } from 'vitest'
 import type { WindowAPI, ModbusAPI, ModbusVariant, ModbusConnectOptions, ModbusBlock, ModbusBlockUpdate, ModbusWriteTarget, ModbusEvent } from '@shared/types'
 
 describe('Modbus IPC 类型契约', () => {
@@ -41,5 +41,22 @@ describe('Modbus IPC 类型契约', () => {
       onData: (cb: (u: ModbusBlockUpdate) => void) => () => void
       onEvent: (cb: (e: ModbusEvent) => void) => () => void
     }>()
+  })
+})
+
+describe('mock-api modbus 桩', () => {
+  it('导入 mock-api 后 window.api.modbus 被注入且为桩', async () => {
+    // node 环境无 window，按本仓库惯例在 globalThis 上挂最小 window 对象
+    const g = globalThis as Record<string, unknown>
+    g.window = {}
+    // IIFE 在 window.api 已存在时会 early-return，先清掉触发重装
+    delete (window as any).api
+    // 动态导入触发 IIFE 执行
+    await import('../src/shared/dev/mock-api')
+    expect(window.api).toBeDefined()
+    expect(window.api.modbus).toBeDefined()
+    expect(typeof window.api.modbus.open).toBe('function')
+    expect(typeof window.api.modbus.onData).toBe('function')
+    expect(typeof window.api.modbus.onEvent).toBe('function')
   })
 })

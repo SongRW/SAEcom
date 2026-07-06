@@ -45,6 +45,16 @@ import type { WindowAPI } from '@shared/types'
       onData: () => emptyUnsubscribe,
       onEvent: () => emptyUnsubscribe
     },
+    modbus: {
+      open: async () => ({ ok: true }),
+      close: async () => undefined,
+      read: async () => ({ values: [] }),
+      write: async () => ({ ok: true }),
+      setPolls: async () => undefined,
+      status: async () => 'closed',
+      onData: () => emptyUnsubscribe,
+      onEvent: () => emptyUnsubscribe
+    },
     tcp: {
       open: asyncOk,
       write: asyncOk,
