@@ -20,23 +20,15 @@ import { test, expect, NAV } from './fixtures'
  *  - 动态输入端口：[data-testid="input-key_<id>"]（setup.ts ScriptClassicNode 渲染 input-<key>，
  *    端口 key 为 key_<id>）
  *
- * ── 关于交互方式：键盘激活而非鼠标点击 ──────────────────────────────
- * Rete 渲染的节点内的按钮（key-add / key-remove）目前无法用鼠标点击触发：pointerdown/
- * mousedown/pointerup/mouseup 都能到达按钮，但浏览器合成的 `click` 事件被 Rete 区域/
- * 连接插件的 pointer 管线吞掉（React onClick 绑在 click 上，故不触发）。
- * 因此这里用「focus + Space」键盘激活按钮——这是合法的无障碍交互路径，走的是与鼠标点击
- * 完全相同的 React 处理函数（addKey/removeKey → commit → KeyListControl.setValue →
- * handleKeysChange → syncObjectNodePorts + area.update），同样覆盖了端口动态增删这一核心行为。
+ * ── 关于交互方式：真实鼠标点击 ─────────────────────────────────────
+ * key-add / key-remove 按钮用 Playwright 的 .click()（真实鼠标点击）触发。这要求按钮的
+ * onClick 能正常合成 click 事件——而 Rete 节点拖拽处理器原本会拦截 pointerdown 导致
+ * 节点移动、浏览器不再合成 click。KeyListControl.tsx 在 .script-key-list 容器上加了
+ * onPointerDown={(e) => e.stopPropagation()} 修复了这一问题，故这里可以直接 .click()。
+ * 用 .click()（而非早期的 focus + Space 键盘激活）才能真正回归验证该修复，防止回归。
  * 键名输入用 Playwright 的 fill()（派发 input 事件，触发 onChange），与真实键入一致。
- * 见本任务报告中的 CRITICAL 说明。
  * ──────────────────────────────────────────────────────────────────
  */
-
-/** 键盘激活一个按钮：focus 后按 Space（等价点击，走同一 React onClick 处理函数）。 */
-async function activateButton(page: import('@playwright/test').Page, button: import('@playwright/test').Locator): Promise<void> {
-  await button.focus()
-  await page.keyboard.press('Space')
-}
 
 test.describe('transform-object 节点', () => {
   test('动态增删键与端口', async ({ page }) => {
@@ -57,8 +49,8 @@ test.describe('transform-object 节点', () => {
 
     // 3) 添加两个键 → 期望出现 2 个键名输入 + 2 个动态输入端口
     const addBtn = node.locator('[data-testid="key-add"]')
-    await activateButton(page, addBtn)
-    await activateButton(page, addBtn)
+    await addBtn.click()
+    await addBtn.click()
 
     await expect(node.locator('[data-testid="key-name-k1"]')).toBeVisible({ timeout: 10000 })
     await expect(node.locator('[data-testid="key-name-k2"]')).toBeVisible({ timeout: 10000 })
@@ -72,7 +64,7 @@ test.describe('transform-object 节点', () => {
     await expect(node.locator('[data-testid="key-name-k1"]')).toHaveValue('temperature')
 
     // 5) 删除第一个键 → k1 键名输入与端口消失；k2（id 稳定不重编号）保留
-    await activateButton(page, node.locator('[data-testid="key-remove-k1"]'))
+    await node.locator('[data-testid="key-remove-k1"]').click()
     await expect(node.locator('[data-testid="key-name-k1"]')).toHaveCount(0)
     await expect(node.locator('[data-testid="input-key_k1"]')).toHaveCount(0)
     await expect(node.locator('[data-testid="key-name-k2"]')).toBeVisible()
@@ -93,7 +85,7 @@ test.describe('transform-object 节点', () => {
     const node = editor.locator('[data-testid="node"][data-node-key="transform-object"]')
     await expect(node).toBeVisible()
 
-    await activateButton(page, node.locator('[data-testid="key-add"]'))
+    await node.locator('[data-testid="key-add"]').click()
     await expect(node.locator('[data-testid="key-name-k1"]')).toBeVisible({ timeout: 10000 })
     await expect(node.locator('[data-testid="input-key_k1"]')).toBeVisible({ timeout: 10000 })
     await node.locator('[data-testid="key-name-k1"]').fill('temperature')

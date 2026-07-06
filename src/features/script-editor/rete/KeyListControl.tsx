@@ -62,7 +62,14 @@ export const KeyListControlView: FC<KeyListControlViewProps> = ({ data }) => {
   }
 
   return (
-    <div className="script-key-list" data-testid="key-list">
+    <div
+      className="script-key-list"
+      data-testid="key-list"
+      // 阻止 pointerdown 冒泡到 Rete 节点的拖拽处理器：否则点击按钮/输入框会
+      // 触发节点拖动，浏览器因 down/up 目标不一致而不再合成 click 事件，
+      // 导致按钮的 onClick 不触发（鼠标点不动）。输入框同理会被拖动抢走焦点。
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {keys.map((entry) => (
         <div className="script-key-list__row" key={entry.id}>
           <input
