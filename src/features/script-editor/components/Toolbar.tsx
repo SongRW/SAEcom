@@ -1,10 +1,12 @@
 import {
   ArrowsInCardinal,
   ArrowsOutCardinal,
+  DownloadSimple,
   FilePlus as FilePlus2,
   FloppyDisk as Save,
   FrameCorners,
   Minus,
+  PencilSimple,
   Play,
   PushPin,
   Stop as Square,
@@ -25,6 +27,8 @@ interface ToolbarProps {
   saveDisabled?: boolean
   onNew: () => void
   onSave: () => void
+  onRename: () => void
+  onExport: () => void
   onDelete: () => void
   onRun: () => void
   onStop: () => void
@@ -46,6 +50,8 @@ export function Toolbar({
   saveDisabled,
   onNew,
   onSave,
+  onRename,
+  onExport,
   onDelete,
   onRun,
   onStop,
@@ -72,6 +78,14 @@ export function Toolbar({
         <Button size="sm" variant="outline" title="保存" onClick={onSave} disabled={saveDisabled}>
           <Save data-icon="inline-start" />
           保存
+        </Button>
+        <Button size="sm" variant="outline" title="重命名" onClick={onRename} disabled={!activeScriptName}>
+          <PencilSimple data-icon="inline-start" />
+          重命名
+        </Button>
+        <Button size="sm" variant="outline" title="导出" onClick={onExport} disabled={!activeScriptName}>
+          <DownloadSimple data-icon="inline-start" />
+          导出
         </Button>
         <Button size="sm" variant="outline" title="删除" onClick={onDelete} disabled={!activeScriptName}>
           <Trash2 data-icon="inline-start" />
