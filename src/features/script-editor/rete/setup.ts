@@ -20,6 +20,7 @@ import {
 } from '@/features/script-editor/nodeInteraction'
 import type { GraphEditorConnection, GraphEditorNode, GraphEditorState } from '@/features/script-editor/rete/graphState'
 import type { ScriptAreaExtra, ScriptConnection, ScriptNode, ScriptSchemes } from '@/features/script-editor/rete/types'
+import { KeyListControl, KeyListControlView, type KeyEntry } from '@/features/script-editor/rete/KeyListControl'
 
 const socketInstances: Record<SocketKind, ClassicPreset.Socket> = {
   dataSocket: new ClassicPreset.Socket(SOCKETS.dataSocket.label),
@@ -143,6 +144,15 @@ export function createClassicNodeFromGraphNode(graphNode: GraphEditorNode): Scri
     }
   })
 
+  if (graphNode.key === OBJECT_NODE_KEY) {
+    const keys = objectNodeKeys(graphNode.data as Record<string, unknown> | undefined)
+    syncObjectNodePorts(node, keys)
+    if (!node.controls['keys']) {
+      node.addControl('keys', new KeyListControl(keys, () => {}))
+    }
+    node.height = objectNodeHeight(keys.length)
+  }
+
   return node
 }
 
@@ -171,6 +181,22 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
       node.data = { ...(node.data || {}), [key]: value }
       instance.options.onGraphChange?.({ type: 'node-data', id: node.id, key, value })
     }
+
+    if (node.key === OBJECT_NODE_KEY) {
+      const initialKeys = objectNodeKeys(graphNode.data as Record<string, unknown> | undefined)
+      if (node.controls['keys']) node.removeControl('keys')
+      const handleKeysChange = (next: KeyEntry[]): void => {
+        node.data = { ...(node.data || {}), keys: next }
+        syncObjectNodePorts(node, next)
+        node.height = objectNodeHeight(next.length)
+        void instance.area.update('node', String(node.id))
+        instance.options.onGraphChange?.({ type: 'node-data', id: node.id, key: 'keys', value: next })
+      }
+      node.addControl('keys', new KeyListControl(initialKeys, handleKeysChange))
+      syncObjectNodePorts(node, initialKeys)
+      node.height = objectNodeHeight(initialKeys.length)
+    }
+
     nodeMap.set(node.id, node)
     await instance.editor.addNode(node)
     await instance.area.translate(node.id, graphNode.position)
@@ -234,7 +260,17 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
   }))
   render.addPreset(ReactPresets.classic.setup({
     customize: {
-      node: () => ScriptClassicNode
+      node: () => ScriptClassicNode,
+      control: (context) => {
+        if (context.payload instanceof KeyListControl) {
+          // Rete passes `{ data: payload }` to the control component, where
+          // payload is typed as the generic ClassicPreset.Control. Our view
+          // accepts `{ data: KeyListControl }` (KeyListControl extends Control).
+          // Cast bridges the contravariant prop-shape mismatch.
+          return KeyListControlView as unknown as ComponentType<{ data: ClassicPreset.Control }>
+        }
+        return null
+      }
     }
   }))
   render.addPreset(ReactPresets.minimap.setup({ size: 200 }))
@@ -331,6 +367,45 @@ function calculateNodeHeight(definition: NodeDef): number {
   return Math.max(86, 58 + ports * 28 + controlRows * 24 + serialSummary)
 }
 
+const OBJECT_NODE_KEY = 'transform-object'
+
+function objectNodeKeys(data: Record<string, unknown> | undefined): KeyEntry[] {
+  const raw = data?.keys
+  return Array.isArray(raw)
+    ? (raw as unknown[]).map((entry) => ({
+        id: String((entry as KeyEntry)?.id ?? ''),
+        name: String((entry as KeyEntry)?.name ?? '')
+      })).filter((entry) => entry.id)
+    : []
+}
+
+function objectNodeHeight(keyCount: number): number {
+  const ports = Math.max(keyCount, 1)
+  return Math.max(86, 58 + ports * 28 + 24)
+}
+
+/**
+ * 同步 transform-object 节点的输入端口，使其与 keys 列表一致。
+ * 可安全重复调用：补齐缺失端口、移除多余端口，不触碰控件。
+ */
+function syncObjectNodePorts(node: ScriptNode, keys: KeyEntry[]): void {
+  const desired = new Set(keys.map((entry) => `key_${entry.id}`))
+  Object.keys(node.inputs).forEach((portKey) => {
+    if (portKey.startsWith('key_') && !desired.has(portKey)) {
+      node.removeInput(portKey as keyof ScriptNode['inputs'])
+    }
+  })
+  keys.forEach((entry) => {
+    const portKey = `key_${entry.id}`
+    if (!node.hasInput(portKey)) {
+      node.addInput(
+        portKey,
+        new ClassicPreset.Input(socketInstances.dataSocket, entry.name || `key_${entry.id}`, false)
+      )
+    }
+  })
+}
+
 // 串口节点标题下方摘要：显示当前选中的 COM 端口 + 波特率。
 function renderSerialSummary(data: ScriptNode): ReactElement | null {
   if (data.key !== 'input-serial' && data.key !== 'output-serial') return null
@@ -352,7 +427,10 @@ const ScriptClassicNode: ComponentType<ClassicNodeProps> = ({ data, emit }) => {
   const outputs = sortEntries(data.outputs)
   const definition = data.key ? NODE_DEFINITIONS[data.key] : null
   const controlSpecs = new Map(definition?.controls.map((control) => [control.key, control]) || [])
-  const controls = sortEntries(data.controls).filter(([key]) => controlSpecs.get(key)?.type !== 'select')
+  const controls = sortEntries(data.controls).filter(([key]) => {
+    if (key === 'keys' && data.key === OBJECT_NODE_KEY) return true
+    return controlSpecs.get(key)?.type !== 'select'
+  })
   const controlLabels = new Map(definition?.controls.map((control) => [control.key, control.label]) || [])
 
   return createElement(
