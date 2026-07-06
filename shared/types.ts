@@ -298,6 +298,8 @@ export interface ScriptsAPI {
   read: (name: string) => Promise<string>
   write: (name: string, content: string) => Promise<unknown>
   delete: (name: string) => Promise<unknown>
+  rename: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>
+  exportScript: (name: string) => Promise<{ ok: boolean; canceled?: boolean; error?: string; filePath?: string }>
   run: (code: string, ctx: ScriptRunContext) => Promise<{ runId: string }>
   stop: (runId: string) => Promise<unknown>
   onEnded: (cb: (p: ScriptEndedPayload) => void) => () => void

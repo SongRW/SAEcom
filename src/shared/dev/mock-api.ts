@@ -107,6 +107,8 @@ import type { WindowAPI } from '@shared/types'
       read: async () => '/* SAE_GRAPH_START\n{\"nodes\":[],\"connections\":[]}\nSAE_GRAPH_END */\n',
       write: asyncOk,
       delete: asyncOk,
+      rename: async () => ({ ok: true }),
+      exportScript: async () => ({ ok: true, filePath: '/mock/export.js' }),
       run: async () => ({ ok: true, runId: 'web-preview-run' }),
       stop: asyncOk,
       onEnded: () => emptyUnsubscribe,
