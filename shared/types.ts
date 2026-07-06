@@ -102,6 +102,60 @@ export interface ScriptLogPayload {
   line: string
 }
 
+// ============ Modbus ============
+
+export type ModbusVariant = 'rtu' | 'tcp' | 'ascii'
+
+export interface ModbusConnectOptions {
+  variant: ModbusVariant
+  // RTU/ASCII 串口参数
+  serialPath?: string
+  baudRate?: number
+  dataBits?: 7 | 8
+  stopBits?: 1 | 2
+  parity?: 'none' | 'even' | 'odd'
+  // TCP 参数
+  tcpHost?: string
+  tcpPort?: number
+}
+
+export interface ModbusBlock {
+  id: string
+  title?: string
+  slaveId: number                 // 1-247
+  functionCode: 1 | 2 | 3 | 4
+  startAddress: number            // 0-65535
+  quantity: number
+  pollEnabled: boolean
+  pollIntervalMs: number
+  displayFormat: 'signed' | 'unsigned' | 'hex' | 'binary'
+    | 'float32'           // big-endian, ABCD
+    | 'float32-swapped'   // 字交换, CDAB
+    | 'float32-byte'      // 字节交换, BADC
+    | 'float32-word-byte' // 字+字节交换, DCBA
+}
+
+export interface ModbusWriteTarget {
+  slaveId: number
+  functionCode: 5 | 6 | 15 | 16
+  startAddress: number
+  values: number[]
+}
+
+export interface ModbusBlockUpdate {
+  panelId: string
+  blockId: string
+  values: number[]
+  ts: number
+  error?: string
+}
+
+export interface ModbusEvent {
+  id: string
+  type: 'open' | 'close' | 'error'
+  message?: string
+}
+
 // ============ 脚本编辑器图结构 ============
 
 export type SocketKind = 'dataSocket' | 'boolSocket' | 'flowSocket' | 'triggerSocket'
@@ -131,7 +185,7 @@ export interface ControlSpec {
   label: string
   default?: unknown
   options?: string[]
-  source?: 'serial-panels' | 'serial-ports'
+  source?: 'serial-panels' | 'serial-ports' | 'modbus-panels'
   required?: boolean
 }
 
@@ -178,6 +232,17 @@ export interface SerialAPI {
   write: (id: string, data: string, mode?: WriteMode, append?: AppendMode, encoding?: string) => Promise<WriteResult>
   onData: (cb: (p: DataPayload) => void) => () => void
   onEvent: (cb: (e: SerialEvent) => void) => () => void
+}
+
+export interface ModbusAPI {
+  open: (panelId: string, options: ModbusConnectOptions) => Promise<{ ok: boolean; message?: string }>
+  close: (panelId: string) => Promise<void>
+  read: (panelId: string, slaveId: number, fc: 1 | 2 | 3 | 4, addr: number, qty: number) => Promise<{ values: number[]; error?: string }>
+  write: (panelId: string, target: ModbusWriteTarget) => Promise<{ ok: boolean; error?: string }>
+  setPolls: (panelId: string, blocks: ModbusBlock[]) => Promise<void>
+  status: (panelId: string) => Promise<'closed' | 'opening' | 'open' | 'error'>
+  onData: (cb: (u: ModbusBlockUpdate) => void) => () => void
+  onEvent: (cb: (e: ModbusEvent) => void) => () => void
 }
 
 export interface TcpAPI {
@@ -347,6 +412,7 @@ export interface ThemeAPI {
 
 export interface WindowAPI {
   serial: SerialAPI
+  modbus: ModbusAPI
   tcp: TcpAPI
   tcpServer: TcpServerAPI
   tcpShare: TcpShareAPI

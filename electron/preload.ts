@@ -74,6 +74,19 @@ const api: WindowAPI = {
       return () => ipcRenderer.off('serial:event', listener)
     }
   },
+  // Modbus IPC 桥接占位 — 类型契约先行；实际主进程 handler 由后续任务实现，
+  // 在此之前调用 modbus:* invoke 会因无 handler 被 reject。
+  modbus: {
+    open: (panelId, options) => ipcRenderer.invoke('modbus:open', { panelId, options }),
+    close: (panelId) => ipcRenderer.invoke('modbus:close', { panelId }),
+    read: (panelId, slaveId, fc, addr, qty) =>
+      ipcRenderer.invoke('modbus:read', { panelId, slaveId, fc, addr, qty }),
+    write: (panelId, target) => ipcRenderer.invoke('modbus:write', { panelId, target }),
+    setPolls: (panelId, blocks) => ipcRenderer.invoke('modbus:setPolls', { panelId, blocks }),
+    status: (panelId) => ipcRenderer.invoke('modbus:status', { panelId }),
+    onData: (_cb) => () => {},
+    onEvent: (_cb) => () => {}
+  },
   panel: {
     popout: (id, title, historyStr, alwaysOnTop, isOpen, viewMode, optionsStr) =>
       ipcRenderer.invoke('panel:popout', { id, title, historyStr, alwaysOnTop, isOpen, viewMode, optionsStr }),
