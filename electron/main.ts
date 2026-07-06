@@ -1010,6 +1010,16 @@ ipcMain.handle('scripts:write', (_e, { name, content }) => {
   }
 })
 ipcMain.handle('scripts:delete', (_e, n: string) => { const f = path.join(scriptsDir, safeScriptName(n)); if (fs.existsSync(f)) fs.unlinkSync(f); return { ok: true } })
+ipcMain.handle('scripts:rename', (_e, { oldName, newName }) => {
+  ensureScriptsDir()
+  const old = path.join(scriptsDir, safeScriptName(oldName))
+  const next = path.join(scriptsDir, safeScriptName(newName))
+  if (!fs.existsSync(old)) return { ok: false, error: '源脚本不存在' }
+  if (old === next) return { ok: true }
+  if (fs.existsSync(next)) return { ok: false, error: '该名称已存在' }
+  try { fs.renameSync(old, next); return { ok: true } }
+  catch (e) { return { ok: false, error: String((e as Error)?.message || e) } }
+})
 ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
   const runId = randomUUID()
   const logs: string[] = []
