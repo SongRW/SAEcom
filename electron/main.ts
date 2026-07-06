@@ -21,6 +21,10 @@ import {
   swapBytes,
   updateLastRecv
 } from './scriptSandbox'
+import {
+  modbusClients, ensureModbusOpen, closeModbus, readOnce, writeOnce,
+  applyPolls, setModbusBroadcaster,
+} from './modbusService'
 
 let iconv: any = null
 try { iconv = require('iconv-lite') } catch { iconv = null }
@@ -53,6 +57,13 @@ const RENDERER_DIST = path.join(__dirname, '../renderer/src')
 const runningScripts = new Map<string, any>()
 const ports = new Map<string, any>()
 const scriptWatchers = new Map<string, Map<string, any>>()
+
+// 把 BrowserWindow 广播能力注入 modbus 服务
+setModbusBroadcaster((channel, payload) => {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send(channel, payload)
+  }
+})
 
 const configPath = path.join(app.getPath('userData'), 'panels.json')
 const commandsPath = path.join(app.getPath('userData'), 'commands.json')
@@ -737,6 +748,36 @@ ipcMain.handle('serial:close', async (_e, { id }) => {
 
 
 ipcMain.handle('serial:write', async (_e, a: any) => writeToSerial(a.id, a.data, a.mode, a.append, a.encoding))
+
+// ============ Modbus ============
+ipcMain.handle('modbus:open', async (_e, panelId: string, opts: any) => ensureModbusOpen(panelId, opts))
+ipcMain.handle('modbus:close', async (_e, panelId: string) => { await closeModbus(panelId); return undefined })
+ipcMain.handle('modbus:read', async (_e, panelId: string, slaveId: number, fc: 1 | 2 | 3 | 4, addr: number, qty: number) => {
+  const entry = modbusClients.get(panelId)
+  if (!entry) return { values: [], error: 'Modbus 面板未连接' }
+  try {
+    const values = await readOnce(entry, { slaveId, functionCode: fc, startAddress: addr, quantity: qty })
+    return { values, error: undefined }
+  } catch (e: any) {
+    return { values: [], error: String(e?.message ?? e) }
+  }
+})
+ipcMain.handle('modbus:write', async (_e, panelId: string, target: any) => {
+  const entry = modbusClients.get(panelId)
+  if (!entry) return { ok: false, error: 'Modbus 面板未连接' }
+  try {
+    await writeOnce(entry, target)
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) }
+  }
+})
+ipcMain.handle('modbus:setPolls', async (_e, panelId: string, blocks: any[]) => {
+  applyPolls(panelId, blocks)
+  return undefined
+})
+ipcMain.handle('modbus:status', async (_e, panelId: string) => modbusClients.get(panelId)?.status ?? 'closed')
+
 ipcMain.handle('file:readHex', (_e, filePath: string) => {
   try {
     const buf = fs.readFileSync(filePath)
@@ -1842,6 +1883,12 @@ app.on('window-all-closed', () => {
   // 清理所有持有 win/sender 引用的资源 map，避免泄漏 + 向已销毁 webContents 发消息。
   // 各清理方式对齐对应的 IPC handler（tcp:close / tcpServer:stop / tcpShare:stop / scripts:stop）。
   ports.forEach(({ port }) => { try { port.close() } catch { } })
+  // 关闭所有 Modbus 连接
+  modbusClients.forEach((entry) => {
+    for (const p of entry.polls.values()) { if (p.timer) clearInterval(p.timer) }
+    try { entry.client?.close?.(() => {}) } catch { /* ignore */ }
+  })
+  modbusClients.clear()
   // TCP 客户端 socket：end + destroy
   sockets.forEach((entry) => { entry.manualClose = true; try { entry.socket?.end(); entry.socket?.destroy() } catch { } })
   sockets.clear()
