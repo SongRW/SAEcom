@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, shell, webUtils } from 'electron'
-import type { WindowAPI } from '../shared/types'
+import type { WindowAPI, ModbusBlockUpdate, ModbusEvent } from '../shared/types'
 
 const api: WindowAPI = {
   tcp: {
@@ -74,18 +74,25 @@ const api: WindowAPI = {
       return () => ipcRenderer.off('serial:event', listener)
     }
   },
-  // Modbus IPC 桥接占位 — 类型契约先行；实际主进程 handler 由后续任务实现，
-  // 在此之前调用 modbus:* invoke 会因无 handler 被 reject。
+  // Modbus IPC 桥接。主进程 handler 用位置参数（见 main.ts 的 modbus:* 注册）。
   modbus: {
-    open: (panelId, options) => ipcRenderer.invoke('modbus:open', { panelId, options }),
-    close: (panelId) => ipcRenderer.invoke('modbus:close', { panelId }),
+    open: (panelId, options) => ipcRenderer.invoke('modbus:open', panelId, options),
+    close: (panelId) => ipcRenderer.invoke('modbus:close', panelId),
     read: (panelId, slaveId, fc, addr, qty) =>
-      ipcRenderer.invoke('modbus:read', { panelId, slaveId, fc, addr, qty }),
-    write: (panelId, target) => ipcRenderer.invoke('modbus:write', { panelId, target }),
-    setPolls: (panelId, blocks) => ipcRenderer.invoke('modbus:setPolls', { panelId, blocks }),
-    status: (panelId) => ipcRenderer.invoke('modbus:status', { panelId }),
-    onData: (_cb) => () => {},
-    onEvent: (_cb) => () => {}
+      ipcRenderer.invoke('modbus:read', panelId, slaveId, fc, addr, qty),
+    write: (panelId, target) => ipcRenderer.invoke('modbus:write', panelId, target),
+    setPolls: (panelId, blocks) => ipcRenderer.invoke('modbus:setPolls', panelId, blocks),
+    status: (panelId) => ipcRenderer.invoke('modbus:status', panelId),
+    onData: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, payload: ModbusBlockUpdate) => cb(payload)
+      ipcRenderer.on('modbus:data', listener)
+      return () => ipcRenderer.off('modbus:data', listener)
+    },
+    onEvent: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, payload: ModbusEvent) => cb(payload)
+      ipcRenderer.on('modbus:event', listener)
+      return () => ipcRenderer.off('modbus:event', listener)
+    }
   },
   panel: {
     popout: (id, title, historyStr, alwaysOnTop, isOpen, viewMode, optionsStr) =>
