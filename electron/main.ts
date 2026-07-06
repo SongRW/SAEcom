@@ -1020,6 +1020,20 @@ ipcMain.handle('scripts:rename', (_e, { oldName, newName }) => {
   try { fs.renameSync(old, next); return { ok: true } }
   catch (e) { return { ok: false, error: String((e as Error)?.message || e) } }
 })
+ipcMain.handle('scripts:export', async (_e, name: string) => {
+  const src = path.join(scriptsDir, safeScriptName(name))
+  if (!fs.existsSync(src)) return { ok: false, error: '脚本不存在' }
+  const content = fs.readFileSync(src, 'utf-8')
+  const defaultPath = String(name || '').replace(/\.js$/i, '')
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: '导出脚本',
+    defaultPath,
+    filters: [{ name: 'JavaScript', extensions: ['js'] }]
+  })
+  if (canceled || !filePath) return { ok: false, canceled: true }
+  try { fs.writeFileSync(filePath, content, 'utf-8'); return { ok: true, filePath } }
+  catch (e) { return { ok: false, error: String((e as Error)?.message || e) } }
+})
 ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
   const runId = randomUUID()
   const logs: string[] = []
