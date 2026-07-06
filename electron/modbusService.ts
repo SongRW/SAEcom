@@ -169,3 +169,63 @@ export function translateModbusError(e: any): string {
   }
   return String(e?.message ?? e)
 }
+
+export async function ensureModbusOpen(
+  panelId: string,
+  opts: ModbusConnectOptions,
+): Promise<{ ok: boolean; message?: string }> {
+  // 已存在则先关
+  if (modbusClients.has(panelId)) {
+    await closeModbus(panelId).catch(() => {})
+  }
+
+  let client: any
+  try {
+    client = await clientFactory(opts)
+  } catch (e: any) {
+    const msg = String(e?.message ?? e)
+    broadcast('modbus:event', { id: panelId, type: 'error', message: msg })
+    return { ok: false, message: msg }
+  }
+
+  const entry: ModbusClientEntry = {
+    panelId, variant: opts.variant, client, connectOptions: opts,
+    polls: new Map(), status: 'opening',
+  }
+  modbusClients.set(panelId, entry)
+
+  try {
+    if (opts.variant === 'tcp') {
+      await client.connectTCP(opts.tcpHost, { port: opts.tcpPort ?? 502 })
+    } else if (opts.variant === 'rtu') {
+      // 阶段 3 实现；阶段 1 先抛错占位
+      throw new Error('RTU 连接将在阶段 3 实现')
+    } else if (opts.variant === 'ascii') {
+      throw new Error('ASCII 连接将在阶段 3 实现')
+    }
+    entry.status = 'open'
+    broadcast('modbus:event', { id: panelId, type: 'open' })
+    return { ok: true }
+  } catch (e: any) {
+    entry.status = 'error'
+    entry.lastError = String(e?.message ?? e)
+    modbusClients.delete(panelId)
+    try { await client.close() } catch { /* ignore */ }
+    const msg = String(e?.message ?? e)
+    broadcast('modbus:event', { id: panelId, type: 'error', message: msg })
+    return { ok: false, message: msg }
+  }
+}
+
+export async function closeModbus(panelId: string): Promise<void> {
+  const entry = modbusClients.get(panelId)
+  if (!entry) return
+  // 清 timers
+  for (const p of entry.polls.values()) {
+    if (p.timer) clearInterval(p.timer)
+  }
+  entry.polls.clear()
+  try { await entry.client?.close?.() } catch { /* ignore */ }
+  modbusClients.delete(panelId)
+  broadcast('modbus:event', { id: panelId, type: 'close' })
+}

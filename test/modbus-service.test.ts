@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readOnce, writeOnce, applyPolls, modbusClients, setModbusBroadcaster } from '../electron/modbusService'
+import { readOnce, writeOnce, applyPolls, modbusClients, setModbusBroadcaster, setModbusClientFactory, ensureModbusOpen, closeModbus } from '../electron/modbusService'
 
 // 一个最小 mock client，模拟 modbus-serial 的方法签名
 function makeMockClient() {
   return {
+    connectTCP: vi.fn().mockResolvedValue(undefined),
     setID: vi.fn(),
     setTimeout: vi.fn(),
     readCoils: vi.fn().mockResolvedValue({ data: [true, false, true] }),
@@ -218,5 +219,74 @@ describe('applyPolls', () => {
     applyPolls('p1', []) // 清空
     await vi.advanceTimersByTimeAsync(5000)
     expect(client.readHoldingRegisters.mock.calls.length).toBe(countAfterFirst) // 不再增长
+  })
+})
+
+describe('ensureModbusOpen / closeModbus', () => {
+  beforeEach(() => {
+    modbusClients.clear()
+    vi.useRealTimers()
+  })
+
+  it('TCP 连接成功：注入 client 工厂返回带 connectTCP 的 client，状态 open', async () => {
+    const fakeClient = makeMockClient()
+    fakeClient.connectTCP = vi.fn().mockResolvedValue(undefined)
+    setModbusClientFactory(async () => fakeClient)
+
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    const r = await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: '127.0.0.1', tcpPort: 502 })
+    expect(r.ok).toBe(true)
+    expect(fakeClient.connectTCP).toHaveBeenCalledWith('127.0.0.1', expect.objectContaining({ port: 502 }))
+    expect(modbusClients.get('p1')?.status).toBe('open')
+    expect(events.some((e) => e.type === 'open')).toBe(true)
+  })
+
+  it('连接失败：返回 ok:false，发 error 事件，不进入注册表', async () => {
+    const fakeClient = makeMockClient()
+    fakeClient.connectTCP = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
+    setModbusClientFactory(async () => fakeClient)
+
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    const r = await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: 'x', tcpPort: 502 })
+    expect(r.ok).toBe(false)
+    expect(r.message).toMatch(/ECONNREFUSED/)
+    expect(modbusClients.has('p1')).toBe(false)
+    expect(events.some((e) => e.type === 'error')).toBe(true)
+  })
+
+  it('已存在连接：先关旧的再重开', async () => {
+    const old = makeMockClient()
+    old.connectTCP = vi.fn().mockResolvedValue(undefined)
+    setModbusClientFactory(async () => old)
+    await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: 'a', tcpPort: 502 })
+
+    const fresh = makeMockClient()
+    fresh.connectTCP = vi.fn().mockResolvedValue(undefined)
+    setModbusClientFactory(async () => fresh)
+    await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: 'b', tcpPort: 502 })
+
+    expect(old.close).toHaveBeenCalled()
+    expect(modbusClients.get('p1')?.client).toBe(fresh)
+  })
+
+  it('closeModbus：清 timers、client.close、从注册表删除、发 close 事件', async () => {
+    const fakeClient = makeMockClient()
+    fakeClient.connectTCP = vi.fn().mockResolvedValue(undefined)
+    setModbusClientFactory(async () => fakeClient)
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: 'a', tcpPort: 502 })
+    // 注入一个轮询 timer
+    modbusClients.get('p1')!.polls.set('b1', { block: {} as any, timer: setInterval(() => {}, 1000) })
+
+    await closeModbus('p1')
+    expect(fakeClient.close).toHaveBeenCalled()
+    expect(modbusClients.has('p1')).toBe(false)
+    expect(events.some((e) => e.type === 'close')).toBe(true)
   })
 })
