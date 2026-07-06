@@ -121,3 +121,51 @@ export async function writeOnce(entry: ModbusClientEntry, params: WriteParams): 
       throw new Error(`不支持的功能码: ${fc}`)
   }
 }
+
+export function applyPolls(panelId: string, blocks: ModbusBlock[]) {
+  const entry = modbusClients.get(panelId)
+  if (!entry) return
+
+  // 清除所有现有 timers
+  for (const p of entry.polls.values()) {
+    if (p.timer) clearInterval(p.timer)
+  }
+  entry.polls.clear()
+
+  for (const block of blocks) {
+    const doRead = async () => {
+      try {
+        const values = await readOnce(entry, {
+          slaveId: block.slaveId,
+          functionCode: block.functionCode,
+          startAddress: block.startAddress,
+          quantity: block.quantity,
+        })
+        const update: ModbusBlockUpdate = { panelId, blockId: block.id, values, ts: Date.now() }
+        broadcast('modbus:data', update)
+      } catch (e: any) {
+        const update: ModbusBlockUpdate = {
+          panelId, blockId: block.id, values: [], ts: Date.now(), error: translateModbusError(e),
+        }
+        broadcast('modbus:data', update)
+      }
+    }
+
+    const intervalMs = Math.max(50, block.pollIntervalMs)
+    const timer = block.pollEnabled ? setInterval(() => { void doRead() }, intervalMs) : null
+    entry.polls.set(block.id, { block, timer })
+    if (block.pollEnabled) void doRead() // 立即首次读
+  }
+}
+
+// 把 modbus-serial / Modbus 异常翻译成可读中文消息
+export function translateModbusError(e: any): string {
+  const code = e?.modbusExceptionCode ?? e?.code
+  if (code != null) {
+    const map: Record<number, string> = {
+      1: '非法功能码(01)', 2: '非法地址(02)', 3: '非法值(03)', 4: '从站故障(04)',
+    }
+    return `从站异常：${map[code] ?? `代码(${String(code).padStart(2, '0')})`}`
+  }
+  return String(e?.message ?? e)
+}

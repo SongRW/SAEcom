@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { readOnce, writeOnce } from '../electron/modbusService'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { readOnce, writeOnce, applyPolls, modbusClients, setModbusBroadcaster } from '../electron/modbusService'
 
 // 一个最小 mock client，模拟 modbus-serial 的方法签名
 function makeMockClient() {
@@ -113,5 +113,110 @@ describe('writeOnce', () => {
     const entry = { client } as any
     await expect(writeOnce(entry, { slaveId: 1, functionCode: 6, startAddress: 0, values: [1, 2] }))
       .rejects.toThrow(/单写.*1 个值/)
+  })
+})
+
+describe('applyPolls', () => {
+  beforeEach(() => {
+    modbusClients.clear()
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('pollEnabled=true 的区块立即读一次 + 启动 interval', async () => {
+    const client = makeMockClient()
+    client.readHoldingRegisters.mockResolvedValue({ data: [11, 22] })
+    const entry: any = {
+      panelId: 'p1', variant: 'tcp', client,
+      connectOptions: { variant: 'tcp' }, polls: new Map(), status: 'open',
+    }
+    modbusClients.set('p1', entry)
+
+    const blocks: any[] = [
+      { id: 'b1', slaveId: 1, functionCode: 3, startAddress: 0, quantity: 2, pollEnabled: true, pollIntervalMs: 1000 },
+    ]
+    applyPolls('p1', blocks)
+
+    // 立即首次读
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.readHoldingRegisters).toHaveBeenCalledTimes(1)
+
+    // 推进一个周期后再读一次
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(client.readHoldingRegisters).toHaveBeenCalledTimes(2)
+  })
+
+  it('pollEnabled=false 的区块不启动 interval', async () => {
+    const client = makeMockClient()
+    const entry: any = {
+      panelId: 'p1', variant: 'tcp', client,
+      connectOptions: { variant: 'tcp' }, polls: new Map(), status: 'open',
+    }
+    modbusClients.set('p1', entry)
+
+    applyPolls('p1', [{ id: 'b1', slaveId: 1, functionCode: 3, startAddress: 0, quantity: 2, pollEnabled: false, pollIntervalMs: 1000 } as any])
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(client.readHoldingRegisters).not.toHaveBeenCalled()
+  })
+
+  it('轮询间隔 <50ms 兜底为 50ms', async () => {
+    const client = makeMockClient()
+    const entry: any = {
+      panelId: 'p1', variant: 'tcp', client,
+      connectOptions: { variant: 'tcp' }, polls: new Map(), status: 'open',
+    }
+    modbusClients.set('p1', entry)
+    applyPolls('p1', [{ id: 'b1', slaveId: 1, functionCode: 3, startAddress: 0, quantity: 1, pollEnabled: true, pollIntervalMs: 10 } as any])
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(49)
+    expect(client.readHoldingRegisters).toHaveBeenCalledTimes(1) // 只首次读
+    await vi.advanceTimersByTimeAsync(1)
+    expect(client.readHoldingRegisters).toHaveBeenCalledTimes(2) // 50ms 到点
+  })
+
+  it('读失败时广播 error，不抛出（不影响其他区块）', async () => {
+    const client = makeMockClient()
+    client.readHoldingRegisters.mockRejectedValue(new Error('timeout'))
+    client.readInputRegisters.mockResolvedValue({ data: [9] })
+    const events: any[] = []
+    // 注入 broadcaster
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    const entry: any = {
+      panelId: 'p1', variant: 'tcp', client,
+      connectOptions: { variant: 'tcp' }, polls: new Map(), status: 'open',
+    }
+    modbusClients.set('p1', entry)
+
+    applyPolls('p1', [
+      { id: 'b1', slaveId: 1, functionCode: 3, startAddress: 0, quantity: 1, pollEnabled: true, pollIntervalMs: 1000 } as any,
+      { id: 'b2', slaveId: 2, functionCode: 4, startAddress: 0, quantity: 1, pollEnabled: true, pollIntervalMs: 1000 } as any,
+    ])
+    await vi.advanceTimersByTimeAsync(0)
+
+    const e1 = events.find((e) => e.blockId === 'b1')
+    const e2 = events.find((e) => e.blockId === 'b2')
+    expect(e1.error).toBeTruthy()
+    expect(e2.values).toEqual([9])
+    expect(events).toHaveLength(2)
+  })
+
+  it('二次调用 applyPolls 清除旧 timers', async () => {
+    const client = makeMockClient()
+    const entry: any = {
+      panelId: 'p1', variant: 'tcp', client,
+      connectOptions: { variant: 'tcp' }, polls: new Map(), status: 'open',
+    }
+    modbusClients.set('p1', entry)
+
+    applyPolls('p1', [{ id: 'b1', slaveId: 1, functionCode: 3, startAddress: 0, quantity: 1, pollEnabled: true, pollIntervalMs: 1000 } as any])
+    await vi.advanceTimersByTimeAsync(0)
+    const countAfterFirst = client.readHoldingRegisters.mock.calls.length
+
+    applyPolls('p1', []) // 清空
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(client.readHoldingRegisters.mock.calls.length).toBe(countAfterFirst) // 不再增长
   })
 })
