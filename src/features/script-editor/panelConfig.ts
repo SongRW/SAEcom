@@ -110,6 +110,7 @@ export function createPanelConfigRef(nodeKey: string, panels: SerialPanelSummary
 }
 
 export function createDefaultNodeData(nodeKey: string, panels: SerialPanelSummary[] = []): Record<string, unknown> {
+  if (nodeKey === 'transform-object') return { keys: [] }
   const configRef = createPanelConfigRef(nodeKey, panels)
   const panelDefaults = configRef.kind === 'panel' ? { panelId: configRef.panelId } : {}
   const serialDefaults = isSerialNode(nodeKey)
@@ -131,6 +132,10 @@ export function createDefaultNodeData(nodeKey: string, panels: SerialPanelSummar
 }
 
 export function migrateNodeData(nodeKey: string, data: Record<string, unknown> = {}): Record<string, unknown> {
+  if (nodeKey === 'transform-object') {
+    return { keys: Array.isArray(data.keys) ? data.keys : [] }
+  }
+
   if (isSerialNode(nodeKey)) {
     return migrateSerialNodeData(nodeKey, data)
   }
@@ -269,6 +274,8 @@ export function validateNodeConfig(nodeKey: string, data: Record<string, unknown
       return String(configValue(data, configRef, 'path') || '').trim() ? [] : [`${nodeLabel(nodeKey)}：文件路径不能为空`]
     case 'output-variable':
       return String(data.name || '').trim() ? [] : ['变量存储：变量名不能为空']
+    case 'transform-object':
+      return []
     default:
       return []
   }
