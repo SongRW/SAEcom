@@ -186,10 +186,22 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
       const initialKeys = objectNodeKeys(graphNode.data as Record<string, unknown> | undefined)
       if (node.controls['keys']) node.removeControl('keys')
       const handleKeysChange = (next: KeyEntry[]): void => {
+        // 1) 更新内存 data
         node.data = { ...(node.data || {}), keys: next }
+        // 1.5) 删除将失去端口的连接（removeInput 不自动清理连接）
+        const nextPortKeys = new Set(next.map((entry) => `key_${entry.id}`))
+        instance.editor.getConnections()
+          .filter((connection) => connection.target === String(node.id)
+            && connection.targetInput.startsWith('key_')
+            && !nextPortKeys.has(connection.targetInput))
+          .forEach((connection) => { void instance.editor.removeConnection(connection.id) })
+        // 2) 同步端口
         syncObjectNodePorts(node, next)
+        // 3) 重算高度
         node.height = objectNodeHeight(next.length)
+        // 4) 轻量刷新节点视图
         void instance.area.update('node', String(node.id))
+        // 5) 通知上层持久化
         instance.options.onGraphChange?.({ type: 'node-data', id: node.id, key: 'keys', value: next })
       }
       node.addControl('keys', new KeyListControl(initialKeys, handleKeysChange))
