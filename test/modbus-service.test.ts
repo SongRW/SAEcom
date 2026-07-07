@@ -53,6 +53,16 @@ describe('readOnce', () => {
     expect(values).toEqual([0, 1])
   })
 
+  it('FC1 线圈按 qty 截断（真实 client 返回字节对齐的 8 位）', async () => {
+    // modbus-serial 解析 FC1 响应时返回整字节位数组（ceil(qty/8)*8），readOnce 必须按 qty 截断
+    const client = makeMockClient()
+    client.readCoils.mockResolvedValue({ data: [true, false, true, false, false, false, false, false] })
+    const entry = { client } as any
+    const values = await readOnce(entry, { slaveId: 1, functionCode: 1, startAddress: 0, quantity: 4 })
+    expect(values).toEqual([1, 0, 1, 0])
+    expect(values).toHaveLength(4)
+  })
+
   it('未知功能码抛错', async () => {
     const client = makeMockClient()
     const entry = { client } as any

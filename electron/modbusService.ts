@@ -28,6 +28,17 @@ function broadcast(channel: string, payload: unknown) {
   if (broadcaster) broadcaster(channel, payload)
 }
 
+// 连接超时：modbus-serial 的 connectTCP 在某些失败模式下会挂起（SYN 被 drop），
+// 用此超时确保 ensureModbusOpen 必有回复。请求级超时由 client.setTimeout 控制。
+const CONNECT_TIMEOUT_MS = 5000
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms)
+  })
+  return Promise.race([p, timeout]).finally(() => { if (timer) clearTimeout(timer) })
+}
+
 // modbus-serial client 工厂（可注入）。默认工厂在 main.ts 接线时设置。
 type ClientFactory = (opts: ModbusConnectOptions) => Promise<any>
 async function defaultClientFactory(_opts: ModbusConnectOptions): Promise<any> {
@@ -59,11 +70,13 @@ export async function readOnce(entry: ModbusClientEntry, params: ReadParams): Pr
   switch (fc) {
     case 1: {
       const r = await c.readCoils(addr, qty)
-      return normalizeData(r).map((b: unknown) => (b ? 1 : 0))
+      // 线圈响应按字节打包（ceil(qty/8) 字节），部分客户端解析后返回字节对齐长度，
+      // 按 qty 截断保证返回长度 == 请求数量。
+      return normalizeData(r).slice(0, qty).map((b: unknown) => (b ? 1 : 0))
     }
     case 2: {
       const r = await c.readDiscreteInputs(addr, qty)
-      return normalizeData(r).map((b: unknown) => (b ? 1 : 0))
+      return normalizeData(r).slice(0, qty).map((b: unknown) => (b ? 1 : 0))
     }
     case 3: {
       const r = await c.readHoldingRegisters(addr, qty)
@@ -199,7 +212,13 @@ export async function ensureModbusOpen(
 
   try {
     if (opts.variant === 'tcp') {
-      await client.connectTCP(opts.tcpHost, { port: opts.tcpPort ?? 502 })
+      // modbus-serial 的 connectTCP 在某些失败模式下（如防火墙 drop SYN）可能挂起，
+      // 用超时包装确保 IPC handler 必有回复（连接级错误必须可靠，见 spec 4.1）。
+      await withTimeout(
+        client.connectTCP(opts.tcpHost, { port: opts.tcpPort ?? 502 }),
+        CONNECT_TIMEOUT_MS,
+        `Modbus TCP 连接超时 (${opts.tcpHost}:${opts.tcpPort ?? 502})`
+      )
     } else if (opts.variant === 'rtu') {
       // 阶段 3 实现；阶段 1 先抛错占位
       throw new Error('RTU 连接将在阶段 3 实现')
@@ -213,7 +232,9 @@ export async function ensureModbusOpen(
     entry.status = 'error'
     entry.lastError = String(e?.message ?? e)
     modbusClients.delete(panelId)
-    try { await client.close() } catch { /* ignore */ }
+    // 连接失败后 client.close() 在 modbus-serial 内部可能挂起（端口对象未完全初始化），
+    // fire-and-forget 避免阻塞 IPC handler 的错误返回。
+    try { void Promise.resolve(client.close?.()).catch(() => {}) } catch { /* ignore */ }
     const msg = String(e?.message ?? e)
     broadcast('modbus:event', { id: panelId, type: 'error', message: msg })
     return { ok: false, message: msg }
