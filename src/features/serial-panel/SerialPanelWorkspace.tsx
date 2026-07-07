@@ -4,6 +4,7 @@ import { FloatingPane } from '@/features/serial-panel/components/FloatingPane'
 import { NewPanelDialog } from '@/features/serial-panel/components/NewPanelDialog'
 import { usePanelsStore } from '@/features/serial-panel/store'
 import { useSerialDataBus } from '@/features/serial-panel/dataBus'
+import { useModbusDataBus } from '@/features/modbus-panel/useModbusDataBus'
 import { useAppShell } from '@/shared/store/appShell'
 import { useIPC } from '@/shared/ipc'
 import { useOscilloscopeStore } from '@/features/oscilloscope/store'
@@ -22,6 +23,7 @@ const PORT_REFRESH_INTERVAL_MS = 3000
  */
 export function SerialPanelWorkspace() {
   useSerialDataBus() // 单次注册数据监听
+  useModbusDataBus() // modbus:data / modbus:event 监听（与 serial/tcp 总线并行）
   const ipc = useIPC()
   const load = usePanelsStore((s) => s.load)
   const loadKnownPorts = usePanelsStore((s) => s.loadKnownPorts)
