@@ -4,7 +4,7 @@
  * 改为纯数据，由 React 渲染。
  */
 
-import type { AppendMode } from '@shared/types'
+import type { AppendMode, ModbusBlock, ModbusConnectOptions } from '@shared/types'
 
 /** 串口连接参数 */
 export interface SerialOptions {
@@ -42,10 +42,24 @@ export interface PanelChunk {
 }
 
 /** 面板类型 */
-export type PanelType = 'serial' | 'tcp'
+export type PanelType = 'serial' | 'tcp' | 'modbus'
 
 /** 视图模式 */
 export type ViewMode = 'text' | 'hex'
+
+/** modbus 面板的运行/配置状态（复用 usePanelsStore，挂到 Panel.modbus） */
+export interface ModbusPanelState {
+  /** 连接参数（持久化） */
+  connectOptions: ModbusConnectOptions
+  /** 区块配置（持久化） */
+  blocks: ModbusBlock[]
+  /** 连接状态（运行时，不持久化） */
+  status: 'closed' | 'opening' | 'open' | 'error'
+  /** 最后错误（运行时） */
+  lastError?: string
+  /** 区块值缓存：blockId → { values, ts, error }（运行时，不持久化） */
+  blockValues: Record<string, { values: number[]; ts: number; error?: string }>
+}
 
 /** 单个浮动面板的完整状态（纯数据，无 DOM 引用） */
 export interface Panel {
@@ -85,6 +99,8 @@ export interface Panel {
   unread: number
   /** z-order（普通面板 10+递增；pin 面板 100000+） */
   z: number
+  /** modbus 面板专属状态（仅 type==='modbus' 时使用） */
+  modbus?: ModbusPanelState
 }
 
 /** 持久化的面板配置（对应 legacy exportPanelsConfig） */
