@@ -10,6 +10,7 @@ import { displayName } from '@/features/serial-panel/paneViewModel'
 import { usePaneDrag, usePaneResize, RESIZE_HANDLES } from '@/features/serial-panel/usePaneInteraction'
 import { clampGeometry } from '@/features/serial-panel/paneViewModel'
 import type { Panel, PanelGeometry } from '@/features/serial-panel/types'
+import { ModbusPanelBody } from '@/features/modbus-panel/ModbusPanelBody'
 
 interface FloatingPaneProps {
   panel: Panel
@@ -160,10 +161,16 @@ export function FloatingPane({ panel, containerRef }: FloatingPaneProps) {
             onExport={handleExport}
           />
         </div>
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <DataDisplay panel={panel} />
-        </div>
-        <SendBar panel={panel} />
+        {panel.type === 'modbus' && panel.modbus ? (
+          <ModbusPanelBody panel={panel} />
+        ) : (
+          <>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <DataDisplay panel={panel} />
+            </div>
+            <SendBar panel={panel} />
+          </>
+        )}
         {/* 8 向缩放手柄 */}
         {RESIZE_HANDLES.map((h) => (
           <div
