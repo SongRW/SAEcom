@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { getIPC } from '@/shared/ipc'
-import type { Panel, PanelChunk, PanelGeometry, PanelType, SendOptions, SerialOptions, ViewMode } from '@/features/serial-panel/types'
+import type { Panel, PanelChunk, PanelGeometry, ModbusPanelState, PanelType, SendOptions, SerialOptions, ViewMode } from '@/features/serial-panel/types'
+import type { ModbusBlock, ModbusConnectOptions } from '@shared/types'
 import { DEFAULT_SERIAL_OPTIONS, DEFAULT_SERIAL_SEND_OPTIONS, DEFAULT_PANEL_W, DEFAULT_PANEL_H, cascadeGeometry, parseLegacyGeometry, trimChunks } from '@/features/serial-panel/paneViewModel'
 
 /** chunk 数量软上限（对应 legacy LIMIT_VIEW_COUNT，避免无界增长） */
@@ -22,6 +23,8 @@ function genPanel(params: {
   options?: SerialOptions
   sendOptions?: SendOptions
   pinned?: boolean
+  /** modbus 面板专属配置/运行状态（仅 type==='modbus'） */
+  modbus?: ModbusPanelState
   /** 无显式 geometry 时按该序号做级联错位（复刻 legacy createPane 定位） */
   cascadeIndex?: number
 }): Panel {
@@ -46,7 +49,8 @@ function genPanel(params: {
     limitView: false,
     limitCount: LIMIT_VIEW_COUNT,
     unread: 0,
-    z: NORMAL_Z_BASE
+    z: NORMAL_Z_BASE,
+    modbus: params.modbus
   }
 }
 
@@ -71,7 +75,7 @@ interface PanelsState {
   loaded: boolean
 
   // ---- 面板生命周期 ----
-  addPanel: (params: { id: string; name?: string; type: PanelType; geometry?: PanelGeometry; options?: SerialOptions }) => boolean
+  addPanel: (params: { id: string; name?: string; type: PanelType; geometry?: PanelGeometry; options?: SerialOptions; modbus?: ModbusPanelState }) => boolean
   removePanel: (id: string) => void
   setActive: (id: string | null) => void
   setHidden: (id: string, hidden: boolean) => void
@@ -86,6 +90,10 @@ interface PanelsState {
   setPaneOpen: (id: string, open: boolean) => void
   /** 切换面板连接（open/close，含 IPC + 乐观更新） */
   togglePanelOpen: (id: string) => Promise<void>
+  setModbusStatus: (id: string, status: ModbusPanelState['status'], error?: string) => void
+  setModbusBlocks: (id: string, blocks: ModbusBlock[]) => void
+  setModbusConnectOptions: (id: string, opts: ModbusConnectOptions) => void
+  updateModbusBlockValue: (panelId: string, blockId: string, values: number[], ts: number, error?: string) => void
   updateOptions: (id: string, options: Partial<SerialOptions>) => void
   updateSendOptions: (id: string, options: Partial<SendOptions>) => void
   reorderList: (fromIndex: number, toIndex: number) => void
@@ -150,7 +158,11 @@ export const usePanelsStore = create<PanelsState>((set, get) => {
           top: `${p.geometry.y}px`,
           width: `${p.geometry.w}px`,
           height: `${p.geometry.h}px`,
-          note: p.note
+          note: p.note,
+          modbus: p.modbus ? {
+            connectOptions: p.modbus.connectOptions,
+            blocks: p.modbus.blocks,
+          } : undefined
         }
       })
     try {
@@ -168,7 +180,7 @@ export const usePanelsStore = create<PanelsState>((set, get) => {
     zCounter: 0,
     loaded: false,
 
-    addPanel({ id, name, type, geometry, options }) {
+    addPanel({ id, name, type, geometry, options, modbus }) {
       if (get().panels[id]) {
         // 已存在：聚焦
         get().setActive(id)
@@ -177,7 +189,7 @@ export const usePanelsStore = create<PanelsState>((set, get) => {
       // 面板数上限：超出拒绝，返回 false 让调用方提示用户
       if (get().listOrder.length >= MAX_PANELS) return false
       // 无显式 geometry 时按现有面板数级联错位，避免新面板恒定叠在 (30,30)
-      const panel = genPanel({ id, name, type, geometry, options, cascadeIndex: get().listOrder.length })
+      const panel = genPanel({ id, name, type, geometry, options, modbus, cascadeIndex: get().listOrder.length })
       set((s) => ({
         panels: { ...s.panels, [id]: panel },
         listOrder: [...s.listOrder, id]
@@ -277,25 +289,82 @@ export const usePanelsStore = create<PanelsState>((set, get) => {
       const ipc = getIPC()
       try {
         if (p.open) {
-          p.type === 'tcp' ? await ipc.tcp.close(id) : await ipc.serial.close(id)
+          // 关闭：仅调用 IPC，不强制改 open 状态——与 serial/tcp 一致，
+          // 实际 open=false 由主进程 close 事件回调（serial:event 'close' / modbus onEvent）驱动。
+          if (p.type === 'tcp') await ipc.tcp.close(id)
+          else if (p.type === 'modbus') await ipc.modbus.close(id)
+          else await ipc.serial.close(id)
         } else {
-          let res: { ok?: boolean; error?: string } | undefined
           if (p.type === 'tcp') {
             const m = id.match(/^tcp:\/\/([^:]+):(\d+)$/)
             if (!m) { get().appendSysLine(id, '[错误] TCP 地址格式无效'); return }
-            res = await ipc.tcp.open(m[1], Number(m[2]), p.options)
+            const res = await ipc.tcp.open(m[1], Number(m[2]), p.options)
+            if (res && res.ok === false) { get().appendSysLine(id, `[错误] ${res.error || '打开失败'}`); return }
+          } else if (p.type === 'modbus' && p.modbus) {
+            get().setModbusStatus(id, 'opening')
+            const res = await ipc.modbus.open(id, p.modbus.connectOptions)
+            if (!res.ok) { get().setModbusStatus(id, 'error', res.message); return }
+            get().setModbusStatus(id, 'open')
+            await ipc.modbus.setPolls(id, p.modbus.blocks)
           } else {
-            res = await ipc.serial.open(id, p.options)
-          }
-          if (res && res.ok === false) {
-            get().appendSysLine(id, `[错误] ${res.error || '打开失败'}`)
-            return
+            const res = await ipc.serial.open(id, p.options)
+            if (res && res.ok === false) { get().appendSysLine(id, `[错误] ${res.error || '打开失败'}`); return }
           }
           get().setPaneOpen(id, true) // 乐观更新
         }
       } catch (e) {
         get().appendSysLine(id, `[错误] ${String(e)}`)
       }
+    },
+
+    setModbusStatus(id, status, error) {
+      set((s) => {
+        const p = s.panels[id]
+        if (!p?.modbus) return s
+        return { panels: { ...s.panels, [id]: { ...p, modbus: { ...p.modbus, status, lastError: error } } } }
+      })
+    },
+
+    setModbusBlocks(id, blocks) {
+      set((s) => {
+        const p = s.panels[id]
+        if (!p?.modbus) return s
+        return { panels: { ...s.panels, [id]: { ...p, modbus: { ...p.modbus, blocks } } } }
+      })
+      persist()
+      // 若已连接，刷新主进程轮询配置
+      const p = get().panels[id]
+      if (p?.modbus?.status === 'open') {
+        try { getIPC().modbus.setPolls(id, blocks) } catch { /* web 预览 */ }
+      }
+    },
+
+    setModbusConnectOptions(id, opts) {
+      set((s) => {
+        const p = s.panels[id]
+        if (!p?.modbus) return s
+        return { panels: { ...s.panels, [id]: { ...p, modbus: { ...p.modbus, connectOptions: opts } } } }
+      })
+      persist()
+    },
+
+    updateModbusBlockValue(panelId, blockId, values, ts, error) {
+      set((s) => {
+        const p = s.panels[panelId]
+        if (!p?.modbus) return s
+        return {
+          panels: {
+            ...s.panels,
+            [panelId]: {
+              ...p,
+              modbus: {
+                ...p.modbus,
+                blockValues: { ...p.modbus.blockValues, [blockId]: { values, ts, error } },
+              },
+            },
+          },
+        }
+      })
     },
 
     updateOptions(id, options) {
@@ -465,7 +534,7 @@ export const usePanelsStore = create<PanelsState>((set, get) => {
       let zCounter = 0
       configs.forEach((c, idx) => {
         const id = String(c.id ?? '')
-        const type = (c.type as PanelType) || (id.startsWith('tcp://') ? 'tcp' : 'serial')
+        const type = (c.type as PanelType) || (id.startsWith('tcp://') ? 'tcp' : id.startsWith('modbus://') ? 'modbus' : 'serial')
         // geometry：优先新版 geometry；否则解析 legacy left/top/width/height（去 "px"）
         const legacyGeo = parseLegacyGeometry(c)
         const geometry = (c.geometry as PanelGeometry | undefined) ?? legacyGeo ?? undefined
@@ -490,7 +559,13 @@ export const usePanelsStore = create<PanelsState>((set, get) => {
           },
           pinned: c.pinned as boolean | undefined,
           // 既无新版 geometry 也无 legacy 几何时，按序级联错位
-          cascadeIndex: geometry ? undefined : idx
+          cascadeIndex: geometry ? undefined : idx,
+          modbus: c.modbus ? {
+            connectOptions: (c.modbus as any).connectOptions,
+            blocks: (c.modbus as any).blocks ?? [],
+            status: 'closed' as const,
+            blockValues: {},
+          } : undefined,
         })
         p.hidden = !!c.hidden
         // 向后兼容：旧持久化数据无 limitView/limitCount，缺失时保持 genPanel 默认值
