@@ -6,13 +6,14 @@ import { useIPC } from '@/shared/ipc'
 import { useSettingsStore } from '@/shared/store/settings'
 import { formatBytes, nowTs, renderChunks, DEFAULT_SERIAL_OPTIONS } from '@/features/serial-panel/paneViewModel'
 import type { PanelChunk, PanelType, ViewMode, SerialOptions } from '@/features/serial-panel/types'
-import type { AppendMode } from '@shared/types'
+import type { AppendMode, ModbusBlock, ModbusConnectOptions } from '@shared/types'
 import { ArrowsInCardinal, PushPin, PushPinSlash, Code, TextAa, Power, PaperPlane } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TitleBarChrome } from '@/features/titlebar'
+import ModbusBlockTable from '@/features/modbus-panel/components/ModbusBlockTable'
 
 const APPEND_OPTIONS: { value: AppendMode; label: string }[] = [
   { value: 'none', label: '无' },
@@ -27,7 +28,12 @@ function readQuery() {
   const id = p.get('id') || ''
   const title = p.get('title') || id
   const isOpen = p.get('isOpen') === '1'
-  const viewMode = (p.get('viewMode') as ViewMode) || 'text'
+  const viewModeRaw = p.get('viewMode') || 'text'
+  // modbus 面板借用 viewMode 槽位传 'modbus' 标识（见 FloatingPane.handlePopout）
+  const isModbus = viewModeRaw === 'modbus'
+  const type: PanelType = isModbus ? 'modbus'
+    : id.startsWith('tcp://') ? 'tcp' : 'serial'
+  const viewMode = isModbus ? 'text' : (viewModeRaw as ViewMode)
   let opts: SerialOptions = { ...DEFAULT_SERIAL_OPTIONS }
   try {
     const o = JSON.parse(p.get('opts') || '{}')
@@ -35,8 +41,12 @@ function readQuery() {
   } catch {
     /* 默认 */
   }
-  const type: PanelType = id.startsWith('tcp://') ? 'tcp' : 'serial'
-  return { id, title, isOpen, viewMode, opts, type }
+  // modbus 配置从 opts 解析（serial/tcp 仍解析 SerialOptions）
+  let modbusData: { connectOptions: ModbusConnectOptions; blocks: ModbusBlock[]; blockValues: Record<string, { values: number[]; ts: number; error?: string }> } | null = null
+  if (isModbus) {
+    try { modbusData = JSON.parse(p.get('opts') || 'null') } catch { /* ignore */ }
+  }
+  return { id, title, isOpen, viewMode, opts, type, modbusData }
 }
 
 /**
@@ -55,6 +65,10 @@ function PopoutPanel() {
   const [open, setOpen] = useState(q.isOpen)
   const [pinned, setPinned] = useState(true) // popout 默认置顶（对应 legacy alwaysOnTop 默认 true）
   const scrollRef = useRef<HTMLDivElement>(null)
+  // modbus 本地状态（仅 type==='modbus' 时使用；由主窗驱动连接状态，此处只读显示）
+  const [modbusBlocks, setModbusBlocks] = useState<ModbusBlock[]>(q.modbusData?.blocks ?? [])
+  const [blockValues, setBlockValues] = useState<Record<string, { values: number[]; ts: number; error?: string }>>(q.modbusData?.blockValues ?? {})
+  const [modbusStatus, setModbusStatus] = useState<'closed' | 'open' | 'error'>(q.isOpen ? 'open' : 'closed')
 
   // 收历史 chunks
   useEffect(() => {
@@ -109,13 +123,32 @@ function PopoutPanel() {
     const offSerialEvent = ipc.serial.onEvent(onEvent)
     const offTcpData = ipc.tcp?.onData(onData)
     const offTcpEvent = ipc.tcp?.onEvent(onEvent)
+    // modbus 监听：按 panelId 过滤，更新区块值缓存与连接状态
+    let offModbusData: (() => void) | undefined
+    let offModbusEvent: (() => void) | undefined
+    if (q.type === 'modbus') {
+      const onModbusData = (u: { panelId: string; blockId: string; values: number[]; ts: number; error?: string }) => {
+        if (u.panelId !== q.id) return
+        setBlockValues((prev) => ({ ...prev, [u.blockId]: { values: u.values, ts: u.ts, error: u.error } }))
+      }
+      const onModbusEvent = (e: { id: string; type: string; message?: string }) => {
+        if (e.id !== q.id) return
+        if (e.type === 'open') setModbusStatus('open')
+        else if (e.type === 'close') setModbusStatus('closed')
+        else if (e.type === 'error') setModbusStatus('error')
+      }
+      offModbusData = ipc.modbus.onData(onModbusData)
+      offModbusEvent = ipc.modbus.onEvent(onModbusEvent)
+    }
     return () => {
       offSerialData()
       offSerialEvent()
       offTcpData?.()
       offTcpEvent?.()
+      offModbusData?.()
+      offModbusEvent?.()
     }
-  }, [ipc, q.id])
+  }, [ipc, q.id, q.type])
 
   // autoScroll
   useEffect(() => {
@@ -194,6 +227,50 @@ function PopoutPanel() {
   }
 
   const rendered = renderChunks(chunks, viewMode)
+
+  // modbus 只读弹出：状态条 + 区块表（readOnly）。连接状态由主窗驱动，本窗只显示。
+  // dock/hide/pin 按钮沿用主壳逻辑（panel.requestDock/requestHide/setAlwaysOnTop 对任意窗口通用）。
+  if (q.type === 'modbus' && q.modbusData) {
+    return (
+      <div className="flex h-screen flex-col bg-card text-foreground">
+        <TitleBarChrome
+          title={q.title}
+          right={
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="size-7" onClick={handleTogglePin} title={pinned ? '取消置顶' : '置顶'}>
+                {pinned ? <PushPinSlash className="size-4" weight="fill" /> : <PushPin className="size-4" />}
+              </Button>
+              <Button variant="ghost" size="icon" className="size-7" onClick={handleDock} title="嵌回主窗口">
+                <ArrowsInCardinal className="size-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="size-7" onClick={handleHide} title="隐藏">
+                ✕
+              </Button>
+            </div>
+          }
+        />
+        {/* 状态条：只读显示连接状态 */}
+        <div className="flex items-center gap-2 border-b px-3 py-2 text-xs">
+          <span>Modbus {q.modbusData.connectOptions.variant?.toUpperCase()}</span>
+          <span className={modbusStatus === 'open' ? 'text-emerald-500' : modbusStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
+            {modbusStatus === 'open' ? '● 已连接' : modbusStatus === 'error' ? '⚠ 错误' : '○ 未连接'}
+          </span>
+        </div>
+        <div className="flex-1 space-y-2 overflow-auto p-2">
+          {modbusBlocks.map((b) => (
+            <ModbusBlockTable
+              key={b.id}
+              panelId={q.id}
+              block={b}
+              value={blockValues[b.id]}
+              readOnly
+            />
+          ))}
+          {modbusBlocks.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">暂无区块</p>}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen flex-col bg-card text-foreground">

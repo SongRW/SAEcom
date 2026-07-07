@@ -36,6 +36,8 @@ interface ModbusBlockTableProps {
   value?: ModbusBlockValue
   onEdit?: (block: ModbusBlock) => void
   onDelete?: (blockId: string) => void
+  /** 只读模式（如 popout 弹出窗口）：隐藏表头操作按钮，禁用双击写值 */
+  readOnly?: boolean
 }
 
 const FLOAT32_FORMATS = ['float32', 'float32-swapped', 'float32-byte', 'float32-word-byte'] as const
@@ -58,6 +60,7 @@ export default function ModbusBlockTable({
   value,
   onEdit,
   onDelete,
+  readOnly,
 }: ModbusBlockTableProps) {
   const ipc = useIPC()
   const blocks = usePanelsStore((s) => s.panels[panelId]?.modbus?.blocks ?? [])
@@ -98,7 +101,7 @@ export default function ModbusBlockTable({
   }
 
   const startEdit = (rowIndex: number, current: string) => {
-    if (!writable) return
+    if (!writable || readOnly) return
     setEditingRow(rowIndex)
     setEditValue(current)
   }
@@ -155,36 +158,38 @@ export default function ModbusBlockTable({
           </div>
           <div className="truncate text-[10px] text-muted-foreground">{subtitle}</div>
         </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handlePollToggle}
-            title={block.pollEnabled ? '暂停轮询' : '开始轮询'}
-          >
-            {block.pollEnabled ? <Pause /> : <Play />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="立即刷新"
-          >
-            <ArrowsClockwise className={refreshing ? 'animate-spin' : undefined} />
-          </Button>
-          <Button variant="ghost" size="icon-xs" onClick={() => onEdit?.(block)} title="编辑区块">
-            <PencilSimple />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onDelete?.(block.id)}
-            title="删除区块"
-          >
-            <Trash />
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={handlePollToggle}
+              title={block.pollEnabled ? '暂停轮询' : '开始轮询'}
+            >
+              {block.pollEnabled ? <Pause /> : <Play />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="立即刷新"
+            >
+              <ArrowsClockwise className={refreshing ? 'animate-spin' : undefined} />
+            </Button>
+            <Button variant="ghost" size="icon-xs" onClick={() => onEdit?.(block)} title="编辑区块">
+              <PencilSimple />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => onDelete?.(block.id)}
+              title="删除区块"
+            >
+              <Trash />
+            </Button>
+          </div>
+        )}
       </div>
 
       <CollapsibleContent>

@@ -113,15 +113,33 @@ export function FloatingPane({ panel, containerRef }: FloatingPaneProps) {
 
   function handlePopout() {
     try {
-      ipc.panel.popout(
-        panel.id,
-        displayName(panel),
-        JSON.stringify(panel.chunks),
-        panel.pinned,
-        panel.open,
-        panel.viewMode,
-        JSON.stringify(panel.options)
-      )
+      if (panel.type === 'modbus' && panel.modbus) {
+        // modbus 面板：借用 viewMode 槽位传 'modbus' 标识，optionsStr 槽位传 modbus 配置快照。
+        // 主进程 panel:popout handler 不区分类型，原样转发到 popout URL。
+        ipc.panel.popout(
+          panel.id,
+          displayName(panel),
+          '[]',
+          panel.pinned,
+          panel.open,
+          'modbus',
+          JSON.stringify({
+            connectOptions: panel.modbus.connectOptions,
+            blocks: panel.modbus.blocks,
+            blockValues: panel.modbus.blockValues,
+          })
+        )
+      } else {
+        ipc.panel.popout(
+          panel.id,
+          displayName(panel),
+          JSON.stringify(panel.chunks),
+          panel.pinned,
+          panel.open,
+          panel.viewMode,
+          JSON.stringify(panel.options)
+        )
+      }
       setHidden(panel.id, true)
     } catch {
       /* web 预览无 ipc */
