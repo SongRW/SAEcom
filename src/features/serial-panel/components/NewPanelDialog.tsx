@@ -25,10 +25,12 @@ const PARITIES = ['none', 'even', 'odd', 'mark', 'space'] as const
 export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
   const knownPorts = usePanelsStore((s) => s.knownPorts)
   const addPanel = usePanelsStore((s) => s.addPanel)
-  const [mode, setMode] = useState<'serial' | 'tcp'>('serial')
+  const [mode, setMode] = useState<'serial' | 'tcp' | 'modbus'>('serial')
   const [port, setPort] = useState('')
   const [host, setHost] = useState('127.0.0.1')
   const [tcpPort, setTcpPort] = useState('8080')
+  const [modbusHost, setModbusHost] = useState('127.0.0.1')
+  const [modbusPort, setModbusPort] = useState('502')
   const [baud, setBaud] = useState(String(DEFAULT_SERIAL_OPTIONS.baudRate))
   const [dataBits, setDataBits] = useState(String(DEFAULT_SERIAL_OPTIONS.dataBits))
   const [stopBits, setStopBits] = useState(String(DEFAULT_SERIAL_OPTIONS.stopBits))
@@ -52,9 +54,25 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
           parity: parity as (typeof PARITIES)[number]
         }
       })
-    } else {
+    } else if (mode === 'tcp') {
       const id = `tcp://${host}:${tcpPort}`
       ok = addPanel({ id, name: id, type: 'tcp' })
+    } else if (mode === 'modbus') {
+      if (!modbusHost) return
+      const portNum = Number(modbusPort)
+      if (!Number.isFinite(portNum) || portNum < 1 || portNum > 65535) return
+      const id = `modbus://tcp/${modbusHost}:${portNum}`
+      ok = addPanel({
+        id,
+        name: id,
+        type: 'modbus',
+        modbus: {
+          connectOptions: { variant: 'tcp', tcpHost: modbusHost, tcpPort: portNum },
+          blocks: [],
+          status: 'closed',
+          blockValues: {},
+        },
+      })
     }
     // 超出 MAX_PANELS 上限：不关弹窗，提示用户
     if (!ok) { toast.error('面板数已达上限（64）') }
@@ -74,6 +92,9 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
           </Button>
           <Button variant={mode === 'tcp' ? 'default' : 'outline'} size="sm" onClick={() => setMode('tcp')}>
             TCP
+          </Button>
+          <Button variant={mode === 'modbus' ? 'default' : 'outline'} size="sm" onClick={() => setMode('modbus')}>
+            Modbus
           </Button>
         </div>
 
@@ -157,7 +178,7 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
               </div>
             </div>
           </div>
-        ) : (
+        ) : mode === 'tcp' ? (
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
             <div className="flex flex-col gap-1.5">
               <Label>主机</Label>
@@ -167,6 +188,20 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
               <Label>端口</Label>
               <Input className="w-24" value={tcpPort} onChange={(e) => setTcpPort(e.target.value)} />
             </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+              <div className="flex flex-col gap-1.5">
+                <Label>Modbus TCP</Label>
+                <Input value={modbusHost} onChange={(e) => setModbusHost(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>端口</Label>
+                <Input className="w-24" value={modbusPort} onChange={(e) => setModbusPort(e.target.value)} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">RTU/ASCII 将在后续版本支持</p>
           </div>
         )}
 
