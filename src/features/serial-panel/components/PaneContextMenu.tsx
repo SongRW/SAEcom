@@ -93,7 +93,7 @@ export function PaneContextMenu({ panel, children, onToggleOpen, onToggleLogging
   }
 
   const isOpen = panel.open
-  const toggleText = isOpen ? (panel.type === 'tcp' ? '关闭连接' : '关闭串口') : (panel.type === 'tcp' ? '打开连接' : '打开串口')
+  const toggleText = isOpen ? (panel.type === 'serial' ? '关闭串口' : '关闭连接') : (panel.type === 'serial' ? '打开串口' : '打开连接')
 
   return (
     <>
