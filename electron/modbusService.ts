@@ -147,6 +147,16 @@ export function applyPolls(panelId: string, blocks: ModbusBlock[]) {
 
   for (const block of blocks) {
     const doRead = async () => {
+      // 连接已断开（isOpen=false）则跳过读，标记区块 error，避免无谓超时等待。
+      // 这是 TCP 断开的可靠检测手段（modbus-serial v8 的 close/error 事件对 TCP 不可靠）。
+      if (entry.client?.isOpen === false) {
+        const update: ModbusBlockUpdate = {
+          panelId, blockId: block.id, values: [], ts: Date.now(),
+          error: '连接已断开',
+        }
+        broadcast('modbus:data', update)
+        return
+      }
       try {
         const values = await readOnce(entry, {
           slaveId: block.slaveId,
@@ -244,6 +254,21 @@ export async function ensureModbusOpen(
         `Modbus ASCII 连接超时 (${opts.serialPath})`
       )
     }
+    // 注册 close/error 监听（best-effort：TCP 下不可靠，RTU/serialport 下有效）。
+    // TCP 断开的可靠检测靠 applyPolls 的 isOpen 轮询检查。
+    entry.client.on?.('close', () => {
+      if (modbusClients.get(panelId) !== entry) return // 已被 closeModbus 接管，不重复处理
+      for (const p of entry.polls.values()) { if (p.timer) clearInterval(p.timer) }
+      entry.polls.clear()
+      entry.status = 'closed'
+      broadcast('modbus:event', { id: panelId, type: 'close' })
+    })
+    entry.client.on?.('error', (err: any) => {
+      if (modbusClients.get(panelId) !== entry) return
+      entry.status = 'error'
+      entry.lastError = String(err?.message ?? err)
+      broadcast('modbus:event', { id: panelId, type: 'error', message: String(err?.message ?? err) })
+    })
     entry.status = 'open'
     broadcast('modbus:event', { id: panelId, type: 'open' })
     return { ok: true }

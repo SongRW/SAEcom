@@ -18,6 +18,8 @@ function makeMockClient() {
     writeCoils: vi.fn().mockResolvedValue(undefined),
     writeRegisters: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
+    isOpen: true,
+    on: vi.fn().mockReturnValue(undefined),
   }
 }
 
@@ -371,5 +373,83 @@ describe('translateModbusError', () => {
   it('旧属性名 modbusExceptionCode 已废弃——不再被读取', () => {
     // 回归保护：modbus-serial v8 用 modbusCode，旧猜测的 modbusExceptionCode 不应触发翻译
     expect(translateModbusError({ modbusExceptionCode: 2, message: 'x' })).toBe('x')
+  })
+})
+
+describe('连接健壮性（断开检测）', () => {
+  beforeEach(() => {
+    modbusClients.clear()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('client close 事件：广播 modbus:event close + 清轮询 timers', async () => {
+    vi.useRealTimers()
+    const fakeClient = makeMockClient()
+    fakeClient.isOpen = true
+    const handlers: Record<string, Function> = {}
+    fakeClient.on = vi.fn((event: string, cb: Function) => { handlers[event] = cb; return fakeClient })
+    setModbusClientFactory(async () => fakeClient)
+
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: 'x', tcpPort: 502 })
+    // 注入一个轮询 timer 模拟活跃轮询
+    modbusClients.get('p1')!.polls.set('b1', {
+      block: { id: 'b1', slaveId: 1, functionCode: 3, startAddress: 0, quantity: 1 } as any,
+      timer: setInterval(() => {}, 100000),
+    })
+
+    // 模拟底层断开
+    handlers['close']?.()
+
+    expect(events.some((e) => e.type === 'close')).toBe(true)
+    expect(modbusClients.get('p1')?.polls.size ?? 0).toBe(0)
+  })
+
+  it('client error 事件：广播 modbus:event error', async () => {
+    vi.useRealTimers()
+    const fakeClient = makeMockClient()
+    fakeClient.isOpen = true
+    const handlers: Record<string, Function> = {}
+    fakeClient.on = vi.fn((event: string, cb: Function) => { handlers[event] = cb; return fakeClient })
+    setModbusClientFactory(async () => fakeClient)
+
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    await ensureModbusOpen('p1', { variant: 'tcp', tcpHost: 'x', tcpPort: 502 })
+    handlers['error']?.(new Error('socket hang up'))
+
+    expect(events.some((e) => e.type === 'error' && String(e.message).includes('socket hang up'))).toBe(true)
+  })
+
+  it('轮询读前检查 isOpen：断开时跳过读并广播区块 error', async () => {
+    vi.useFakeTimers()
+    const fakeClient = makeMockClient()
+    fakeClient.isOpen = false // 模拟已断开
+    fakeClient.readHoldingRegisters.mockResolvedValue({ data: [1] })
+    setModbusClientFactory(async () => fakeClient)
+
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+
+    const entry: any = {
+      panelId: 'p1', variant: 'tcp', client: fakeClient,
+      connectOptions: { variant: 'tcp' }, polls: new Map(), status: 'open',
+    }
+    modbusClients.set('p1', entry)
+
+    applyPolls('p1', [{
+      id: 'b1', slaveId: 1, functionCode: 3 as const, startAddress: 0, quantity: 1,
+      pollEnabled: true, pollIntervalMs: 1000, displayFormat: 'signed' as const,
+    }])
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(fakeClient.readHoldingRegisters).not.toHaveBeenCalled()
+    const blockUpdate = events.find((e) => e.blockId === 'b1')
+    expect(blockUpdate?.error).toBeTruthy()
   })
 })
