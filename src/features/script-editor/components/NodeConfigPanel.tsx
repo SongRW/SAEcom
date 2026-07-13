@@ -24,6 +24,8 @@ import {
   validateGraphNode
 } from '@/features/script-editor/rete/graphState'
 import { getNodeDefinition } from '@/features/script-editor/nodes/definitions'
+import { usePanelsStore } from '@/features/serial-panel/store'
+import { displayName } from '@/features/serial-panel/paneViewModel'
 
 interface NodeConfigPanelProps {
   graph: GraphEditorState
@@ -223,6 +225,15 @@ function optionsForControl(
   serialPanelOptions: SelectOption[],
   serialPortOptions: SelectOption[]
 ): SelectOption[] {
+  if (control.source === 'modbus-panels') {
+    // 无 prop 线程（ScriptEditorDialog/viewModel 暂不可改），直接读 store vanilla API。
+    // 在非组件函数里用 getState() 而非 hook，避免破坏 hooks 规则；列表始终为最新。
+    const { panels, listOrder } = usePanelsStore.getState()
+    return listOrder
+      .map((id) => panels[id])
+      .filter((p) => p && p.type === 'modbus')
+      .map((p) => ({ value: p.id, label: displayName(p) }))
+  }
   if (control.source === 'serial-panels') return serialPanelOptions
   if (control.source === 'serial-ports') return serialPortOptions
   return (control.options || []).map((option) => ({ value: option, label: option }))
