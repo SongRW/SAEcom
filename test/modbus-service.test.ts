@@ -5,6 +5,8 @@ import { readOnce, writeOnce, applyPolls, modbusClients, setModbusBroadcaster, s
 function makeMockClient() {
   return {
     connectTCP: vi.fn().mockResolvedValue(undefined),
+    connectRTUBuffered: vi.fn().mockResolvedValue(undefined),
+    connectAsciiSerial: vi.fn().mockResolvedValue(undefined),
     setID: vi.fn(),
     setTimeout: vi.fn(),
     readCoils: vi.fn().mockResolvedValue({ data: [true, false, true] }),
@@ -298,6 +300,44 @@ describe('ensureModbusOpen / closeModbus', () => {
     expect(fakeClient.close).toHaveBeenCalled()
     expect(modbusClients.has('p1')).toBe(false)
     expect(events.some((e) => e.type === 'close')).toBe(true)
+  })
+
+  it('RTU 连接：调用 connectRTUBuffered 并传 serialPath + 串口参数', async () => {
+    const fakeClient = makeMockClient()
+    setModbusClientFactory(async () => fakeClient)
+    const r = await ensureModbusOpen('p1', {
+      variant: 'rtu', serialPath: 'COM3', baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none',
+    })
+    expect(r.ok).toBe(true)
+    expect(fakeClient.connectRTUBuffered).toHaveBeenCalledWith('COM3', expect.objectContaining({
+      baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none',
+    }))
+    expect(modbusClients.get('p1')?.status).toBe('open')
+  })
+
+  it('ASCII 连接：调用 connectAsciiSerial', async () => {
+    const fakeClient = makeMockClient()
+    setModbusClientFactory(async () => fakeClient)
+    const r = await ensureModbusOpen('p1', {
+      variant: 'ascii', serialPath: '/dev/ttyUSB0', baudRate: 19200, dataBits: 7, stopBits: 1, parity: 'even',
+    })
+    expect(r.ok).toBe(true)
+    expect(fakeClient.connectAsciiSerial).toHaveBeenCalledWith('/dev/ttyUSB0', expect.objectContaining({
+      baudRate: 19200, parity: 'even',
+    }))
+  })
+
+  it('RTU 连接失败：返回 ok:false，发 error 事件，不进入注册表', async () => {
+    const fakeClient = makeMockClient()
+    fakeClient.connectRTUBuffered.mockRejectedValue(new Error('权限不足'))
+    setModbusClientFactory(async () => fakeClient)
+    const events: any[] = []
+    setModbusBroadcaster((_ch, payload) => events.push(payload))
+    const r = await ensureModbusOpen('p1', { variant: 'rtu', serialPath: 'COM9', baudRate: 9600 })
+    expect(r.ok).toBe(false)
+    expect(r.message).toMatch(/权限不足/)
+    expect(modbusClients.has('p1')).toBe(false)
+    expect(events.some((e) => e.type === 'error')).toBe(true)
   })
 })
 

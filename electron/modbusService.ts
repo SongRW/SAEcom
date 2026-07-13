@@ -220,10 +220,29 @@ export async function ensureModbusOpen(
         `Modbus TCP 连接超时 (${opts.tcpHost}:${opts.tcpPort ?? 502})`
       )
     } else if (opts.variant === 'rtu') {
-      // 阶段 3 实现；阶段 1 先抛错占位
-      throw new Error('RTU 连接将在阶段 3 实现')
+      if (!opts.serialPath) throw new Error('RTU 缺少 serialPath')
+      await withTimeout(
+        client.connectRTUBuffered(opts.serialPath, {
+          baudRate: opts.baudRate ?? 9600,
+          dataBits: opts.dataBits ?? 8,
+          stopBits: opts.stopBits ?? 1,
+          parity: opts.parity ?? 'none',
+        }),
+        CONNECT_TIMEOUT_MS,
+        `Modbus RTU 连接超时 (${opts.serialPath})`
+      )
     } else if (opts.variant === 'ascii') {
-      throw new Error('ASCII 连接将在阶段 3 实现')
+      if (!opts.serialPath) throw new Error('ASCII 缺少 serialPath')
+      await withTimeout(
+        client.connectAsciiSerial(opts.serialPath, {
+          baudRate: opts.baudRate ?? 19200,
+          dataBits: opts.dataBits ?? 7,
+          stopBits: opts.stopBits ?? 1,
+          parity: opts.parity ?? 'even',
+        }),
+        CONNECT_TIMEOUT_MS,
+        `Modbus ASCII 连接超时 (${opts.serialPath})`
+      )
     }
     entry.status = 'open'
     broadcast('modbus:event', { id: panelId, type: 'open' })
