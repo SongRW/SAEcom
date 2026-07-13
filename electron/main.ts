@@ -1433,6 +1433,20 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
       return r
     },
 
+    modbusRead: async (panelId: string, fc: number, slaveId: number, addr: number, qty: number) => {
+      if (token.aborted) throw new Error('ABORTED')
+      const entry = modbusClients.get(panelId)
+      if (!entry) throw new Error(`Modbus 面板未连接: ${panelId}`)
+      return readOnce(entry, { slaveId, functionCode: fc as 1 | 2 | 3 | 4, startAddress: addr, quantity: qty })
+    },
+    modbusWrite: async (panelId: string, fc: number, slaveId: number, addr: number, values: number[]) => {
+      if (token.aborted) throw new Error('ABORTED')
+      const entry = modbusClients.get(panelId)
+      if (!entry) throw new Error(`Modbus 面板未连接: ${panelId}`)
+      await writeOnce(entry, { slaveId, functionCode: fc as 5 | 6 | 15 | 16, startAddress: addr, values })
+      return { ok: true }
+    },
+
     sendTCP: async (host: string, port: number, data: string, mode: string = 'text') => {
       if (token.aborted) throw new Error('ABORTED')
 
