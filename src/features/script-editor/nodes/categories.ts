@@ -15,5 +15,6 @@ export const NODE_CATEGORIES: Record<NodeCategory, CategoryMeta> = {
   compare: { key: 'compare', name: '比较类', color: '#0ea5e9' },
   logical: { key: 'logical', name: '逻辑类', color: '#14b8a6' },
   control: { key: 'control', name: '控制类', color: '#a855f7' },
-  output: { key: 'output', name: '输出类', color: '#10b981' }
+  output: { key: 'output', name: '输出类', color: '#10b981' },
+  modbus: { key: 'modbus', name: 'Modbus', color: '#d97706' }
 }

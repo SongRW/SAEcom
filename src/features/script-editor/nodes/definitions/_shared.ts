@@ -41,6 +41,14 @@ const serialPortControl = (): ControlSpec => ({
   source: 'serial-ports'
 })
 
+const modbusPanelControl = (): ControlSpec => ({
+  key: 'panel',
+  type: 'select',
+  label: 'Modbus面板',
+  default: '',
+  source: 'modbus-panels'
+})
+
 const serialConfigControls = (includeReceiveOptions = false): ControlSpec[] => [
   serialPortControl(),
   numberControl('baudRate', '波特率', 115200),
@@ -80,5 +88,6 @@ export const nodeBuilders = {
   selectControl,
   serialPortControl,
   serialConfigControls,
+  modbusPanelControl,
   def
 }

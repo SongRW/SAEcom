@@ -10,6 +10,7 @@ import { COMPARE_NODES } from '@/features/script-editor/nodes/definitions/compar
 import { CONTROL_NODES } from '@/features/script-editor/nodes/definitions/control'
 import { INPUT_NODES } from '@/features/script-editor/nodes/definitions/input'
 import { LOGICAL_NODES } from '@/features/script-editor/nodes/definitions/logical'
+import { MODBUS_NODES } from '@/features/script-editor/nodes/definitions/modbus'
 import { NUMERIC_NODES } from '@/features/script-editor/nodes/definitions/numeric'
 import { OUTPUT_NODES } from '@/features/script-editor/nodes/definitions/output'
 import { SPLIT_NODES } from '@/features/script-editor/nodes/definitions/split'
@@ -25,7 +26,8 @@ export const NODE_DEFINITIONS: Record<string, NodeDef> = {
   ...COMPARE_NODES,
   ...LOGICAL_NODES,
   ...CONTROL_NODES,
-  ...OUTPUT_NODES
+  ...OUTPUT_NODES,
+  ...MODBUS_NODES
 }
 
 export const getNodeDefinition = (key: string): NodeDef | undefined => NODE_DEFINITIONS[key]
