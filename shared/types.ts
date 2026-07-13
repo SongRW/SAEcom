@@ -170,6 +170,7 @@ export type NodeCategory =
   | 'logical'
   | 'control'
   | 'output'
+  | 'modbus'
 
 export interface SocketSpec {
   key: string
