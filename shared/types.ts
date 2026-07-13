@@ -77,7 +77,7 @@ export interface PanelConfigRef {
 export interface SerialPanelSummary {
   id: string
   name: string
-  type: 'serial' | 'tcp'
+  type: 'serial' | 'tcp' | 'modbus'
   open: boolean
   active: boolean
   hidden?: boolean
