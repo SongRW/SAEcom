@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plug, X, CircleNotch, Warning } from '@phosphor-icons/react'
-import type { ModbusVariant } from '@shared/types'
+import type { ModbusConnectOptions, ModbusVariant } from '@shared/types'
 import type { Panel } from '@/features/serial-panel/types'
 import { usePanelsStore } from '@/features/serial-panel/store'
 import { Button } from '@/components/ui/button'
@@ -14,17 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 
 const VARIANT_LABELS: Record<ModbusVariant, string> = {
   tcp: 'TCP',
   rtu: 'RTU',
   ascii: 'ASCII',
 }
+
+const BAUD_RATES = [9600, 19200, 38400, 57600, 115200]
+const SERIAL_PARITIES = ['none', 'even', 'odd'] as const
 
 /** 残缺错误显示的最大宽度字符；超出用 title 显示完整信息 */
 const MAX_ERROR_LEN = 28
@@ -77,9 +75,10 @@ interface ModbusConnectBarProps {
 /**
  * Modbus 连接栏：变体选择 + 连接参数 + 连接/断开按钮 + 状态徽章。
  * 未连接时字段可编辑；已连接时只读并显示断开按钮。
- * RTU/ASCII 为阶段 3 支持，目前禁用（仅 TCP 可选）。
+ * TCP 显示主机/端口；RTU/ASCII 显示串口路径及波特率/数据位/停止位/校验。
  */
 export default function ModbusConnectBar({ panel }: ModbusConnectBarProps) {
+  const knownPorts = usePanelsStore((s) => s.knownPorts)
   const setModbusConnectOptions = usePanelsStore((s) => s.setModbusConnectOptions)
   const togglePanelOpen = usePanelsStore((s) => s.togglePanelOpen)
 
@@ -87,29 +86,45 @@ export default function ModbusConnectBar({ panel }: ModbusConnectBarProps) {
   const variant = connectOptions?.variant ?? 'tcp'
   const tcpHost = connectOptions?.tcpHost ?? ''
   const tcpPort = connectOptions?.tcpPort ?? 502
+  const serialPath = connectOptions?.serialPath ?? ''
+  const baudRate = connectOptions?.baudRate ?? (variant === 'ascii' ? 19200 : 9600)
+  const dataBits = connectOptions?.dataBits ?? (variant === 'ascii' ? 7 : 8)
+  const stopBits = connectOptions?.stopBits ?? 1
+  const parity = connectOptions?.parity ?? (variant === 'ascii' ? 'even' : 'none')
   const connected = panel.open
   const disabled = connected
 
   // 本地输入草稿（受控 host 文本，避免每次按键直接触发持久化往返抖动）
   const [hostDraft, setHostDraft] = useState(tcpHost)
 
+  function patch(p: Partial<ModbusConnectOptions>) {
+    setModbusConnectOptions(panel.id, { ...connectOptions!, ...p })
+  }
+
   function commitVariant(v: ModbusVariant) {
-    setModbusConnectOptions(panel.id, { ...connectOptions!, variant: v })
+    // 切换变体时填充该变体的默认串口参数（仅当未显式设置时）
+    if (v === 'rtu') {
+      patch({ variant: v, baudRate: baudRate ?? 9600, dataBits: dataBits ?? 8, stopBits: stopBits ?? 1, parity: parity ?? 'none' })
+    } else if (v === 'ascii') {
+      patch({ variant: v, baudRate: baudRate ?? 19200, dataBits: dataBits ?? 7, stopBits: stopBits ?? 1, parity: parity ?? 'even' })
+    } else {
+      patch({ variant: v })
+    }
   }
 
   function commitHost() {
     if (hostDraft === tcpHost) return
-    setModbusConnectOptions(panel.id, { ...connectOptions!, tcpHost: hostDraft })
+    patch({ tcpHost: hostDraft })
   }
 
   function commitPort(v: string) {
     const port = Number(v)
     if (!Number.isFinite(port)) return
-    setModbusConnectOptions(panel.id, { ...connectOptions!, tcpPort: port })
+    patch({ tcpPort: port })
   }
 
   return (
-    <div className="flex items-center gap-2 border-b px-3 py-2 text-xs">
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs">
       {/* 变体选择 */}
       <div className="flex items-center gap-1.5">
         <Label className="text-muted-foreground">类型</Label>
@@ -123,27 +138,8 @@ export default function ModbusConnectBar({ panel }: ModbusConnectBarProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="tcp">TCP</SelectItem>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* span 包裹以承接禁用项的 hover（SelectItem disabled 不触发 onSelect） */}
-                <span>
-                  <SelectItem value="rtu" disabled>
-                    {VARIANT_LABELS.rtu}
-                  </SelectItem>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>阶段 3 支持</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <SelectItem value="ascii" disabled>
-                    {VARIANT_LABELS.ascii}
-                  </SelectItem>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>阶段 3 支持</TooltipContent>
-            </Tooltip>
+            <SelectItem value="rtu">{VARIANT_LABELS.rtu}</SelectItem>
+            <SelectItem value="ascii">{VARIANT_LABELS.ascii}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -174,6 +170,110 @@ export default function ModbusConnectBar({ panel }: ModbusConnectBarProps) {
             onChange={(e) => commitPort(e.target.value)}
           />
         </div>
+      )}
+
+      {/* RTU/ASCII 串口参数 */}
+      {(variant === 'rtu' || variant === 'ascii') && (
+        <>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-muted-foreground">串口</Label>
+            <Select
+              value={serialPath}
+              onValueChange={(v) => patch({ serialPath: v })}
+              disabled={disabled}
+            >
+              <SelectTrigger size="sm" className="h-7 w-40">
+                <SelectValue placeholder={knownPorts.length ? '选择串口' : '无可用串口'} />
+              </SelectTrigger>
+              <SelectContent>
+                {knownPorts.map((p) => (
+                  <SelectItem key={p.path} value={p.path}>
+                    {p.friendlyName ? `${p.path} (${p.friendlyName})` : p.path}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* 当所选路径不在已知列表时，提供手动输入回退 */}
+            {serialPath && !knownPorts.some((p) => p.path === serialPath) && (
+              <Input
+                className="h-7 w-40 text-xs"
+                value={serialPath}
+                disabled={disabled}
+                onChange={(e) => patch({ serialPath: e.target.value })}
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-muted-foreground">波特率</Label>
+            <Select
+              value={String(baudRate)}
+              onValueChange={(v) => patch({ baudRate: Number(v) })}
+              disabled={disabled}
+            >
+              <SelectTrigger size="sm" className="h-7 w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BAUD_RATES.map((b) => (
+                  <SelectItem key={b} value={String(b)}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-muted-foreground">数据位</Label>
+            <Select
+              value={String(dataBits)}
+              onValueChange={(v) => patch({ dataBits: Number(v) as 7 | 8 })}
+              disabled={disabled}
+            >
+              <SelectTrigger size="sm" className="h-7 w-16">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7</SelectItem>
+                <SelectItem value="8">8</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-muted-foreground">停止位</Label>
+            <Select
+              value={String(stopBits)}
+              onValueChange={(v) => patch({ stopBits: Number(v) as 1 | 2 })}
+              disabled={disabled}
+            >
+              <SelectTrigger size="sm" className="h-7 w-16">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-muted-foreground">校验</Label>
+            <Select
+              value={parity}
+              onValueChange={(v) => patch({ parity: v as (typeof SERIAL_PARITIES)[number] })}
+              disabled={disabled}
+            >
+              <SelectTrigger size="sm" className="h-7 w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SERIAL_PARITIES.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </>
       )}
 
       <div className="ml-auto flex items-center gap-2">
