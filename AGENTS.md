@@ -6,6 +6,8 @@ SAEcom is an Electron serial-port assistant with a fully React-based renderer. E
 
 ## Build, Test, and Development Commands
 
+> **Prerequisites**: Node.js 20 (see `.nvmrc`). A C++ toolchain for the native `@serialport/bindings-cpp` module is **usually not required** — it ships N-API prebuilt binaries that match Electron's ABI. You only need one (Windows: VS Build Tools 2022 with the "Desktop development with C++" workload + Python 3; macOS: `xcode-select --install`; Linux: `python3 make g++`) if you hit a native-module load error and must recompile via `npm run rebuild`. See the "从源码构建" section of `README.MD`.
+
 - `npm run dev`: start the Electron/Vite development workflow through `scripts/dev.js`.
 - `npm run build`: build main, preload, and renderer bundles with `electron-vite`.
 - `npm run typecheck`: run TypeScript checks for app and node configs.

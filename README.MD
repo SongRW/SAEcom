@@ -21,6 +21,57 @@
 
 ------
 
+## 从源码构建
+
+适用于希望自行编译、二次开发或参与贡献的开发者。
+
+### 环境要求
+
+- **Node.js 20**（项目基于 Electron 31，内嵌 Node 20。推荐用 [nvm](https://github.com/nvm-sh/nvm)/[fnm](https://github.com/Schniz/fnm) 管理，仓库根目录已提供 `.nvmrc`，执行 `nvm use` 即可切换到正确版本）
+- **npm**
+
+### 关于原生模块：通常无需配置编译环境
+
+本项目通过 [`serialport`](https://serialport.io/) 访问串口，其底层 [`@serialport/bindings-cpp`](https://www.npmjs.com/package/@serialport/bindings-cpp) 是原生模块。它基于 [N-API](https://nodejs.org/api/n-api.html)，**已为 Windows / macOS / Linux 各平台附带预编译二进制（prebuild）**，与 Electron 内嵌的 Node ABI 兼容。因此：
+
+- **绝大多数情况下，`npm install` 后即可直接 `npm run dev`，无需安装任何 C++ 编译工具链或 Python。**
+- `npm install` 的 `postinstall` 会尝试针对当前 Electron 重新编译原生模块（以求 ABI 精确匹配）。**即使这一步因缺少编译器而失败，也不影响使用**——会自动回退到自带的 prebuild 二进制。所以安装日志里看到 `node-gyp` 报错通常可以安全忽略。
+
+#### 什么时候需要装编译工具链
+
+仅当你遇到**与原生模块相关的运行时错误**（例如 `Could not locate the bindings file`、模块加载失败、或使用了 prebuild 未覆盖的架构）时，才需要补齐工具链并重新编译 `npm run rebuild`：
+
+- **Windows**：[Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/)，安装时勾选 **“使用 C++ 的桌面开发”**（Desktop development with C++）工作负载（含 MSVC 与 Windows SDK）；并安装 [Python 3.x](https://www.python.org/downloads/)（安装时勾选 “Add python.exe to PATH”）。
+- **macOS**：`xcode-select --install`（Command Line Tools，提供 clang）。Python 3 系统一般自带，或 `brew install python`。
+- **Linux**：`sudo apt install python3 make g++`（Debian/Ubuntu）。
+
+> 注：仅 `@serialport/bindings-cpp` 一个包涉及原生编译，其余依赖均为纯 JS 或已附带预编译二进制。
+
+### 安装与运行
+
+```bash
+nvm use            # 切换到 .nvmrc 指定的 Node 20
+npm install        # 安装依赖（原生模块会优先使用预编译二进制）
+npm run dev        # 启动开发环境
+```
+
+### 常用脚本
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 启动 Electron + Vite 开发环境 |
+| `npm run build` | 构建 main / preload / renderer 三端产物 |
+| `npm run typecheck` | TypeScript 类型检查 |
+| `npm test` | 运行 Vitest 单元测试 |
+| `npm run test:e2e:build` | 构建并运行 Playwright E2E 测试 |
+| `npm run rebuild` | 升级 Electron / Node 后重新编译原生模块 |
+| `npm run dist:win` | 打包 Windows 安装包（NSIS） |
+| `npm run dist:mac` | 打包 macOS 安装包（dmg） |
+
+完整命令见 [`package.json`](./package.json) 的 `scripts` 与 [`AGENTS.md`](./AGENTS.md)。
+
+------
+
 ## 功能展示
 
 ### 多面板串口管理
