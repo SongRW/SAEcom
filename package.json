@@ -3,6 +3,9 @@
   "version": "0.6.0",
   "description": "基于Electron开发的多面板串口助手/Serial port Assistant based on Electron",
   "main": "out/main/index.js",
+  "engines": {
+    "node": "^20"
+  },
   "scripts": {
     "dev": "node scripts/dev.js",
     "start": "electron-vite preview",
@@ -60,7 +63,7 @@
     "rete-dock-plugin": "^2.0.4",
     "rete-minimap-plugin": "^2.0.3",
     "rete-react-plugin": "^2.1.0",
-    "serialport": "^12.0.0",
+    "serialport": "^13.0.0",
     "shadcn": "^4.11.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
@@ -87,6 +90,10 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.5",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "serialport": "$serialport",
+    "@serialport/bindings-cpp": "^13.0.0"
   },
   "build": {
     "appId": "com.example.serialhelper",
