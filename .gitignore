@@ -136,6 +136,10 @@ dist
 .superpowers/
 .worktrees/
 
+# AI agent local config & caches
+.claude/
+.zcode/
+
 .workbuddy/
 # yarn v3
 .pnp.*
