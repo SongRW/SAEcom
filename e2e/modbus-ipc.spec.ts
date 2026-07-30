@@ -1,3 +1,4 @@
+import { test, expect } from './fixtures'
 /**
  * Modbus IPC 端到端（阶段 1：协议层 + 主进程服务）。
  *
@@ -9,7 +10,6 @@
  *
  * 这是 Task 9 手动验证的程序化替代，跑在真实 Electron + 真实 modbus-serial 上。
  */
-import { test, expect } from './fixtures'
 import { startModbusSlave } from './helpers/mock-modbus-slave'
 
 const PANEL_ID = 'modbus-e2e-panel'

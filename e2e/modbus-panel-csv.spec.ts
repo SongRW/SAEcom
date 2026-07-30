@@ -1,4 +1,4 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, clickReady, createModbusTcpPanel } from './fixtures'
 import { startModbusSlave } from './helpers/mock-modbus-slave'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -34,18 +34,9 @@ test.describe('Modbus 面板 CSV 映射导入/导出', () => {
 
   test('导入映射追加区块，导出映射写出完整 CSV', async ({ page, electronApp }) => {
     // ---- 1) 新建 Modbus 面板并连接 ----
-    await page.getByText(NAV.newPanel, { exact: true }).click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-    await dialog.getByRole('button', { name: 'Modbus', exact: true }).click()
-    await expect(dialog.locator('label', { hasText: 'Modbus TCP' })).toBeVisible()
-    await dialog.locator('input').nth(0).fill('127.0.0.1')
-    await dialog.locator('input').nth(1).fill(String(slave.port))
-    await dialog.getByRole('button', { name: '创建' }).click()
-    await expect(dialog).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /新增区块/ })).toBeVisible({ timeout: 10000 })
+    await createModbusTcpPanel(page, slave.port)
 
-    await page.getByRole('button', { name: '连接', exact: true }).click()
+    await clickReady(page, page.getByRole('button', { name: '连接', exact: true }))
     await expect(page.getByText('已连接', { exact: true }).first()).toBeVisible({ timeout: 10000 })
 
     // 区块卡片计数锚点：每个区块 = ModbusBlockTable(Collapsible, 类名 .rounded-md.border.bg-card)，

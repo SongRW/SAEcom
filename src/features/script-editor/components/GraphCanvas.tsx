@@ -11,11 +11,19 @@ import {
   removeGraphConnection,
   removeGraphNode,
   updateGraphNodeData,
-  updateGraphNodePosition
+  updateGraphNodePosition,
+  updateGraphNodePositions
 } from '@/features/script-editor/rete/graphState'
-import { createReteEditor, syncReteEditorFromGraph } from '@/features/script-editor/rete/setup'
+import { ARRANGE_LAYOUT_OPTIONS } from '@/features/script-editor/rete/connectionPath'
+import { createReteEditor, syncReteEditorFromGraph, syncReteNodeDataFromGraph, syncReteNodePositionsFromGraph } from '@/features/script-editor/rete/setup'
 import type { ReteEditorInstance } from '@/features/script-editor/rete/setup'
-import { clampCanvasZoom, fitGraphToView, getNextCanvasNodePosition } from '@/features/script-editor/viewModel'
+import { classifyGraphSync } from '@/features/script-editor/rete/graphSync'
+import {
+  clampCanvasZoom,
+  computeCanvasZoomMin,
+  fitGraphToView,
+  getNextCanvasNodePosition
+} from '@/features/script-editor/viewModel'
 import { useEmptyMinimapInteraction, computeWheelZoom } from '@/features/script-editor/useEmptyMinimapInteraction'
 
 interface GraphCanvasProps {
@@ -33,11 +41,19 @@ interface GraphCanvasProps {
   onNodeDoubleClick: (id: string) => void
   onSelectNodes: (ids: string[]) => void
   onZoomChange: (zoom: number) => void
+  graphRevision: number
 }
 
 export interface GraphCanvasHandle {
   /** 让整张图居中并 fit 到可视区域，返回算出的 zoom。 */
   fitView: () => void
+  /** 用 ELK 自动排版全部节点，写回坐标后 fit 到可视区域。 */
+  arrangeLayout: () => Promise<void>
+  /**
+   * 当前图内容允许的最小 zoom（大图会低于默认 50%）。
+   * 工具栏 +/- 缩放用此值 clamp，与画布滚轮/restrictor 一致。
+   */
+  getZoomMin: () => number
 }
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas({
@@ -54,7 +70,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   onResetView,
   onNodeDoubleClick,
   onSelectNodes,
-  onZoomChange
+  onZoomChange,
+  graphRevision
 }, ref) {
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const reteRef = useRef<ReteEditorInstance | null>(null)
@@ -66,7 +83,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const onGraphChangeRef = useRef(onGraphChange)
   const onSelectNodesRef = useRef(onSelectNodes)
   const onNodeDoubleClickRef = useRef(onNodeDoubleClick)
-  const lastSyncedSignatureRef = useRef('')
+  const lastSyncedGraphRef = useRef<GraphEditorState | null>(null)
+  const queuedGraphRef = useRef<GraphEditorState | null>(null)
+  const syncQueueRef = useRef(Promise.resolve())
   const syncingRef = useRef(false)
   const capabilitiesRef = useRef<ToolCapabilities>(getToolCapabilities(tool))
   const lastPickRef = useRef<{ id: string; time: number }>({ id: '', time: 0 })
@@ -77,15 +96,20 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const menuRef = useRef<HTMLDivElement | null>(null)
   // 标记当前 zoom 变更是由本组件的 zoom effect 主动触发，避免回调再把同一个值写回父组件。
   const applyingZoomRef = useRef(false)
+  // 上次已应用到 Rete 的 zoom，避免拖节点触发 graph 重渲染时反复 area.zoom 打断拖拽。
+  const lastAppliedZoomRef = useRef(zoom)
   // 标记 fitView 被请求时 Rete 正在同步新 graph，需等同步完成后再 fit。
   const pendingFitRef = useRef(false)
+  const arrangingRef = useRef(false)
   const onZoomChangeRef = useRef(onZoomChange)
+  const lastGraphRevisionRef = useRef(graphRevision)
 
   // 主动把画布 transform 设置为算出的 fit 值（来自 fitGraphToView），并标记避免回调回灌。
   const applyFitTransform = (result: { zoom: number; x: number; y: number }) => {
     const instance = reteRef.current
     if (!instance) return
     applyingZoomRef.current = true
+    lastAppliedZoomRef.current = result.zoom
     void instance.area.area.translate(result.x, result.y).then(() => {
       void instance.area.area.zoom(result.zoom).finally(() => {
         applyingZoomRef.current = false
@@ -94,32 +118,53 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     })
   }
 
+  // 读取已渲染节点真实包围盒（无实例时退回 graph 坐标 + 默认尺寸）。
+  const collectFitRects = () => {
+    const instance = reteRef.current
+    if (instance && instance.area.nodeViews.size > 0) {
+      return [...instance.area.nodeViews].map(([, view]) => {
+        const el = view.element
+        return {
+          x: view.position.x,
+          y: view.position.y,
+          width: el.offsetWidth || 216,
+          height: el.offsetHeight || 120
+        }
+      })
+    }
+    return graphRef.current.nodes.map((node) => ({
+      x: node.position.x,
+      y: node.position.y,
+      width: 216,
+      height: 120
+    }))
+  }
+
+  const resolveZoomMin = () => {
+    const container = canvasRef.current
+    const size = container
+      ? { width: container.clientWidth, height: container.clientHeight }
+      : { width: 800, height: 600 }
+    return computeCanvasZoomMin(collectFitRects(), size)
+  }
+
   // 计算所有已渲染节点的真实包围盒，返回 fit 结果或 null（无节点）。
   const computeFit = () => {
-    const instance = reteRef.current
     const container = canvasRef.current
-    if (!instance || !container) return null
-    const rects = [...instance.area.nodeViews].map(([, view]) => {
-      const el = view.element
-      return {
-        x: view.position.x,
-        y: view.position.y,
-        width: el.offsetWidth || 216,
-        height: el.offsetHeight || 120
-      }
-    })
-    return fitGraphToView(rects, {
+    if (!container) return null
+    return fitGraphToView(collectFitRects(), {
       width: container.clientWidth,
       height: container.clientHeight
     })
   }
 
   // 执行 fit；若 Rete 正在/即将同步新 graph，则登记为待执行，由 sync effect 结束后触发。
-  // 通过签名判断：当前 graph 尚未同步到 Rete 时（如刚 selectScript），延后到同步完成。
   const runFit = () => {
     const instance = reteRef.current
     const syncing = syncingRef.current
-    const pendingSync = instance ? lastSyncedSignatureRef.current !== graphStructureSignature(graphRef.current) : true
+    const pendingSync = instance
+      ? classifyGraphSync(lastSyncedGraphRef.current, graphRef.current).kind !== 'none'
+      : true
     if (syncing || pendingSync) {
       pendingFitRef.current = true
       return
@@ -128,8 +173,37 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     if (result) applyFitTransform(result)
   }
 
+  const runArrangeLayout = async () => {
+    const instance = reteRef.current
+    if (!instance || graphRef.current.nodes.length === 0) return
+    if (arrangingRef.current || syncingRef.current) return
+
+    arrangingRef.current = true
+    try {
+      await instance.arrange.layout({
+        options: ARRANGE_LAYOUT_OPTIONS
+      })
+
+      const positions: Record<string, { x: number; y: number }> = {}
+      for (const [id, view] of instance.area.nodeViews) {
+        positions[id] = { x: view.position.x, y: view.position.y }
+      }
+      const nextGraph = updateGraphNodePositions(graphRef.current, positions)
+      graphRef.current = nextGraph
+      // position 不在 structure signature 里，不会触发全量 resync。
+      onGraphChangeRef.current(nextGraph)
+    } finally {
+      arrangingRef.current = false
+    }
+
+    // 排版后整图居中适配视口。
+    runFit()
+  }
+
   useImperativeHandle(ref, () => ({
-    fitView: runFit
+    fitView: runFit,
+    arrangeLayout: runArrangeLayout,
+    getZoomMin: resolveZoomMin
   }), [])
 
   useEffect(() => {
@@ -183,7 +257,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         if (change.type === 'node-data') {
           const nextGraph = updateGraphNodeData(graphRef.current, change.id, change.key, change.value)
           graphRef.current = nextGraph
-          lastSyncedSignatureRef.current = graphStructureSignature(nextGraph)
+          const plan = classifyGraphSync(lastSyncedGraphRef.current, nextGraph)
+          if (plan.kind === 'node-data') {
+            // 普通 Rete 内嵌控件已直接更新当前节点，无需再经 React 回灌一次。
+            lastSyncedGraphRef.current = nextGraph
+            queuedGraphRef.current = nextGraph
+          }
           onGraphChangeRef.current(nextGraph)
         }
       }
@@ -191,6 +270,17 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     reteRef.current = instance
     setEditorInstance(instance)
     instance.setAreaPanEnabled(capabilitiesRef.current.areaPan)
+    // 画布组件卸载重建（对话框关闭重开 / dock 来回）时，createReteEditor 新建的 area
+    // transform 是默认值（zoom=1），而父组件保留的 zoom 可能是非 1 值。若不在此主动对齐，
+    // 后续两个 zoom effect 的守卫（lastAppliedZoomRef.current === zoom）会判定相等而跳过，
+    // 导致 React zoom 与画板实际 transform 脱节，缩略图/拖动缩放全部失效。
+    if (zoom !== 1) {
+      applyingZoomRef.current = true
+      lastAppliedZoomRef.current = zoom
+      void instance.area.area.zoom(zoom).finally(() => {
+        applyingZoomRef.current = false
+      })
+    }
     // 注意：本版本 Rete 的 addPipe 返回 void（无卸载句柄），pipe 清理依赖
     // instance.destroy()（销毁 area scope）及实例被 GC 回收。
     instance.area.addPipe((context) => {
@@ -199,7 +289,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         // 否则父组件持有的 zoom 与画板实际值脱节，后续任何 graph 变更（如添加节点）
         // 触发的 zoom(zoom) 会用过期值覆盖画板，造成“回滚”假象。
         if (context.type === 'zoomed' && !applyingZoomRef.current) {
-          onZoomChangeRef.current(clampCanvasZoom(context.data.zoom))
+          onZoomChangeRef.current(clampCanvasZoom(context.data.zoom, resolveZoomMin()))
         }
         const capabilities = capabilitiesRef.current
         if (context.type === 'nodepicked') {
@@ -226,7 +316,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           }
         }
         if (context.type === 'nodetranslated') {
-          onGraphChangeRef.current(updateGraphNodePosition(graphRef.current, context.data.id, context.data.position))
+          // 自动排版期间由 arrangeLayout 批量写回，跳过单点更新。
+          if (arrangingRef.current) return context
+          // 立即更新 graphRef，避免连续拖拽事件之间 React 尚未重渲染导致坐标回退。
+          const nextGraph = updateGraphNodePosition(graphRef.current, context.data.id, context.data.position)
+          graphRef.current = nextGraph
+          // 拖动由 Rete 自身完成定位；记录为已同步，避免 React 回灌重复 translate。
+          lastSyncedGraphRef.current = nextGraph
+          queuedGraphRef.current = nextGraph
+          onGraphChangeRef.current(nextGraph)
         }
         if (context.type === 'contextmenu') {
           const menuEvent = context.data.event
@@ -286,34 +384,68 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     }
   }, [menu])
 
+  // 图同步分级：普通参数只刷新该节点；拓扑变化（节点/端口/连线）才重建 Rete。
+  // 队列必须串行，避免快速输入时 clear/addNode/addConnection 交错。
   useEffect(() => {
     const instance = reteRef.current
     if (!instance) return
-    const signature = graphStructureSignature(graph)
-    if (lastSyncedSignatureRef.current === signature) {
-      applyingZoomRef.current = true
-      void instance.area.area.zoom(zoom).finally(() => {
-        applyingZoomRef.current = false
-      })
-      return
-    }
-    lastSyncedSignatureRef.current = signature
+
+    const revisionChanged = lastGraphRevisionRef.current !== graphRevision
+    const plan = revisionChanged
+      ? { kind: 'structure' as const, changedNodeIds: [] }
+      : classifyGraphSync(queuedGraphRef.current, graph)
+    if (plan.kind === 'none') return
+
+    queuedGraphRef.current = graph
+    lastGraphRevisionRef.current = graphRevision
     syncingRef.current = true
-    void syncReteEditorFromGraph(instance, graph).then(() => {
-      applyingZoomRef.current = true
-      void instance.area.area.zoom(zoom).finally(() => {
-        applyingZoomRef.current = false
-      })
-    }).finally(() => {
+
+    const task = syncQueueRef.current.then(async () => {
+      if (plan.kind === 'node-data') {
+        await syncReteNodeDataFromGraph(instance, graph, plan.changedNodeIds)
+      } else if (plan.kind === 'node-position') {
+        await syncReteNodePositionsFromGraph(instance, graph, plan.changedNodeIds)
+      } else {
+        await syncReteEditorFromGraph(instance, graph)
+        if (lastAppliedZoomRef.current !== zoom) {
+          lastAppliedZoomRef.current = zoom
+          applyingZoomRef.current = true
+          await instance.area.area.zoom(zoom)
+          applyingZoomRef.current = false
+        }
+      }
+      lastSyncedGraphRef.current = graph
+    })
+    const queueTail = task.catch((error) => {
+      queuedGraphRef.current = null
+      lastSyncedGraphRef.current = null
+      console.error('同步脚本画布失败', error)
+    })
+    syncQueueRef.current = queueTail
+
+    void task.finally(() => {
+      if (syncQueueRef.current !== queueTail) return
       syncingRef.current = false
-      // 若 fitView 在同步进行中被调用，这里补执行一次。
       if (pendingFitRef.current) {
         pendingFitRef.current = false
         const result = computeFit()
         if (result) applyFitTransform(result)
       }
     })
-  }, [graph, zoom])
+  }, [graph, graphRevision, zoom])
+
+  // zoom 独立应用：只在 zoom 真的变化时调用 area.zoom
+  useEffect(() => {
+    const instance = reteRef.current
+    if (!instance) return
+    if (lastAppliedZoomRef.current === zoom) return
+    if (syncingRef.current) return // 全量同步期间由上面的 effect 负责对齐
+    lastAppliedZoomRef.current = zoom
+    applyingZoomRef.current = true
+    void instance.area.area.zoom(zoom).finally(() => {
+      applyingZoomRef.current = false
+    })
+  }, [zoom])
 
   // 空画布时让 minimap 仍可拖动平移、点击定位、滚轮缩放
   // （Rete MinimapPlugin 无节点时不渲染导航框 → 点/拖/滚轮默认无反应）
@@ -321,7 +453,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     canvasRef,
     editorInstance,
     graph.nodes.length === 0,
-    (deltaY) => onZoomChange(computeWheelZoom(zoom, deltaY))
+    (deltaY) => onZoomChange(computeWheelZoom(zoom, deltaY, resolveZoomMin()))
   )
 
   return (
@@ -336,6 +468,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         for (const id of selectedNodeIds) next = removeGraphNode(next, id)
         onGraphChange(next)
         onDeleteSelectedNodes()
+      }}
+      onDragStart={(event) => {
+        // 画布内部只允许 Rete 的 pointer 拖拽（平移/移节点）。
+        // 若不拦截 HTML5 dragstart，Electron/Chromium 会生成半透明 ghost，
+        // 并取消 pointer 序列，表现为「组件拖出影子 + 画布平移停住」。
+        // 组件树 → 画布落点仍走 NodePalette 的 application/x-saecom-node D&D。
+        event.preventDefault()
       }}
       onDragOver={(event) => {
         if (!event.dataTransfer.types.includes('application/x-saecom-node')) return
@@ -441,6 +580,18 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
               <button className="script-editor-context-menu__item" role="menuitem" type="button" onClick={() => { setMenu(null); onDropNode('transform-hex', getNextCanvasNodePosition) }}>添加 HEX 转换</button>
               <button className="script-editor-context-menu__item" role="menuitem" type="button" onClick={() => { setMenu(null); onDropNode('output-serial', getNextCanvasNodePosition) }}>添加发送串口</button>
               <div className="script-editor-context-menu__separator" />
+              <button
+                className="script-editor-context-menu__item"
+                role="menuitem"
+                type="button"
+                data-testid="auto-arrange-menu"
+                onClick={() => {
+                  setMenu(null)
+                  void runArrangeLayout()
+                }}
+              >
+                自动排版
+              </button>
               <button className="script-editor-context-menu__item" role="menuitem" type="button" onClick={() => { setMenu(null); onResetView() }}>重置视图</button>
             </>
           )}
@@ -463,18 +614,6 @@ function getNodeIdFromEventTarget(instance: ReteEditorInstance | null, target: E
   }
 
   return null
-}
-
-function graphStructureSignature(graph: GraphEditorState): string {
-  return JSON.stringify({
-    nodes: graph.nodes.map((node) => ({
-      id: node.id,
-      key: node.key,
-      label: node.label,
-      data: node.data
-    })),
-    connections: graph.connections
-  })
 }
 
 function getMarqueeStyle(marquee: Bounds, canvas: HTMLElement | null): { left: number; top: number; width: number; height: number } {

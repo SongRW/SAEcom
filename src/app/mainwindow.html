@@ -3,39 +3,26 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>串口助手 (React 预览)</title>
-    <style>
-        html,
-        body {
-            margin: 0;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        #root {
-            height: 100%;
-        }
-    </style>
+    <title>串串</title>
     <!--
-      冷启动防闪烁（FOUC）：在 React 挂载前同步读取持久化设置，提前应用主题类与字号。
-      否则深色模式启动时先以浅色绘制，React 挂载后再切深色 → 明显闪白。
-      设置项的「单一真源」是 localStorage['appSettings']（与 settings store 一致）。
+      注意：本文件不含任何内联 <script>/<style>。生产 CSP（installCsp, 见 electron/main.ts）
+      script-src/style-src 均为 'self'，禁止内联——故冷启动主题、加载框样式与逻辑全部
+      由 mainwindow.tsx（Vite 打包的同源模块，CSP 允许）注入。HTML 仅保留纯结构。
     -->
-    <script>
-        (function () {
-            try {
-                var raw = localStorage.getItem('appSettings')
-                var s = raw ? JSON.parse(raw) : {}
-                var el = document.documentElement
-                if (s.dark) { el.classList.add('dark'); el.classList.add('theme-dark') }
-                var fs = Number(s.fontSize)
-                if (fs > 0) el.style.setProperty('--font-size-base', fs + 'px')
-            } catch (e) { /* 容错：解析失败则用默认浅色 */ }
-        })()
-    </script>
 </head>
 
 <body>
+    <!--
+      启动加载框：纯结构。样式由 mainwindow.tsx 注入的 <style> 提供；
+      __hideAppLoader 由 mainwindow.tsx 暴露，渲染层首帧后调用（见 MainWindow.tsx）。
+      默认配色走 CSS 变量 --loader-bg/--loader-fg（mainwindow.tsx 冷启动时按 localStorage 写入）。
+    -->
+    <div id="app-loader">
+        <div class="loader-logo">串串</div>
+        <div class="loader-spinner"></div>
+        <div class="loader-text" id="app-loader-text">正在启动…</div>
+    </div>
+
     <!-- React 主窗口挂载点（双轨并行：此入口独立于 legacy src/index.html） -->
     <div id="root"></div>
 

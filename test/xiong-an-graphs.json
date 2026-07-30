@@ -1,0 +1,2320 @@
+{
+  "protocol1": {
+    "nodes": [
+      {
+        "id": "1",
+        "key": "input-file",
+        "position": {
+          "x": 40,
+          "y": 40
+        },
+        "data": {
+          "path": "位置报送帧.txt",
+          "encoding": "utf8"
+        }
+      },
+      {
+        "id": "2",
+        "key": "split-delimiter",
+        "position": {
+          "x": 280,
+          "y": 40
+        },
+        "data": {
+          "delimiter": "换行",
+          "custom": "",
+          "index": "全部"
+        }
+      },
+      {
+        "id": "3",
+        "key": "control-loop",
+        "position": {
+          "x": 520,
+          "y": 40
+        },
+        "data": {
+          "count": 0,
+          "type": "遍历循环"
+        }
+      },
+      {
+        "id": "4",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 40
+        },
+        "data": {
+          "start": 0,
+          "length": 1
+        }
+      },
+      {
+        "id": "5",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 40
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "6",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 40
+        },
+        "data": {
+          "prefix": "协议编号",
+          "level": "info"
+        }
+      },
+      {
+        "id": "7",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 100
+        },
+        "data": {
+          "start": 1,
+          "length": 1
+        }
+      },
+      {
+        "id": "8",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 100
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "9",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 100
+        },
+        "data": {
+          "prefix": "年",
+          "level": "info"
+        }
+      },
+      {
+        "id": "10",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 160
+        },
+        "data": {
+          "start": 2,
+          "length": 1
+        }
+      },
+      {
+        "id": "11",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 160
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "12",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 160
+        },
+        "data": {
+          "prefix": "月",
+          "level": "info"
+        }
+      },
+      {
+        "id": "13",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 220
+        },
+        "data": {
+          "start": 3,
+          "length": 1
+        }
+      },
+      {
+        "id": "14",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 220
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "15",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 220
+        },
+        "data": {
+          "prefix": "日",
+          "level": "info"
+        }
+      },
+      {
+        "id": "16",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 280
+        },
+        "data": {
+          "start": 4,
+          "length": 1
+        }
+      },
+      {
+        "id": "17",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 280
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "18",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 280
+        },
+        "data": {
+          "prefix": "时",
+          "level": "info"
+        }
+      },
+      {
+        "id": "19",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 340
+        },
+        "data": {
+          "start": 5,
+          "length": 1
+        }
+      },
+      {
+        "id": "20",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 340
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "21",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 340
+        },
+        "data": {
+          "prefix": "分",
+          "level": "info"
+        }
+      },
+      {
+        "id": "22",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 400
+        },
+        "data": {
+          "start": 6,
+          "length": 1
+        }
+      },
+      {
+        "id": "23",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 400
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "24",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 400
+        },
+        "data": {
+          "prefix": "秒",
+          "level": "info"
+        }
+      },
+      {
+        "id": "25",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 460
+        },
+        "data": {
+          "start": 7,
+          "length": 3
+        }
+      },
+      {
+        "id": "26",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 460
+        },
+        "data": {
+          "width": 3,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "27",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 460
+        },
+        "data": {
+          "operator": "除",
+          "operand2": "10000"
+        }
+      },
+      {
+        "id": "28",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1420,
+          "y": 460
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "90"
+        }
+      },
+      {
+        "id": "29",
+        "key": "output-log",
+        "position": {
+          "x": 1640,
+          "y": 460
+        },
+        "data": {
+          "prefix": "纬度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "30",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 520
+        },
+        "data": {
+          "start": 10,
+          "length": 3
+        }
+      },
+      {
+        "id": "31",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 520
+        },
+        "data": {
+          "width": 3,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "32",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 520
+        },
+        "data": {
+          "operator": "除",
+          "operand2": "10000"
+        }
+      },
+      {
+        "id": "33",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1420,
+          "y": 520
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "180"
+        }
+      },
+      {
+        "id": "34",
+        "key": "output-log",
+        "position": {
+          "x": 1640,
+          "y": 520
+        },
+        "data": {
+          "prefix": "经度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "35",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 580
+        },
+        "data": {
+          "start": 13,
+          "length": 2
+        }
+      },
+      {
+        "id": "36",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 580
+        },
+        "data": {
+          "width": 2,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "37",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 580
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "500"
+        }
+      },
+      {
+        "id": "38",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 580
+        },
+        "data": {
+          "prefix": "海拔",
+          "level": "info"
+        }
+      },
+      {
+        "id": "39",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 640
+        },
+        "data": {
+          "start": 15,
+          "length": 1
+        }
+      },
+      {
+        "id": "40",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 640
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "41",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 640
+        },
+        "data": {
+          "operator": "乘",
+          "operand2": "1.852"
+        }
+      },
+      {
+        "id": "42",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 640
+        },
+        "data": {
+          "prefix": "速度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "43",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 700
+        },
+        "data": {
+          "start": 16,
+          "length": 1
+        }
+      },
+      {
+        "id": "44",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 700
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "45",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 700
+        },
+        "data": {
+          "operator": "乘",
+          "operand2": "2"
+        }
+      },
+      {
+        "id": "46",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 700
+        },
+        "data": {
+          "prefix": "航向角",
+          "level": "info"
+        }
+      },
+      {
+        "id": "47",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 760
+        },
+        "data": {
+          "start": 17,
+          "length": 1
+        }
+      },
+      {
+        "id": "48",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 760
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "49",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 760
+        },
+        "data": {
+          "prefix": "温度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "50",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 820
+        },
+        "data": {
+          "start": 18,
+          "length": 1
+        }
+      },
+      {
+        "id": "51",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 820
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "52",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 820
+        },
+        "data": {
+          "operator": "除",
+          "operand2": "5"
+        }
+      },
+      {
+        "id": "53",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 820
+        },
+        "data": {
+          "prefix": "供电电压",
+          "level": "info"
+        }
+      },
+      {
+        "id": "54",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 880
+        },
+        "data": {
+          "start": 19,
+          "length": 1
+        }
+      },
+      {
+        "id": "55",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 880
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "56",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 880
+        },
+        "data": {
+          "prefix": "倾角",
+          "level": "info"
+        }
+      },
+      {
+        "id": "57",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 940
+        },
+        "data": {
+          "start": 20,
+          "length": 1
+        }
+      },
+      {
+        "id": "58",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 940
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "59",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 940
+        },
+        "data": {
+          "operator": "异或",
+          "operand2": "128"
+        }
+      },
+      {
+        "id": "60",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1420,
+          "y": 940
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "128"
+        }
+      },
+      {
+        "id": "61",
+        "key": "output-log",
+        "position": {
+          "x": 1640,
+          "y": 940
+        },
+        "data": {
+          "prefix": "信号强度",
+          "level": "info"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "1.out->2.in",
+        "source": "1",
+        "sourceOutput": "out",
+        "target": "2",
+        "targetInput": "in"
+      },
+      {
+        "id": "2.out->3.in",
+        "source": "2",
+        "sourceOutput": "out",
+        "target": "3",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->4.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "4",
+        "targetInput": "hex"
+      },
+      {
+        "id": "4.out->5.hex",
+        "source": "4",
+        "sourceOutput": "out",
+        "target": "5",
+        "targetInput": "hex"
+      },
+      {
+        "id": "5.out->6.in",
+        "source": "5",
+        "sourceOutput": "out",
+        "target": "6",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->7.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "7",
+        "targetInput": "hex"
+      },
+      {
+        "id": "7.out->8.hex",
+        "source": "7",
+        "sourceOutput": "out",
+        "target": "8",
+        "targetInput": "hex"
+      },
+      {
+        "id": "8.out->9.in",
+        "source": "8",
+        "sourceOutput": "out",
+        "target": "9",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->10.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "10",
+        "targetInput": "hex"
+      },
+      {
+        "id": "10.out->11.hex",
+        "source": "10",
+        "sourceOutput": "out",
+        "target": "11",
+        "targetInput": "hex"
+      },
+      {
+        "id": "11.out->12.in",
+        "source": "11",
+        "sourceOutput": "out",
+        "target": "12",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->13.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "13",
+        "targetInput": "hex"
+      },
+      {
+        "id": "13.out->14.hex",
+        "source": "13",
+        "sourceOutput": "out",
+        "target": "14",
+        "targetInput": "hex"
+      },
+      {
+        "id": "14.out->15.in",
+        "source": "14",
+        "sourceOutput": "out",
+        "target": "15",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->16.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "16",
+        "targetInput": "hex"
+      },
+      {
+        "id": "16.out->17.hex",
+        "source": "16",
+        "sourceOutput": "out",
+        "target": "17",
+        "targetInput": "hex"
+      },
+      {
+        "id": "17.out->18.in",
+        "source": "17",
+        "sourceOutput": "out",
+        "target": "18",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->19.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "19",
+        "targetInput": "hex"
+      },
+      {
+        "id": "19.out->20.hex",
+        "source": "19",
+        "sourceOutput": "out",
+        "target": "20",
+        "targetInput": "hex"
+      },
+      {
+        "id": "20.out->21.in",
+        "source": "20",
+        "sourceOutput": "out",
+        "target": "21",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->22.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "22",
+        "targetInput": "hex"
+      },
+      {
+        "id": "22.out->23.hex",
+        "source": "22",
+        "sourceOutput": "out",
+        "target": "23",
+        "targetInput": "hex"
+      },
+      {
+        "id": "23.out->24.in",
+        "source": "23",
+        "sourceOutput": "out",
+        "target": "24",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->25.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "25",
+        "targetInput": "hex"
+      },
+      {
+        "id": "25.out->26.hex",
+        "source": "25",
+        "sourceOutput": "out",
+        "target": "26",
+        "targetInput": "hex"
+      },
+      {
+        "id": "26.out->27.left",
+        "source": "26",
+        "sourceOutput": "out",
+        "target": "27",
+        "targetInput": "left"
+      },
+      {
+        "id": "27.out->28.left",
+        "source": "27",
+        "sourceOutput": "out",
+        "target": "28",
+        "targetInput": "left"
+      },
+      {
+        "id": "28.out->29.in",
+        "source": "28",
+        "sourceOutput": "out",
+        "target": "29",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->30.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "30",
+        "targetInput": "hex"
+      },
+      {
+        "id": "30.out->31.hex",
+        "source": "30",
+        "sourceOutput": "out",
+        "target": "31",
+        "targetInput": "hex"
+      },
+      {
+        "id": "31.out->32.left",
+        "source": "31",
+        "sourceOutput": "out",
+        "target": "32",
+        "targetInput": "left"
+      },
+      {
+        "id": "32.out->33.left",
+        "source": "32",
+        "sourceOutput": "out",
+        "target": "33",
+        "targetInput": "left"
+      },
+      {
+        "id": "33.out->34.in",
+        "source": "33",
+        "sourceOutput": "out",
+        "target": "34",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->35.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "35",
+        "targetInput": "hex"
+      },
+      {
+        "id": "35.out->36.hex",
+        "source": "35",
+        "sourceOutput": "out",
+        "target": "36",
+        "targetInput": "hex"
+      },
+      {
+        "id": "36.out->37.left",
+        "source": "36",
+        "sourceOutput": "out",
+        "target": "37",
+        "targetInput": "left"
+      },
+      {
+        "id": "37.out->38.in",
+        "source": "37",
+        "sourceOutput": "out",
+        "target": "38",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->39.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "39",
+        "targetInput": "hex"
+      },
+      {
+        "id": "39.out->40.hex",
+        "source": "39",
+        "sourceOutput": "out",
+        "target": "40",
+        "targetInput": "hex"
+      },
+      {
+        "id": "40.out->41.left",
+        "source": "40",
+        "sourceOutput": "out",
+        "target": "41",
+        "targetInput": "left"
+      },
+      {
+        "id": "41.out->42.in",
+        "source": "41",
+        "sourceOutput": "out",
+        "target": "42",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->43.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "43",
+        "targetInput": "hex"
+      },
+      {
+        "id": "43.out->44.hex",
+        "source": "43",
+        "sourceOutput": "out",
+        "target": "44",
+        "targetInput": "hex"
+      },
+      {
+        "id": "44.out->45.left",
+        "source": "44",
+        "sourceOutput": "out",
+        "target": "45",
+        "targetInput": "left"
+      },
+      {
+        "id": "45.out->46.in",
+        "source": "45",
+        "sourceOutput": "out",
+        "target": "46",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->47.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "47",
+        "targetInput": "hex"
+      },
+      {
+        "id": "47.out->48.hex",
+        "source": "47",
+        "sourceOutput": "out",
+        "target": "48",
+        "targetInput": "hex"
+      },
+      {
+        "id": "48.out->49.in",
+        "source": "48",
+        "sourceOutput": "out",
+        "target": "49",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->50.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "50",
+        "targetInput": "hex"
+      },
+      {
+        "id": "50.out->51.hex",
+        "source": "50",
+        "sourceOutput": "out",
+        "target": "51",
+        "targetInput": "hex"
+      },
+      {
+        "id": "51.out->52.left",
+        "source": "51",
+        "sourceOutput": "out",
+        "target": "52",
+        "targetInput": "left"
+      },
+      {
+        "id": "52.out->53.in",
+        "source": "52",
+        "sourceOutput": "out",
+        "target": "53",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->54.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "54",
+        "targetInput": "hex"
+      },
+      {
+        "id": "54.out->55.hex",
+        "source": "54",
+        "sourceOutput": "out",
+        "target": "55",
+        "targetInput": "hex"
+      },
+      {
+        "id": "55.out->56.in",
+        "source": "55",
+        "sourceOutput": "out",
+        "target": "56",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->57.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "57",
+        "targetInput": "hex"
+      },
+      {
+        "id": "57.out->58.hex",
+        "source": "57",
+        "sourceOutput": "out",
+        "target": "58",
+        "targetInput": "hex"
+      },
+      {
+        "id": "58.out->59.left",
+        "source": "58",
+        "sourceOutput": "out",
+        "target": "59",
+        "targetInput": "left"
+      },
+      {
+        "id": "59.out->60.left",
+        "source": "59",
+        "sourceOutput": "out",
+        "target": "60",
+        "targetInput": "left"
+      },
+      {
+        "id": "60.out->61.in",
+        "source": "60",
+        "sourceOutput": "out",
+        "target": "61",
+        "targetInput": "in"
+      }
+    ]
+  },
+  "protocol2": {
+    "nodes": [
+      {
+        "id": "1",
+        "key": "input-file",
+        "position": {
+          "x": 40,
+          "y": 40
+        },
+        "data": {
+          "path": "安全监测帧.txt",
+          "encoding": "utf8"
+        }
+      },
+      {
+        "id": "2",
+        "key": "split-delimiter",
+        "position": {
+          "x": 280,
+          "y": 40
+        },
+        "data": {
+          "delimiter": "换行",
+          "custom": "",
+          "index": "全部"
+        }
+      },
+      {
+        "id": "3",
+        "key": "control-loop",
+        "position": {
+          "x": 520,
+          "y": 40
+        },
+        "data": {
+          "count": 0,
+          "type": "遍历循环"
+        }
+      },
+      {
+        "id": "4",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 40
+        },
+        "data": {
+          "start": 0,
+          "length": 1
+        }
+      },
+      {
+        "id": "5",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 40
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "6",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 40
+        },
+        "data": {
+          "prefix": "协议编号",
+          "level": "info"
+        }
+      },
+      {
+        "id": "7",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 100
+        },
+        "data": {
+          "start": 1,
+          "length": 1
+        }
+      },
+      {
+        "id": "8",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 100
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "9",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 100
+        },
+        "data": {
+          "prefix": "年",
+          "level": "info"
+        }
+      },
+      {
+        "id": "10",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 160
+        },
+        "data": {
+          "start": 2,
+          "length": 1
+        }
+      },
+      {
+        "id": "11",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 160
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "12",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 160
+        },
+        "data": {
+          "prefix": "月",
+          "level": "info"
+        }
+      },
+      {
+        "id": "13",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 220
+        },
+        "data": {
+          "start": 3,
+          "length": 1
+        }
+      },
+      {
+        "id": "14",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 220
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "15",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 220
+        },
+        "data": {
+          "prefix": "日",
+          "level": "info"
+        }
+      },
+      {
+        "id": "16",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 280
+        },
+        "data": {
+          "start": 4,
+          "length": 1
+        }
+      },
+      {
+        "id": "17",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 280
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "18",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 280
+        },
+        "data": {
+          "prefix": "时",
+          "level": "info"
+        }
+      },
+      {
+        "id": "19",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 340
+        },
+        "data": {
+          "start": 5,
+          "length": 1
+        }
+      },
+      {
+        "id": "20",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 340
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "21",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 340
+        },
+        "data": {
+          "prefix": "分",
+          "level": "info"
+        }
+      },
+      {
+        "id": "22",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 400
+        },
+        "data": {
+          "start": 6,
+          "length": 1
+        }
+      },
+      {
+        "id": "23",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 400
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "24",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 400
+        },
+        "data": {
+          "prefix": "秒",
+          "level": "info"
+        }
+      },
+      {
+        "id": "25",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 460
+        },
+        "data": {
+          "start": 7,
+          "length": 3
+        }
+      },
+      {
+        "id": "26",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 460
+        },
+        "data": {
+          "width": 3,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "27",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 460
+        },
+        "data": {
+          "operator": "除",
+          "operand2": "10000"
+        }
+      },
+      {
+        "id": "28",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1420,
+          "y": 460
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "90"
+        }
+      },
+      {
+        "id": "29",
+        "key": "output-log",
+        "position": {
+          "x": 1640,
+          "y": 460
+        },
+        "data": {
+          "prefix": "纬度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "30",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 520
+        },
+        "data": {
+          "start": 10,
+          "length": 3
+        }
+      },
+      {
+        "id": "31",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 520
+        },
+        "data": {
+          "width": 3,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "32",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 520
+        },
+        "data": {
+          "operator": "除",
+          "operand2": "10000"
+        }
+      },
+      {
+        "id": "33",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1420,
+          "y": 520
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "180"
+        }
+      },
+      {
+        "id": "34",
+        "key": "output-log",
+        "position": {
+          "x": 1640,
+          "y": 520
+        },
+        "data": {
+          "prefix": "经度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "35",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 580
+        },
+        "data": {
+          "start": 13,
+          "length": 2
+        }
+      },
+      {
+        "id": "36",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 580
+        },
+        "data": {
+          "width": 2,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "37",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 580
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "500"
+        }
+      },
+      {
+        "id": "38",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 580
+        },
+        "data": {
+          "prefix": "海拔",
+          "level": "info"
+        }
+      },
+      {
+        "id": "39",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 640
+        },
+        "data": {
+          "start": 15,
+          "length": 1
+        }
+      },
+      {
+        "id": "40",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 640
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "41",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 640
+        },
+        "data": {
+          "operator": "乘",
+          "operand2": "1.852"
+        }
+      },
+      {
+        "id": "42",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 640
+        },
+        "data": {
+          "prefix": "速度",
+          "level": "info"
+        }
+      },
+      {
+        "id": "43",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 700
+        },
+        "data": {
+          "start": 16,
+          "length": 1
+        }
+      },
+      {
+        "id": "44",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 700
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "45",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 700
+        },
+        "data": {
+          "operator": "乘",
+          "operand2": "2"
+        }
+      },
+      {
+        "id": "46",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 700
+        },
+        "data": {
+          "prefix": "航向角",
+          "level": "info"
+        }
+      },
+      {
+        "id": "47",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 760
+        },
+        "data": {
+          "start": 17,
+          "length": 1
+        }
+      },
+      {
+        "id": "48",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 760
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "49",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 760
+        },
+        "data": {
+          "prefix": "定位状态",
+          "level": "info"
+        }
+      },
+      {
+        "id": "50",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 820
+        },
+        "data": {
+          "start": 18,
+          "length": 1
+        }
+      },
+      {
+        "id": "51",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 820
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "52",
+        "key": "output-log",
+        "position": {
+          "x": 1200,
+          "y": 820
+        },
+        "data": {
+          "prefix": "历史定位时间",
+          "level": "info"
+        }
+      },
+      {
+        "id": "53",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 880
+        },
+        "data": {
+          "start": 19,
+          "length": 1
+        }
+      },
+      {
+        "id": "54",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 880
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "55",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 880
+        },
+        "data": {
+          "operator": "除",
+          "operand2": "5"
+        }
+      },
+      {
+        "id": "56",
+        "key": "output-log",
+        "position": {
+          "x": 1420,
+          "y": 880
+        },
+        "data": {
+          "prefix": "供电电压",
+          "level": "info"
+        }
+      },
+      {
+        "id": "57",
+        "key": "protocol-slice",
+        "position": {
+          "x": 760,
+          "y": 940
+        },
+        "data": {
+          "start": 20,
+          "length": 1
+        }
+      },
+      {
+        "id": "58",
+        "key": "protocol-parse-u",
+        "position": {
+          "x": 980,
+          "y": 940
+        },
+        "data": {
+          "width": 1,
+          "endian": "大端"
+        }
+      },
+      {
+        "id": "59",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1200,
+          "y": 940
+        },
+        "data": {
+          "operator": "异或",
+          "operand2": "128"
+        }
+      },
+      {
+        "id": "60",
+        "key": "numeric-calc",
+        "position": {
+          "x": 1420,
+          "y": 940
+        },
+        "data": {
+          "operator": "减",
+          "operand2": "128"
+        }
+      },
+      {
+        "id": "61",
+        "key": "output-log",
+        "position": {
+          "x": 1640,
+          "y": 940
+        },
+        "data": {
+          "prefix": "信号强度",
+          "level": "info"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "1.out->2.in",
+        "source": "1",
+        "sourceOutput": "out",
+        "target": "2",
+        "targetInput": "in"
+      },
+      {
+        "id": "2.out->3.in",
+        "source": "2",
+        "sourceOutput": "out",
+        "target": "3",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->4.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "4",
+        "targetInput": "hex"
+      },
+      {
+        "id": "4.out->5.hex",
+        "source": "4",
+        "sourceOutput": "out",
+        "target": "5",
+        "targetInput": "hex"
+      },
+      {
+        "id": "5.out->6.in",
+        "source": "5",
+        "sourceOutput": "out",
+        "target": "6",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->7.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "7",
+        "targetInput": "hex"
+      },
+      {
+        "id": "7.out->8.hex",
+        "source": "7",
+        "sourceOutput": "out",
+        "target": "8",
+        "targetInput": "hex"
+      },
+      {
+        "id": "8.out->9.in",
+        "source": "8",
+        "sourceOutput": "out",
+        "target": "9",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->10.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "10",
+        "targetInput": "hex"
+      },
+      {
+        "id": "10.out->11.hex",
+        "source": "10",
+        "sourceOutput": "out",
+        "target": "11",
+        "targetInput": "hex"
+      },
+      {
+        "id": "11.out->12.in",
+        "source": "11",
+        "sourceOutput": "out",
+        "target": "12",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->13.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "13",
+        "targetInput": "hex"
+      },
+      {
+        "id": "13.out->14.hex",
+        "source": "13",
+        "sourceOutput": "out",
+        "target": "14",
+        "targetInput": "hex"
+      },
+      {
+        "id": "14.out->15.in",
+        "source": "14",
+        "sourceOutput": "out",
+        "target": "15",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->16.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "16",
+        "targetInput": "hex"
+      },
+      {
+        "id": "16.out->17.hex",
+        "source": "16",
+        "sourceOutput": "out",
+        "target": "17",
+        "targetInput": "hex"
+      },
+      {
+        "id": "17.out->18.in",
+        "source": "17",
+        "sourceOutput": "out",
+        "target": "18",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->19.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "19",
+        "targetInput": "hex"
+      },
+      {
+        "id": "19.out->20.hex",
+        "source": "19",
+        "sourceOutput": "out",
+        "target": "20",
+        "targetInput": "hex"
+      },
+      {
+        "id": "20.out->21.in",
+        "source": "20",
+        "sourceOutput": "out",
+        "target": "21",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->22.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "22",
+        "targetInput": "hex"
+      },
+      {
+        "id": "22.out->23.hex",
+        "source": "22",
+        "sourceOutput": "out",
+        "target": "23",
+        "targetInput": "hex"
+      },
+      {
+        "id": "23.out->24.in",
+        "source": "23",
+        "sourceOutput": "out",
+        "target": "24",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->25.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "25",
+        "targetInput": "hex"
+      },
+      {
+        "id": "25.out->26.hex",
+        "source": "25",
+        "sourceOutput": "out",
+        "target": "26",
+        "targetInput": "hex"
+      },
+      {
+        "id": "26.out->27.left",
+        "source": "26",
+        "sourceOutput": "out",
+        "target": "27",
+        "targetInput": "left"
+      },
+      {
+        "id": "27.out->28.left",
+        "source": "27",
+        "sourceOutput": "out",
+        "target": "28",
+        "targetInput": "left"
+      },
+      {
+        "id": "28.out->29.in",
+        "source": "28",
+        "sourceOutput": "out",
+        "target": "29",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->30.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "30",
+        "targetInput": "hex"
+      },
+      {
+        "id": "30.out->31.hex",
+        "source": "30",
+        "sourceOutput": "out",
+        "target": "31",
+        "targetInput": "hex"
+      },
+      {
+        "id": "31.out->32.left",
+        "source": "31",
+        "sourceOutput": "out",
+        "target": "32",
+        "targetInput": "left"
+      },
+      {
+        "id": "32.out->33.left",
+        "source": "32",
+        "sourceOutput": "out",
+        "target": "33",
+        "targetInput": "left"
+      },
+      {
+        "id": "33.out->34.in",
+        "source": "33",
+        "sourceOutput": "out",
+        "target": "34",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->35.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "35",
+        "targetInput": "hex"
+      },
+      {
+        "id": "35.out->36.hex",
+        "source": "35",
+        "sourceOutput": "out",
+        "target": "36",
+        "targetInput": "hex"
+      },
+      {
+        "id": "36.out->37.left",
+        "source": "36",
+        "sourceOutput": "out",
+        "target": "37",
+        "targetInput": "left"
+      },
+      {
+        "id": "37.out->38.in",
+        "source": "37",
+        "sourceOutput": "out",
+        "target": "38",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->39.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "39",
+        "targetInput": "hex"
+      },
+      {
+        "id": "39.out->40.hex",
+        "source": "39",
+        "sourceOutput": "out",
+        "target": "40",
+        "targetInput": "hex"
+      },
+      {
+        "id": "40.out->41.left",
+        "source": "40",
+        "sourceOutput": "out",
+        "target": "41",
+        "targetInput": "left"
+      },
+      {
+        "id": "41.out->42.in",
+        "source": "41",
+        "sourceOutput": "out",
+        "target": "42",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->43.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "43",
+        "targetInput": "hex"
+      },
+      {
+        "id": "43.out->44.hex",
+        "source": "43",
+        "sourceOutput": "out",
+        "target": "44",
+        "targetInput": "hex"
+      },
+      {
+        "id": "44.out->45.left",
+        "source": "44",
+        "sourceOutput": "out",
+        "target": "45",
+        "targetInput": "left"
+      },
+      {
+        "id": "45.out->46.in",
+        "source": "45",
+        "sourceOutput": "out",
+        "target": "46",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->47.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "47",
+        "targetInput": "hex"
+      },
+      {
+        "id": "47.out->48.hex",
+        "source": "47",
+        "sourceOutput": "out",
+        "target": "48",
+        "targetInput": "hex"
+      },
+      {
+        "id": "48.out->49.in",
+        "source": "48",
+        "sourceOutput": "out",
+        "target": "49",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->50.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "50",
+        "targetInput": "hex"
+      },
+      {
+        "id": "50.out->51.hex",
+        "source": "50",
+        "sourceOutput": "out",
+        "target": "51",
+        "targetInput": "hex"
+      },
+      {
+        "id": "51.out->52.in",
+        "source": "51",
+        "sourceOutput": "out",
+        "target": "52",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->53.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "53",
+        "targetInput": "hex"
+      },
+      {
+        "id": "53.out->54.hex",
+        "source": "53",
+        "sourceOutput": "out",
+        "target": "54",
+        "targetInput": "hex"
+      },
+      {
+        "id": "54.out->55.left",
+        "source": "54",
+        "sourceOutput": "out",
+        "target": "55",
+        "targetInput": "left"
+      },
+      {
+        "id": "55.out->56.in",
+        "source": "55",
+        "sourceOutput": "out",
+        "target": "56",
+        "targetInput": "in"
+      },
+      {
+        "id": "3.out->57.hex",
+        "source": "3",
+        "sourceOutput": "out",
+        "target": "57",
+        "targetInput": "hex"
+      },
+      {
+        "id": "57.out->58.hex",
+        "source": "57",
+        "sourceOutput": "out",
+        "target": "58",
+        "targetInput": "hex"
+      },
+      {
+        "id": "58.out->59.left",
+        "source": "58",
+        "sourceOutput": "out",
+        "target": "59",
+        "targetInput": "left"
+      },
+      {
+        "id": "59.out->60.left",
+        "source": "59",
+        "sourceOutput": "out",
+        "target": "60",
+        "targetInput": "left"
+      },
+      {
+        "id": "60.out->61.in",
+        "source": "60",
+        "sourceOutput": "out",
+        "target": "61",
+        "targetInput": "in"
+      }
+    ]
+  }
+}

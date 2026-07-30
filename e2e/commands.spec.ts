@@ -1,4 +1,5 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, NAV, openNavPage, clickReady, expectDialogClosed } from './fixtures'
+
 
 /**
  * 命令编辑与发送：覆盖命令分组/命令的 CRUD + 持久化。
@@ -13,39 +14,39 @@ test.describe('命令编辑与发送', () => {
     const cmdData = `E2E-${Date.now()}`
 
     // 1) 切到「命令」页
-    await page.getByText(NAV.pageCommands, { exact: true }).click()
+    await openNavPage(page, NAV.pageCommands)
 
     // 2) 打开命令编辑器（空态有「打开命令编辑器」，有命令时是「编辑命令」）
-    await page.getByText(/编辑命令|打开命令编辑器/).first().click()
+    await clickReady(page, page.getByRole('button', { name: /编辑命令|打开命令编辑器/ }))
     const editor = page.getByRole('dialog', { name: '命令编辑器' })
     await editor.waitFor()
 
     // 3) 新建分组：展开分组管理 → 填名 → 新建
-    await editor.getByRole('button', { name: '分组管理' }).click()
+    await clickReady(page, editor.getByRole('button', { name: '分组管理' }))
     await editor.getByPlaceholder('新分组名').fill(groupName)
-    await editor.getByRole('button', { name: '新建', exact: true }).click()
+    await clickReady(page, editor.getByRole('button', { name: '新建', exact: true }))
 
     // 4) 新建命令：底部「新建命令」→ 填名称/数据
-    await editor.getByRole('button', { name: '新建命令' }).click()
+    await clickReady(page, editor.getByRole('button', { name: '新建命令' }))
     await editor.getByPlaceholder('名称').fill(cmdName)
     await editor.getByPlaceholder('数据').fill(cmdData)
 
     // 5) 关闭编辑器
-    await editor.getByRole('button', { name: '完成' }).click()
-    await expect(editor).toBeHidden()
+    await clickReady(page, editor.getByRole('button', { name: '完成' }))
+    await expectDialogClosed(page, '命令编辑器')
 
     // 6) 网格出现命令卡片（role=button，含命令名）
     await expect(page.getByRole('button', { name: new RegExp(cmdName) })).toBeVisible()
   })
 
   test('命令编辑器可打开并关闭', async ({ page }) => {
-    await page.getByText(NAV.pageCommands, { exact: true }).click()
-    await page.getByText(/编辑命令|打开命令编辑器/).first().click()
+    await openNavPage(page, NAV.pageCommands)
+    await clickReady(page, page.getByRole('button', { name: /编辑命令|打开命令编辑器/ }))
     const editor = page.getByRole('dialog', { name: '命令编辑器' })
     await expect(editor).toBeVisible()
 
     // shadcn Dialog 默认有关闭（X）按钮，也可用「完成」
-    await editor.getByRole('button', { name: '完成' }).click()
-    await expect(editor).toBeHidden()
+    await clickReady(page, editor.getByRole('button', { name: '完成' }))
+    await expectDialogClosed(page, '命令编辑器')
   })
 })

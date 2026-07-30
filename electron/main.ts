@@ -7,6 +7,7 @@ import vm from 'node:vm'
 import https from 'node:https'
 import { spawn, execFile } from 'node:child_process'
 import os from 'node:os'
+import { seedSampleScripts } from './sampleScripts'
 import net from 'node:net'
 import {
   bytesToNumber,
@@ -124,58 +125,14 @@ function resolveSampleScriptsDir(): string | null {
   return null
 }
 
-/**
- * 内置样本是否需要强制刷新。
- * - 目标不存在：需要
- * - 目标仍含已删除的测试特化节点 key：需要（否则加载后端口/节点失效，表现为「断线要重连」）
- * - 源文件带 @sample-version 标记且与目标不一致：需要（示例脚本迭代后自动同步到 userData）
- * 其它情况不覆盖，避免冲掉用户本地改过的同名脚本。
- */
-const SAMPLE_VERSION_RE = /@sample-version\s+(\d+)/
-function shouldRefreshSampleScript(srcPath: string, dest: string): boolean {
-  if (!fs.existsSync(dest)) return true
-  try {
-    const destText = fs.readFileSync(dest, 'utf-8')
-    // 旧特化节点残留：强制刷新
-    if (/protocol-dual-seal|protocol-bitpack|protocol-bit-unpack/.test(destText)) return true
-    // 版本标记：源标记存在且与目标不同 → 刷新。源无标记时不动（保持旧行为）。
-    const srcText = fs.readFileSync(srcPath, 'utf-8')
-    const srcVer = srcText.match(SAMPLE_VERSION_RE)?.[1]
-    if (srcVer !== undefined) {
-      const destVer = destText.match(SAMPLE_VERSION_RE)?.[1]
-      return srcVer !== destVer
-    }
-  } catch {
-    return false
-  }
-  return false
-}
-
-/**
- * 把 shared/samples 下的示例脚本拷到 userData/scripts。
- * 默认不覆盖用户文件；若检测到旧版特化节点残留则强制刷新到最新通用节点版。
- */
-function seedSampleScripts(): void {
-  ensureScriptsDir()
+function seedBundledSampleScripts(): void {
   const sampleDir = resolveSampleScriptsDir()
   if (!sampleDir) return
-  let entries: string[] = []
-  try {
-    // 示例脚本(.js) + 脚本配套数据文件(.txt，供 input-file 读取)
-    entries = fs.readdirSync(sampleDir).filter((f) => f.endsWith('.js') || f.endsWith('.txt'))
-  } catch { return }
-  for (const name of entries) {
-    const src = path.join(sampleDir, name)
-    const dest = path.join(scriptsDir, safeScriptName(name))
-    // 数据文件(.txt)每次覆盖（脚本读取的就是最新帧数据）；.js 走版本刷新判断
-    const isDataFile = name.endsWith('.txt')
-    if (!isDataFile && !shouldRefreshSampleScript(src, dest)) continue
-    try {
-      fs.copyFileSync(src, dest)
-    } catch (err) {
-      console.error('[seedSampleScripts]', name, err)
-    }
-  }
+  seedSampleScripts({
+    sampleDir,
+    scriptsDir,
+    statePath: path.join(app.getPath('userData'), 'sample-scripts.json')
+  })
 }
 function getPortId(portPath: string): string { return portPath }
 
@@ -2129,7 +2086,7 @@ function installCsp(): void {
 app.whenReady().then(() => {
   installCsp()
   ensureScriptsDir()
-  seedSampleScripts()
+  seedBundledSampleScripts()
   createMainWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMainWindow() })
 })

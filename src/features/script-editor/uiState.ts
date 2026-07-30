@@ -1,6 +1,12 @@
 export type ScriptEditorSidePanel = 'components' | 'scripts'
 export type CanvasTool = 'pointer' | 'select' | 'pan'
 export type ScriptEditorWindowMode = 'normal' | 'maximized' | 'minimized'
+/**
+ * 视图模式：
+ * - 'auto'：按内容自动选（有节点→画布；纯代码→源码面板）
+ * - 'canvas'：强制画布（纯代码脚本也能切到空画布加节点）
+ */
+export type ScriptViewMode = 'auto' | 'canvas'
 
 export interface ScriptEditorUiState {
   sidePanel: ScriptEditorSidePanel | null
@@ -9,6 +15,7 @@ export interface ScriptEditorUiState {
   canvasTool: CanvasTool
   windowMode: ScriptEditorWindowMode
   preMinimizeMode: Exclude<ScriptEditorWindowMode, 'minimized'>
+  viewMode: ScriptViewMode
 }
 
 export function createScriptEditorUiState(): ScriptEditorUiState {
@@ -18,7 +25,8 @@ export function createScriptEditorUiState(): ScriptEditorUiState {
     outputExpanded: false,
     canvasTool: 'pointer',
     windowMode: 'normal',
-    preMinimizeMode: 'normal'
+    preMinimizeMode: 'normal',
+    viewMode: 'auto'
   }
 }
 
@@ -73,6 +81,11 @@ export function setCanvasTool(state: ScriptEditorUiState, canvasTool: CanvasTool
     ...state,
     canvasTool
   }
+}
+
+/** 设置视图模式（auto / 强制画布）。切脚本时由 selectScript reset 回 auto。 */
+export function setViewMode(state: ScriptEditorUiState, viewMode: ScriptViewMode): ScriptEditorUiState {
+  return { ...state, viewMode }
 }
 
 export function onScriptRunStarted(state: ScriptEditorUiState): ScriptEditorUiState {

@@ -18,7 +18,7 @@ const api: WindowAPI = {
     }
   },
   tcpServer: {
-    start: (port) => ipcRenderer.invoke('tcpServer:start', { port }),
+    start: (port, echo) => ipcRenderer.invoke('tcpServer:start', { port, echo }),
     stop: (id) => ipcRenderer.invoke('tcpServer:stop', { id }),
     status: (id) => ipcRenderer.invoke('tcpServer:status', { id }),
     broadcast: (id, data, mode, append, encoding) => ipcRenderer.invoke('tcpServer:broadcast', { id, data, mode, append, encoding }),
@@ -128,14 +128,48 @@ const api: WindowAPI = {
     setAlwaysOnTop: (id, onTop) => ipcRenderer.send('panel:set-always-on-top', { id, onTop })
   },
   scriptEditor: {
-    popout: () => ipcRenderer.invoke('script-editor:popout'),
-    requestDock: () => ipcRenderer.send('script-editor:request-dock'),
+    popout: (graphStr: string, activeScriptName: string) => ipcRenderer.invoke('script-editor:popout', { graphStr, activeScriptName }),
+    requestDock: (graphStr: string, activeScriptName: string) => ipcRenderer.send('script-editor:request-dock', { graphStr, activeScriptName }),
+    onPopoutPayload: (cb) => {
+      const listener = (_e: unknown, payload: { graphStr: string; activeScriptName: string }) => cb(payload)
+      ipcRenderer.on('script-editor:popout-payload', listener)
+      return () => ipcRenderer.off('script-editor:popout-payload', listener)
+    },
     onDock: (cb) => {
-      const listener = () => cb()
+      const listener = (_e: unknown, payload: { graphStr: string; activeScriptName: string }) => cb(payload || { graphStr: '', activeScriptName: '' })
       ipcRenderer.on('script-editor:dock', listener)
       return () => ipcRenderer.off('script-editor:dock', listener)
     },
     isPopout: () => (process.argv || []).includes('--script-editor-popout')
+  },
+  scriptOutput: {
+    popout: (lines, scriptName) => ipcRenderer.invoke('script-output:popout', { lines: lines || [], scriptName: scriptName || '' }),
+    sync: (lines, scriptName) => ipcRenderer.send('script-output:sync', { lines: lines || [], scriptName: scriptName || '' }),
+    requestClose: () => ipcRenderer.send('script-output:request-close'),
+    requestClear: () => ipcRenderer.send('script-output:request-clear'),
+    onPopoutPayload: (cb) => {
+      const listener = (_e: unknown, payload: { lines: Array<{ text: string; ts: number }>; scriptName: string }) =>
+        cb(payload || { lines: [], scriptName: '' })
+      ipcRenderer.on('script-output:popout-payload', listener)
+      return () => ipcRenderer.off('script-output:popout-payload', listener)
+    },
+    onSync: (cb) => {
+      const listener = (_e: unknown, payload: { lines: Array<{ text: string; ts: number }>; scriptName: string }) =>
+        cb(payload || { lines: [], scriptName: '' })
+      ipcRenderer.on('script-output:sync', listener)
+      return () => ipcRenderer.off('script-output:sync', listener)
+    },
+    onClearRequest: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('script-output:clear-request', listener)
+      return () => ipcRenderer.off('script-output:clear-request', listener)
+    },
+    onClosed: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('script-output:closed', listener)
+      return () => ipcRenderer.off('script-output:closed', listener)
+    },
+    isPopout: () => (process.argv || []).includes('--script-output-popout')
   },
   config: {
     load: () => ipcRenderer.invoke('config:load'),

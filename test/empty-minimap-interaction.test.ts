@@ -11,20 +11,21 @@ describe('empty minimap interaction helpers', () => {
     expect(computeTranslateDelta(-8, -3)).toEqual({ dx: 8, dy: 3 })
   })
 
-  it('computeWheelZoom: 向上滚（deltaY<0）放大，经 clampCanvasZoom 约束', () => {
+  it('computeWheelZoom: deltaY<0 向前放大', () => {
+    // 与 WindowsWheelZoom / wheelZoomDelta 一致：向前放大
     const next = computeWheelZoom(1, -100)
     expect(next).toBeGreaterThan(1)
-    expect(next).toBeLessThanOrEqual(1.8) // clampCanvasZoom 上限
+    expect(next).toBeLessThanOrEqual(1.8)
   })
 
-  it('computeWheelZoom: 向下滚（deltaY>0）缩小，不低于 0.5', () => {
+  it('computeWheelZoom: deltaY>0 向后缩小', () => {
     const next = computeWheelZoom(1, 100)
     expect(next).toBeLessThan(1)
-    expect(next).toBeGreaterThanOrEqual(0.5) // clampCanvasZoom 下限
+    expect(next).toBeGreaterThanOrEqual(0.5)
   })
 
   it('computeWheelZoom: 极限值被 clamp', () => {
-    expect(computeWheelZoom(1.8, -1000)).toBe(1.8)
     expect(computeWheelZoom(0.5, 1000)).toBe(0.5)
+    expect(computeWheelZoom(1.8, -1000)).toBe(1.8)
   })
 })

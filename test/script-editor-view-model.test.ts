@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   buildSerialPanelOptions,
   buildSerialPortOptions,
+  CANVAS_PAN_EMPTY_EXTENT,
+  CANVAS_ZOOM_ABSOLUTE_MIN,
+  CANVAS_ZOOM_MIN,
   clampCanvasZoom,
+  computeCanvasPanBounds,
+  computeCanvasZoomMin,
   createDefaultReteGraph,
   fitGraphToView,
   groupNodesForPalette,
+  MINIMAP_RATIO,
+  MINIMAP_SIZE,
   nextDefaultScriptName,
   normalizeScriptName,
   stripScriptExtension
@@ -15,7 +22,7 @@ describe('script editor view model', () => {
   it('groups node definitions for the palette in category order', () => {
     const groups = groupNodesForPalette()
 
-    expect(groups).toHaveLength(9)
+    expect(groups).toHaveLength(11)
     expect(groups[0].key).toBe('input')
     expect(groups.find((group) => group.key === 'compare')?.nodes).toHaveLength(10)
     expect(groups.find((group) => group.key === 'logical')?.nodes.map((node) => node.key)).toEqual([
@@ -39,6 +46,13 @@ describe('script editor view model', () => {
     expect(clampCanvasZoom(0.1)).toBe(0.5)
     expect(clampCanvasZoom(1.25)).toBe(1.25)
     expect(clampCanvasZoom(3)).toBe(1.8)
+  })
+
+  it('clamps canvas zoom with a dynamic floor for large graphs', () => {
+    // 大图允许 min 低于默认 0.5，但仍不低于 ABSOLUTE_MIN。
+    expect(clampCanvasZoom(0.2, 0.25)).toBe(0.25)
+    expect(clampCanvasZoom(0.05, 0.05)).toBe(CANVAS_ZOOM_ABSOLUTE_MIN)
+    expect(clampCanvasZoom(1, 0.2)).toBe(1)
   })
 
   it('describes inherited serial panel options', () => {
@@ -90,16 +104,129 @@ describe('script editor view model', () => {
     expect(result?.y).toBe(600 / 2 - 60 * 1.8)
   })
 
-  it('shrinks zoom to fit a wide graph inside the viewport', () => {
+  it('shrinks zoom below the default floor to fit a wide graph', () => {
     const result = fitGraphToView(
       [{ x: 0, y: 0, width: 2000, height: 200 }],
       { width: 800, height: 600 }
     )
-    // 受宽度约束：(800 - 160) / 2000 = 0.32，被 clamp 到下限 0.5。
-    expect(result?.zoom).toBe(0.5)
+    // 受宽度约束：(800 - 160) / 2000 = 0.32；动态下限允许低于默认 0.5。
+    expect(result?.zoom).toBe(0.32)
     // 仍以包围盒中心对准画布中心。
-    expect(result?.x).toBeCloseTo(800 / 2 - 1000 * 0.5)
-    expect(result?.y).toBeCloseTo(600 / 2 - 100 * 0.5)
+    expect(result?.x).toBeCloseTo(800 / 2 - 1000 * 0.32)
+    expect(result?.y).toBeCloseTo(600 / 2 - 100 * 0.32)
+  })
+
+  it('keeps default zoom min for small/empty graphs', () => {
+    expect(computeCanvasZoomMin([], { width: 800, height: 600 })).toBe(CANVAS_ZOOM_MIN)
+    expect(computeCanvasZoomMin(
+      [{ x: 0, y: 0, width: 200, height: 100 }],
+      { width: 800, height: 600 }
+    )).toBe(CANVAS_ZOOM_MIN)
+  })
+
+  it('lowers zoom min dynamically so large scripts can still fit', () => {
+    // required = (800-160)/4000 = 0.16；headroom 0.9 → 0.144 → 0.14
+    const min = computeCanvasZoomMin(
+      [{ x: 0, y: 0, width: 4000, height: 400 }],
+      { width: 800, height: 600 }
+    )
+    expect(min).toBeLessThan(CANVAS_ZOOM_MIN)
+    expect(min).toBeGreaterThanOrEqual(CANVAS_ZOOM_ABSOLUTE_MIN)
+    expect(min).toBe(0.14)
+  })
+})
+
+describe('minimap constants', () => {
+  it('keeps ratio=1 so rete-react-plugin can map X/Y with containerWidth', () => {
+    // MiniNode/MiniViewport 用 containerWidth 同时换算 left/top；ratio≠1 会把内容纵向裁切成空白。
+    expect(MINIMAP_RATIO).toBe(1)
+    expect(MINIMAP_SIZE).toBeGreaterThanOrEqual(200)
+  })
+})
+
+describe('computeCanvasPanBounds', () => {
+  it('returns a loose extent for empty graphs so empty canvas can still pan', () => {
+    expect(computeCanvasPanBounds([], { width: 800, height: 600 }, 1)).toEqual({
+      left: -CANVAS_PAN_EMPTY_EXTENT,
+      top: -CANVAS_PAN_EMPTY_EXTENT,
+      right: CANVAS_PAN_EMPTY_EXTENT,
+      bottom: CANVAS_PAN_EMPTY_EXTENT
+    })
+  })
+
+  it('clamps so a small graph stays fully inside the viewport', () => {
+    // 图比视口小：视口必须「包含」整张图，节点不会拖出视口。
+    // 单节点 (0,0)-(200,100)，padding 默认 320 → graph 世界范围 (-320,-320)-(520,420)
+    // zoom=1、容器 800x600：
+    // rawLeft  = containerW - graphRight*k = 800 - 520 = 280
+    // rawRight = -graphLeft*k = 320
+    // rawTop   = containerH - graphBottom*k = 600 - 420 = 180
+    // rawBottom= -graphTop*k = 320
+    const bounds = computeCanvasPanBounds(
+      [{ x: 0, y: 0, width: 200, height: 100 }],
+      { width: 800, height: 600 },
+      1
+    )
+    expect(bounds.left).toBe(280)
+    expect(bounds.right).toBe(320)
+    expect(bounds.top).toBe(180)
+    expect(bounds.bottom).toBe(320)
+  })
+
+  it('node stays visible at both pan bounds (contain semantics)', () => {
+    // 关键性质：把 x 钳到 left 或 right 时，节点屏幕坐标仍在 [0, containerW] 内。
+    const node = { x: 100, y: 100, width: 216, height: 120 }
+    const container = { width: 1000, height: 700 }
+    const zoom = 1
+    const bounds = computeCanvasPanBounds([node], container, zoom)
+    for (const tx of [bounds.left, bounds.right]) {
+      // 节点左缘屏幕坐标
+      const screenLeft = node.x * zoom + tx
+      const screenRight = (node.x + node.width) * zoom + tx
+      expect(screenLeft).toBeGreaterThanOrEqual(-0.01)
+      expect(screenRight).toBeLessThanOrEqual(container.width + 0.01)
+    }
+  })
+
+  it('clamps a large graph inside its own bounds', () => {
+    // 图比视口大：视口被限制在图内，看不到图外无限空白。
+    // 单节点 (0,0)-(3000,3000)，padding 320 → graph (-320..3320)
+    // zoom=1 容器 800x600：
+    // rawLeft=800-3320=-2520, rawRight=320
+    const bounds = computeCanvasPanBounds(
+      [{ x: 0, y: 0, width: 3000, height: 3000 }],
+      { width: 800, height: 600 },
+      1
+    )
+    expect(bounds.left).toBe(-2520)
+    expect(bounds.right).toBe(320)
+    expect(bounds.top).toBe(-2720)
+    expect(bounds.bottom).toBe(320)
+  })
+
+  it('scales pan limits with zoom so world-space clamp stays consistent', () => {
+    const bounds = computeCanvasPanBounds(
+      [{ x: 0, y: 0, width: 200, height: 100 }],
+      { width: 800, height: 600 },
+      0.5
+    )
+    expect(bounds.left).toBe(160)
+    expect(bounds.right).toBe(540)
+    expect(bounds.top).toBe(160)
+    expect(bounds.bottom).toBe(390)
+  })
+
+  it('rejects invalid zoom / container and falls back to empty extent', () => {
+    expect(computeCanvasPanBounds(
+      [{ x: 0, y: 0, width: 10, height: 10 }],
+      { width: 0, height: 600 },
+      1
+    ).left).toBe(-CANVAS_PAN_EMPTY_EXTENT)
+    expect(computeCanvasPanBounds(
+      [{ x: 0, y: 0, width: 10, height: 10 }],
+      { width: 800, height: 600 },
+      0
+    ).right).toBe(CANVAS_PAN_EMPTY_EXTENT)
   })
 })
 

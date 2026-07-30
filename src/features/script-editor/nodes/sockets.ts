@@ -13,4 +13,5 @@ export const SOCKETS: Record<SocketKind, SocketMeta> = {
   triggerSocket: { key: 'triggerSocket', label: '触发', color: '#f97316' }
 }
 
-export const canConnectSockets = (from: SocketKind, to: SocketKind): boolean => from === to
+export const canConnectSockets = (from: SocketKind, to: SocketKind): boolean =>
+  from === to || (from === 'boolSocket' && to === 'dataSocket')

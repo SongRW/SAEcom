@@ -7,6 +7,8 @@ import {
   getCompatibleSources,
   importGraphState,
   updateGraphNodeData,
+  updateGraphNodePosition,
+  updateGraphNodePositions,
   validateGraphNode
 } from '../src/features/script-editor/rete/graphState'
 import {
@@ -48,6 +50,29 @@ describe('script editor graph state', () => {
       { x: 324, y: 72 }
     ])
     expect(getNextCanvasNodePosition(graph)).toEqual({ x: 584, y: 72 })
+  })
+
+  it('batch-updates node positions without touching other fields', () => {
+    let graph = createEmptyGraphState()
+    graph = addGraphNode(graph, 'input-manual', { x: 10, y: 20 }, 'a')
+    graph = addGraphNode(graph, 'transform-hex', { x: 30, y: 40 }, 'b')
+    graph = updateGraphNodeData(graph, 'a', 'value', 'hello')
+
+    const next = updateGraphNodePositions(graph, {
+      a: { x: 100, y: 200 },
+      b: { x: 300, y: 400 },
+      missing: { x: 1, y: 2 }
+    })
+
+    expect(next.nodes.map((node) => ({ id: node.id, position: node.position, data: node.data }))).toEqual([
+      { id: 'a', position: { x: 100, y: 200 }, data: expect.objectContaining({ value: 'hello' }) },
+      { id: 'b', position: { x: 300, y: 400 }, data: graph.nodes[1].data }
+    ])
+    expect(next.connections).toBe(graph.connections)
+
+    // 单点 API 仍可用
+    const one = updateGraphNodePosition(next, 'a', { x: 1, y: 2 })
+    expect(one.nodes.find((node) => node.id === 'a')?.position).toEqual({ x: 1, y: 2 })
   })
 
   it('builds serial binding options from the current panel and panel list', () => {
@@ -94,10 +119,28 @@ describe('script editor graph state', () => {
     expect(graph.nodes[0].data).not.toHaveProperty('__panels')
   })
 
+  // 回归（Bug B「修改脚本后保存不了」）：加载一个已选好端口的串口节点时，
+  // defaultNodeData 带的顶层 portPath:"" 不得清空 configRef.portPath，
+  // 否则 validateGraphNode 报「未选择串口」→ saveScript 拦截保存。
+  it('keeps a selected serial port valid for save when re-adding a serial node with an existing configRef', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'input-serial', { x: 0, y: 0 }, 'serial', {
+      portPath: '',
+      configRef: {
+        kind: 'serial-port',
+        portPath: 'COM7',
+        serialOptions: { baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none' },
+        usesFallbackOptions: true
+      }
+    })
+    const node = graph.nodes[0]
+    expect((node.data.configRef as { portPath?: string }).portPath).toBe('COM7')
+    expect(validateGraphNode(node)).toEqual([])
+  })
+
   it('keeps every node category available for the vertical component tree', () => {
     const groups = groupNodesForPalette()
 
-    expect(groups).toHaveLength(9)
+    expect(groups).toHaveLength(11)
     expect(groups[0]?.key).toBe('input')
     expect(groups.every((group) => group.nodes.length > 0)).toBe(true)
     expect(groups.find((group) => group.key === 'string')?.nodes.map((node) => node.key)).toContain('string-concat')
@@ -159,6 +202,74 @@ describe('script editor graph state', () => {
 
     expect(imported.connections).toHaveLength(2)
     expect(exportGraphState(imported)).toEqual(exported)
+  })
+
+  it('restores dynamic object and bitfield ports before importing their connections', () => {
+    const graph = importGraphState({
+      nodes: [
+        { id: 'source', key: 'input-manual', position: { x: 0, y: 0 }, data: { content: 'ABCD' } },
+        { id: 'object', key: 'transform-object', position: { x: 240, y: 0 }, data: { keys: [{ id: 'k1', name: 'value' }] } },
+        { id: 'unpack', key: 'protocol-bitfield', position: { x: 480, y: 0 }, data: { mode: '解包', fields: [{ id: 'f1', name: '状态', bits: 8 }] } },
+        { id: 'log', key: 'output-log', position: { x: 720, y: 0 }, data: { prefix: '状态' } }
+      ],
+      connections: [
+        { source: 'source', sourceOutput: 'out', target: 'object', targetInput: 'key_k1' },
+        { source: 'source', sourceOutput: 'out', target: 'unpack', targetInput: 'hex' },
+        { source: 'unpack', sourceOutput: 'field_f1', target: 'log', targetInput: 'in' }
+      ]
+    })
+
+    expect(graph.nodes.find((node) => node.id === 'object')?.inputs).toHaveProperty('key_k1')
+    expect(graph.nodes.find((node) => node.id === 'unpack')?.inputs).toHaveProperty('hex')
+    expect(graph.nodes.find((node) => node.id === 'unpack')?.outputs).toHaveProperty('field_f1')
+    expect(graph.connections).toHaveLength(3)
+    expect(importGraphState(exportGraphState(graph)).connections).toEqual(graph.connections)
+  })
+
+  it('prunes only connections whose object key port is removed', () => {
+    let graph = createEmptyGraphState()
+    graph = addGraphNode(graph, 'input-manual', { x: 0, y: 0 }, 'left')
+    graph = addGraphNode(graph, 'input-manual', { x: 0, y: 120 }, 'right')
+    graph = addGraphNode(graph, 'transform-object', { x: 240, y: 0 }, 'object', {
+      keys: [{ id: 'k1', name: 'first' }, { id: 'k2', name: 'second' }]
+    })
+    graph = connectGraphNodes(graph, { source: 'left', sourceOutput: 'out', target: 'object', targetInput: 'key_k1' })
+    graph = connectGraphNodes(graph, { source: 'right', sourceOutput: 'out', target: 'object', targetInput: 'key_k2' })
+
+    const next = updateGraphNodeData(graph, 'object', 'keys', [{ id: 'k2', name: 'second' }])
+
+    expect(next.nodes.find((node) => node.id === 'object')?.inputs).not.toHaveProperty('key_k1')
+    expect(next.nodes.find((node) => node.id === 'object')?.inputs).toHaveProperty('key_k2')
+    expect(next.connections).toEqual([
+      expect.objectContaining({ source: 'right', target: 'object', targetInput: 'key_k2' })
+    ])
+  })
+
+  it('prunes directed bitfield connections after changing packing mode', () => {
+    const graph = importGraphState({
+      nodes: [
+        { id: 'source', key: 'input-manual', position: { x: 0, y: 0 }, data: { content: 'ABCD' } },
+        { id: 'bitfield', key: 'protocol-bitfield', position: { x: 240, y: 0 }, data: {
+          mode: '解包', fields: [{ id: 'f1', name: '状态', bits: 8 }, { id: 'f2', name: '告警', bits: 8 }]
+        } },
+        { id: 'first', key: 'output-log', position: { x: 480, y: 0 }, data: { prefix: '状态' } },
+        { id: 'second', key: 'output-log', position: { x: 480, y: 120 }, data: { prefix: '告警' } }
+      ],
+      connections: [
+        { source: 'source', sourceOutput: 'out', target: 'bitfield', targetInput: 'hex' },
+        { source: 'bitfield', sourceOutput: 'field_f1', target: 'first', targetInput: 'in' },
+        { source: 'bitfield', sourceOutput: 'field_f2', target: 'second', targetInput: 'in' }
+      ]
+    })
+
+    const next = updateGraphNodeData(graph, 'bitfield', 'mode', '打包')
+    const bitfield = next.nodes.find((node) => node.id === 'bitfield')
+
+    expect(bitfield?.inputs).toHaveProperty('field_f1')
+    expect(bitfield?.inputs).toHaveProperty('field_f2')
+    expect(bitfield?.outputs).not.toHaveProperty('field_f1')
+    expect(bitfield?.outputs).not.toHaveProperty('field_f2')
+    expect(next.connections).toEqual([])
   })
 
   it('filters compatible sources and validates required control values', () => {

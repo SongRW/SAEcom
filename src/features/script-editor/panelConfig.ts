@@ -111,6 +111,8 @@ export function createPanelConfigRef(nodeKey: string, panels: SerialPanelSummary
 
 export function createDefaultNodeData(nodeKey: string, panels: SerialPanelSummary[] = []): Record<string, unknown> {
   if (nodeKey === 'transform-object') return { keys: [] }
+  // protocol-bitfield 中性默认：单 8 位字段（不预设任何具体协议的位段布局）
+  if (nodeKey === 'protocol-bitfield') return { mode: '打包', fields: [{ id: 'f1', name: 'field', bits: 8 }] }
   const configRef = createPanelConfigRef(nodeKey, panels)
   const panelDefaults = configRef.kind === 'panel' ? { panelId: configRef.panelId } : {}
   const serialDefaults = isSerialNode(nodeKey)
@@ -134,6 +136,19 @@ export function createDefaultNodeData(nodeKey: string, panels: SerialPanelSummar
 export function migrateNodeData(nodeKey: string, data: Record<string, unknown> = {}): Record<string, unknown> {
   if (nodeKey === 'transform-object') {
     return { keys: Array.isArray(data.keys) ? data.keys : [] }
+  }
+  if (nodeKey === 'protocol-bitfield') {
+    // fields 数组守门：非法结构回退中性默认
+    const fields = Array.isArray(data.fields)
+      ? (data.fields as unknown[])
+          .map((entry) => ({
+            id: String((entry as { id?: string })?.id ?? ''),
+            name: String((entry as { name?: string })?.name ?? ''),
+            bits: Number((entry as { bits?: number })?.bits) || 8
+          }))
+          .filter((entry) => entry.id)
+      : [{ id: 'f1', name: 'field', bits: 8 }]
+    return { mode: String(data.mode ?? '打包'), fields }
   }
 
   if (isSerialNode(nodeKey)) {
@@ -317,7 +332,18 @@ function migrateSerialNodeData(nodeKey: string, data: Record<string, unknown>): 
   const currentRef = isPanelConfigRef(data.configRef)
     ? serialConfigRefFromLegacy(data.configRef)
     : serialConfigRefFromLegacy(createPanelConfigRef(nodeKey))
-  return syncSerialNodeData(nodeKey, { ...data, ...serialDataFromConfigRef(currentRef, nodeKey), ...data }, currentRef)
+  // 先用 data 垫底，再用 configRef 提取出的权威串口设置（端口/选项）覆盖，
+  // 最后再展开一次 data 以保留用户显式设置的非串口字段（append/mode 等）。
+  // portPath 例外：defaultNodeData 给串口节点带顶层 portPath:""，若让它盖回会清空
+  // 刚从 configRef 提取出的真实端口 → 校验报「未选择串口」→ saveScript 拦截保存。
+  // 故末尾展开时去掉空的 portPath 键（仅当用户显式填了非空端口时才采纳顶层值）。
+  const legacyTail = { ...data }
+  if (!String(legacyTail.portPath ?? '').trim()) delete legacyTail.portPath
+  return syncSerialNodeData(
+    nodeKey,
+    { ...data, ...serialDataFromConfigRef(currentRef, nodeKey), ...legacyTail },
+    currentRef
+  )
 }
 
 function serialConfigRefFromLegacy(ref: PanelConfigRef): PanelConfigRef {

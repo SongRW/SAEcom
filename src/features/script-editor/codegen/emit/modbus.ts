@@ -1,7 +1,7 @@
 import type { ReteGraphNode } from '@shared/types'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
 import { incomingForInput, nodeId } from '@/features/script-editor/codegen/graph'
-import { data, outVar } from '@/features/script-editor/codegen/emit/shared'
+import { data, getInputVar, outVar } from '@/features/script-editor/codegen/emit/shared'
 
 export function emitModbus(ctx: EmitContext, node: ReteGraphNode, indent: string): string {
   const config = data(node)
@@ -18,11 +18,11 @@ export function emitModbus(ctx: EmitContext, node: ReteGraphNode, indent: string
   }
 
   // modbus-write: 有上游连接时使用上游变量，否则解析 config.values 为数组
+  // 复用 getInputVar 的复合 key 查询，自动支持多输出节点（如 protocol-bitfield 解包）。
   const incoming = incomingForInput(ctx.graph, node, 'in')
   let valuesExpr: string
   if (incoming.length > 0) {
-    const sourceId = nodeId(incoming[0].source)
-    valuesExpr = ctx.varMap.get(sourceId) ?? '_last_recv'
+    valuesExpr = getInputVar(ctx, node, 'in', '_last_recv')
   } else {
     const parsed = String(config.values ?? '')
       .split(',')

@@ -1,4 +1,5 @@
-import { test, expect, waitForWindow, NAV } from './fixtures'
+import { test, expect, NAV, openAbout, navPageButton, waitForWindow } from './fixtures'
+
 
 /**
  * 启动冒烟 + 多窗口。
@@ -12,11 +13,11 @@ test.describe('启动冒烟 + 多窗口', () => {
 
     // 侧栏底部三个页签
     for (const label of [NAV.pageSerial, NAV.pageCommands, NAV.pageScript]) {
-      await expect(page.getByText(label, { exact: true })).toBeVisible()
+      await expect(navPageButton(page, label)).toBeVisible()
     }
 
     // 底部「关于」「设置」菜单项
-    await expect(page.getByText(NAV.about, { exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: NAV.about, exact: true })).toBeVisible()
 
     // 窗口标题应已设置（TitleBarChrome 用 document.title）
     const title = await page.title()
@@ -25,7 +26,7 @@ test.describe('启动冒烟 + 多窗口', () => {
 
   test('打开关于窗（独立 Electron 窗口）', async ({ page, electronApp }) => {
     const before = electronApp.windows().length
-    await page.getByText(NAV.about, { exact: true }).first().click()
+    await openAbout(page)
 
     // 新窗口出现
     await waitForWindow(electronApp, 'about.html')
@@ -38,7 +39,7 @@ test.describe('启动冒烟 + 多窗口', () => {
 
   test('打开更新日志窗（从关于窗触发）', async ({ page, electronApp }) => {
     // 先打开关于窗
-    await page.getByText(NAV.about, { exact: true }).first().click()
+    await openAbout(page)
     const aboutWin = await waitForWindow(electronApp, 'about.html')
 
     const before = electronApp.windows().length

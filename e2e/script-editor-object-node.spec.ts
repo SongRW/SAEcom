@@ -1,4 +1,6 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, NAV, openNavPage, clickReady } from './fixtures'
+
+const SAFETY_SAMPLE = '安全监测报警终端-可视化.js'
 
 /**
  * transform-object 节点 E2E：覆盖动态键/端口交互 + 持久化（AGENTS.md 硬性门槛）。
@@ -33,15 +35,15 @@ import { test, expect, NAV } from './fixtures'
 test.describe('transform-object 节点', () => {
   test('动态增删键与端口', async ({ page }) => {
     // 1) 打开脚本编辑器
-    await page.getByText(NAV.pageScript, { exact: true }).click()
-    await page.getByText('打开脚本编辑器').click()
+    await openNavPage(page, NAV.pageScript)
+    await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await expect(editor).toBeVisible()
 
     // 2) 打开组件库 → 展开「转换类」→ 添加 transform-object 节点
-    await editor.getByRole('button', { name: '组件' }).click()
+    await clickReady(page, editor.getByRole('button', { name: '组件' }))
     // 转换类分组可能默认折叠，点一下展开（CollapsibleContent 在 DOM 但可能隐藏）
-    await editor.getByText('转换类', { exact: true }).click()
+    await clickReady(page, editor.getByText('转换类', { exact: true }))
     await editor.locator('[data-node-key="transform-object"]').click()
 
     const node = editor.locator('[data-testid="node"][data-node-key="transform-object"]')
@@ -71,15 +73,51 @@ test.describe('transform-object 节点', () => {
     await expect(node.locator('[data-testid="input-key_k2"]')).toBeVisible()
   })
 
+
+  test('右侧参数逐字编辑不会重建安全监测画布', async ({ page }) => {
+    await openNavPage(page, NAV.pageScript)
+    await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
+    const editor = page.getByRole('dialog', { name: '脚本编辑器' })
+    await expect(editor).toBeVisible()
+
+    await clickReady(page, editor.locator('[title="脚本"]'))
+    await clickReady(page, editor.getByRole('button', { name: SAFETY_SAMPLE, exact: true }))
+    await expect(editor.locator('[data-testid="node"]')).toHaveCount(61, { timeout: 15000 })
+
+    const log = editor.locator('[data-testid="node"][data-node-id="9"]')
+    await log.evaluate((node) => { node.dataset.e2eInstance = 'before-edit' })
+    await log.locator('[data-testid="title"]').dblclick()
+    const drawer = editor.locator('.script-editor-drawer').filter({ hasText: '节点配置' })
+    await expect(drawer).toBeVisible()
+    const prefix = drawer.getByRole('textbox').first()
+    await prefix.focus()
+    await prefix.pressSequentially('ABC')
+
+    await expect(prefix).toHaveValue('年ABC')
+    await expect(prefix).toBeFocused()
+    await expect(editor.locator('[data-testid="node"]')).toHaveCount(61)
+    await expect(log).toHaveAttribute('data-e2e-instance', 'before-edit')
+    await expect(log).toBeAttached()
+    await expect
+      .poll(
+        async () => editor.locator('path').evaluateAll((paths) => paths.filter((path) => {
+          const style = getComputedStyle(path)
+          return style.fill === 'none' && style.stroke !== 'none' && path.getBoundingClientRect().width > 1
+        }).length),
+        { timeout: 10000 }
+      )
+      .toBeGreaterThan(0)
+  })
+
   test('保存后重开仍保留键与端口（持久化）', async ({ page }) => {
-    await page.getByText(NAV.pageScript, { exact: true }).click()
-    await page.getByText('打开脚本编辑器').click()
+    await openNavPage(page, NAV.pageScript)
+    await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await expect(editor).toBeVisible()
 
     // 添加节点 + 一个键并命名
-    await editor.getByRole('button', { name: '组件' }).click()
-    await editor.getByText('转换类', { exact: true }).click()
+    await clickReady(page, editor.getByRole('button', { name: '组件' }))
+    await clickReady(page, editor.getByText('转换类', { exact: true }))
     await editor.locator('[data-node-key="transform-object"]').click()
 
     const node = editor.locator('[data-testid="node"][data-node-key="transform-object"]')
@@ -97,6 +135,7 @@ test.describe('transform-object 节点', () => {
     await expect(saveAsDialog).toBeVisible()
     await saveAsDialog.getByRole('textbox').fill('ObjTest')
     await saveAsDialog.getByRole('button', { name: '确定' }).click()
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: '已保存' })).toBeVisible({ timeout: 10000 })
 
     // 保存完成：断言节点 + 键名 + 端口仍可见（保存不应清空画布）
     await expect(node).toBeVisible()
@@ -108,7 +147,7 @@ test.describe('transform-object 节点', () => {
     await expect(editor).toHaveCount(0)
 
     // 重新打开编辑器
-    await page.getByText('打开脚本编辑器').click()
+    await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
     const editorReopened = page.getByRole('dialog', { name: '脚本编辑器' })
     await expect(editorReopened).toBeVisible()
 

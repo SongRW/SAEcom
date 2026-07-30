@@ -1,4 +1,5 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, openNewPanelDialog, clickReady } from './fixtures'
+
 
 /**
  * 回归：「新建面板」弹窗内点开 Select 下拉后，点击框内别处，Dialog 不应被关闭。
@@ -15,14 +16,13 @@ import { test, expect, NAV } from './fixtures'
  */
 test.describe('新建面板 Select 下拉与 Dialog 误关闭', () => {
   test('下拉打开后点框内别处，Dialog 不应关闭', async ({ page }) => {
-    await page.getByText(NAV.newPanel, { exact: true }).click()
-    const dialog = page.getByRole('dialog')
-    await dialog.waitFor()
+    const dialog = await openNewPanelDialog(page)
+    await expect(dialog).toBeVisible()
     const dlgEl = page.locator('[data-slot="dialog-content"]')
     const listbox = page.getByRole('listbox')
 
-    // 打开波特率下拉
-    await dialog.getByRole('combobox').nth(1).click()
+    // 打开波特率下拉（串口模式默认；combobox 偶发卡 stable）
+    await clickReady(page, dialog.getByRole('combobox').nth(1))
     await expect(listbox).toBeVisible()
 
     // 取「新建面板」标题中心坐标，作为「框内别处」的点击点（标题在 dialog 顶部，

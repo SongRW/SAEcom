@@ -164,6 +164,8 @@
   min-height: 0;
   overflow: hidden;
   flex: 1 1 0;
+  /* 深色兜底：避免画板区在主题切换瞬间/dev 模式 CSS 时序下露出浅色背景 */
+  background: var(--background);
 }
 
 .script-editor-canvas {
@@ -173,6 +175,9 @@
   min-width: 0;
   min-height: 0;
   padding: 0;
+  /* 画布内禁止 HTML5 原生拖拽预览；Rete 用 pointer 事件平移/移节点。 */
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .script-editor-canvas:focus {
@@ -186,15 +191,33 @@
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  background:
-    radial-gradient(circle at 1px 1px, var(--script-editor-canvas-dot) 1px, transparent 1.4px),
-    var(--background);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* 底色单独声明：background-color 始终铺满整个元素（含底部），避免多层 background
+     简写 + 单值 background-size 在某些 Chromium/Electron 合成条件下底部露白。 */
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--script-editor-canvas-dot) 1px, transparent 1.4px);
   background-size: 22px 22px;
+}
+
+/* 节点/连线等子树同样禁止原生 drag，避免按住拖时整图变半透明 ghost。 */
+.script-editor-canvas__surface,
+.script-editor-canvas__surface * {
+  -webkit-user-drag: none;
+}
+
+/* Rete area plugin 在 surface 内生成的 transform / content-area 容器（无类名 div）
+   默认透明即可；这里显式约束，避免任何默认/继承的浅色背景在画板底部露出白条。 */
+.script-editor-canvas__surface > div {
+  background: transparent;
 }
 
 .script-editor-canvas__hud {
   position: absolute;
-  right: 12px;
+  /* 右下角留给输出 dock 收起 handle（约 36px），避免与 Rete · zoom 标签重叠。 */
+  right: 56px;
   bottom: 12px;
   z-index: 2;
   border: 1px solid var(--border);
@@ -216,6 +239,75 @@
   color: var(--muted-foreground);
   font-size: 13px;
   text-align: center;
+}
+
+/* 纯代码 / legacy 脚本视图：无流程图节点时铺满画布壳 */
+.script-editor-code {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.script-editor-code__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+}
+
+.script-editor-code__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.script-editor-code__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.script-editor-code__hint {
+  margin: 0;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.45;
+  background: color-mix(in oklab, var(--primary) 6%, transparent);
+}
+
+.script-editor-code__editor {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  resize: none;
+  outline: none;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
 }
 
 .script-editor-canvas__surface .script-rete-node,
@@ -376,8 +468,26 @@
   font-size: 11px;
 }
 
+/* 位域 / 键列表：标签置顶，控件占满整行，避免名称输入被挤窄 */
+.script-rete-node__control--full {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 4px;
+}
+
+.script-rete-node__control--full > span:first-child {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
 .script-rete-node__control .control,
 .script-rete-node__control > span:last-child {
+  min-width: 0;
+}
+
+.script-rete-node__control--full .control,
+.script-rete-node__control--full > span:last-child {
+  width: 100%;
   min-width: 0;
 }
 
@@ -391,6 +501,9 @@
 .script-editor-canvas__surface [data-testid="connection"] path {
   stroke: var(--muted-foreground) !important;
   stroke-width: 2.5px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  fill: none !important;
 }
 
 .script-editor-canvas__surface [data-testid$="socket"] {
@@ -470,8 +583,11 @@
   color: var(--primary);
 }
 
-/* minimap 容器：官方插件渲染到 area 容器内，这里把它定位到右上角并套主题样式。
-   data-minimap="off" 时隐藏。 */
+/* minimap 容器：官方插件渲染到 area 容器内，定位到右上角并套主题。
+   data-minimap="off" 时隐藏。
+   尺寸由 ReactPresets.minimap size 决定（正方形，ratio 必须为 1）。
+   不要用 `> div` 统一刷背景：会把 minimap-node / minimap-viewport 盖成同色，
+   看起来像「没有内容」。 */
 .script-editor-canvas[data-minimap="off"] [data-testid="minimap"] {
   display: none !important;
 }
@@ -481,21 +597,40 @@
   right: 12px !important;
   bottom: auto !important;
   z-index: 3 !important;
-  padding: 10px !important;
+  max-width: min(280px, calc(100% - 24px)) !important;
+  max-height: min(280px, calc(100% - 24px)) !important;
+  padding: 8px !important;
   border: 1px solid var(--border) !important;
   border-radius: 8px !important;
   background: color-mix(in oklab, var(--card) 94%, transparent) !important;
   box-shadow: var(--script-editor-shadow-soft) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-.script-editor-canvas [data-testid="minimap"] > div {
-  background: color-mix(in oklab, var(--muted) 40%, transparent);
+/* 节点缩略块：实心色块，缩小后仍可辨认，不被视口灰罩盖住观感。 */
+.script-editor-canvas [data-testid="minimap-node"] {
+  background: color-mix(in oklab, var(--primary) 62%, transparent) !important;
+  border: 1px solid color-mix(in oklab, var(--primary) 80%, transparent) !important;
+  border-radius: 2px !important;
+  box-sizing: border-box !important;
+  pointer-events: none !important;
 }
 
-.script-editor-canvas [data-testid="minimap"] > div > div {
-  background: color-mix(in oklab, var(--primary) 55%, transparent);
-  border: 1px solid var(--primary);
-  border-radius: 2px;
+/* 视口框：几乎透明填充 + 描边。缩小时框会很大，若用灰色半透明填充
+   会把整张缩略图盖成「发灰失能」；透明填充只保留可拖边框。 */
+.script-editor-canvas [data-testid="minimap-viewport"] {
+  background: color-mix(in oklab, var(--primary) 6%, transparent) !important;
+  border: 1.5px solid color-mix(in oklab, var(--primary) 85%, transparent) !important;
+  border-radius: 2px !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--background) 55%, transparent) !important;
+  cursor: grab !important;
+}
+
+.script-editor-canvas [data-testid="minimap-viewport"]:active {
+  cursor: grabbing !important;
+  background: color-mix(in oklab, var(--primary) 10%, transparent) !important;
 }
 
 .script-editor-canvas.is-tool-pointer .script-editor-canvas__surface {
@@ -749,6 +884,9 @@
   font: inherit;
   padding: 7px 8px;
   text-align: left;
+  /* 组件树 → 画布仍走 HTML5 D&D；画布内部已 user-drag:none。 */
+  -webkit-user-drag: element;
+  user-select: none;
 }
 
 .script-editor-node-template:hover {
@@ -1130,65 +1268,217 @@
   background: var(--border);
 }
 
-.script-editor-output {
-  height: 42px;
-  border-top: 1px solid var(--border);
-  background: var(--card);
-  transition: height 160ms ease;
-}
-
-.script-editor-output.is-expanded {
-  height: 150px;
-}
-
-.script-editor-output__handle {
+/* 底部输出 dock：canvas-shell 内绝对定位。
+   展开态用内联 height（可拖）；样式尽量薄，避免 Card 的 ring/大 padding。 */
+.script-editor-output-dock {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 4;
   display: block;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  pointer-events: none;
+  color: var(--card-foreground);
+}
+
+.script-editor-output-dock.is-expanded {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: auto;
+  /* height 由组件内联 style 控制（可拖） */
+  min-height: 96px;
+}
+
+.script-editor-output-dock__handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 4px;
+  pointer-events: auto;
+}
+
+.script-editor-output-dock.is-expanded .script-editor-output-dock__handle {
+  display: none;
+}
+
+.script-editor-output-dock__badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  padding: 0 3px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.script-editor-output-dock__panel {
+  display: flex;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 5px;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--card) 97%, transparent);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
+.script-editor-output-dock.is-expanded .script-editor-output-dock__panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* 顶部拖拽条：细、可点 */
+.script-editor-output-dock__grip {
+  flex: 0 0 6px;
+  width: 100%;
   border: 0;
-  background: var(--muted);
+  background: transparent;
   cursor: ns-resize;
+  touch-action: none;
+  position: relative;
+}
+
+.script-editor-output-dock__grip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 28px;
+  height: 2px;
+  margin-left: -14px;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+}
+
+.script-editor-output-dock__header {
+  display: flex;
+  height: 28px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  padding: 0 6px 0 10px;
+}
+
+.script-editor-output-dock__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.script-editor-output-dock__count {
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 5px;
+}
+
+.script-editor-output-dock__actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.script-editor-output-dock__actions button {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 4px;
   padding: 0;
 }
 
-.script-editor-output__header {
+.script-editor-output-dock__actions button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.script-editor-output-dock__body {
   display: flex;
-  height: 36px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px 0 12px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.script-editor-output__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.script-editor-output__actions button {
-  width: 30px;
-  height: 30px;
-}
-
-.script-editor-output__body {
-  height: calc(100% - 41px);
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
   overflow: auto;
-  border-top: 1px solid var(--border);
   color: var(--foreground);
   font-family: Consolas, "Courier New", monospace;
   font-size: 12px;
-  padding: 8px 12px;
+  line-height: 1.45;
+  padding: 4px 10px 6px;
+  user-select: text;
 }
 
-.script-editor-output__placeholder {
+.script-editor-output-dock__placeholder {
   color: var(--muted-foreground);
+  font-size: 12px;
 }
 
-.script-editor-output__line {
-  line-height: 1.55;
+.script-editor-output-dock__line {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 5px;
   white-space: pre-wrap;
+}
+
+.script-editor-output-dock__ts {
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  flex-shrink: 0;
+  user-select: text;
+}
+
+/* —— 脚本输出独立窗 —— */
+.script-output-popout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.script-output-popout__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 10px 14px 14px;
+  user-select: text;
 }
 
 @keyframes script-editor-spin {
@@ -1247,8 +1537,15 @@
     width: clamp(220px, calc(100% - 150px), 312px);
   }
 
-  .script-editor-output.is-expanded {
-    height: 130px;
+  .script-editor-output-dock {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .script-editor-output-dock.is-expanded {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
   }
 }
 
@@ -1456,18 +1753,24 @@
 
 .script-key-list {
   display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 8px;
+  padding: 2px 0 0;
 }
 .script-key-list__row {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 .script-key-list__input {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 72px;
+  width: 0; /* 配合 flex:1，让名称栏吃满剩余宽度 */
   padding: 2px 6px;
   font-size: 12px;
   border: 1px solid var(--border, #d0d5dd);
@@ -1500,6 +1803,32 @@
 }
 .script-key-list__add:hover {
   background: var(--muted, #f5f5f5);
+}
+.script-key-list__add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.script-key-list__input--narrow {
+  flex: 0 0 52px;
+  width: 52px;
+  min-width: 52px;
+  text-align: center;
+}
+.script-key-list__hint {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--muted-foreground, #888);
+}
+.script-key-list__error {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--destructive, #e11d48);
+}
+.script-key-list__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 

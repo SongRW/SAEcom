@@ -6,10 +6,18 @@ export function computeTranslateDelta(dx: number, dy: number): { dx: number; dy:
   return { dx: -dx, dy: -dy }
 }
 
-/** wheel deltaY → 下一 zoom（经 clampCanvasZoom 约束，与画布滚轮缩放一致） */
-export function computeWheelZoom(currentZoom: number, deltaY: number): number {
+/**
+ * wheel deltaY → 下一 zoom（经 clampCanvasZoom 约束）。
+ * 与画布 WindowsWheelZoom / Rete 默认一致：向前（deltaY<0）放大，向后缩小。
+ * minZoom 可由大图动态下限传入，默认 CANVAS_ZOOM_MIN。
+ */
+export function computeWheelZoom(
+  currentZoom: number,
+  deltaY: number,
+  minZoom?: number
+): number {
   const factor = deltaY < 0 ? 0.1 : -0.1
-  return clampCanvasZoom(currentZoom + factor)
+  return clampCanvasZoom(currentZoom + factor, minZoom)
 }
 
 interface ReteAreaLike {
@@ -44,77 +52,109 @@ export function useEmptyMinimapInteraction(
     if (!isEmpty || !editor) return
     const cont = containerRef.current
     if (!cont) return
-    // minimap 可能挂在 surface 内或上层 .script-editor-canvas，两处都查
-    const minimap =
-      cont.querySelector<HTMLElement>('[data-testid="minimap"]') ||
-      cont.closest('.script-editor-canvas')?.querySelector<HTMLElement>('[data-testid="minimap"]')
-    if (!minimap) return
 
     const area = editor.area?.area
     if (!area) return
 
-    let dragging = false
-    let moved = false
-    let lastX = 0
-    let lastY = 0
-    let startX = 0
-    let startY = 0
+    /** 在 cont 范围内查找 minimap 节点（可能挂在 surface 内或上层 .script-editor-canvas）。 */
+    const findMinimap = (): HTMLElement | null =>
+      cont.querySelector<HTMLElement>('[data-testid="minimap"]') ||
+      cont.closest('.script-editor-canvas')?.querySelector<HTMLElement>('[data-testid="minimap"]') ||
+      null
 
-    const onDown = (e: PointerEvent) => {
-      if (e.button !== 0) return
-      dragging = true
-      moved = false
-      lastX = e.clientX
-      lastY = e.clientY
-      startX = e.clientX
-      startY = e.clientY
-      minimap.setPointerCapture(e.pointerId)
-      minimap.style.cursor = 'grabbing'
-    }
+    let cleanup: (() => void) | null = null
 
-    const onMove = (e: PointerEvent) => {
-      if (!dragging) return
-      const dx = e.clientX - lastX
-      const dy = e.clientY - lastY
-      lastX = e.clientX
-      lastY = e.clientY
-      if (Math.abs(e.clientX - startX) > 2 || Math.abs(e.clientY - startY) > 2) moved = true
-      const delta = computeTranslateDelta(dx, dy)
-      area.translate(delta.dx, delta.dy)
-    }
+    /** 给 minimap 绑定 pointer/wheel 透传逻辑，返回解绑函数。 */
+    const bind = (minimap: HTMLElement): (() => void) => {
+      let dragging = false
+      let moved = false
+      let lastX = 0
+      let lastY = 0
+      let startX = 0
+      let startY = 0
 
-    const onUp = (e: PointerEvent) => {
-      if (!dragging) return
-      dragging = false
-      minimap.style.cursor = 'grab'
-      try { minimap.releasePointerCapture(e.pointerId) } catch { /* 已释放 */ }
-      // 点击（无显著 move）：把点击点对齐视口中心
-      if (!moved) {
-        const rect = minimap.getBoundingClientRect()
-        const cx = e.clientX - rect.left - rect.width / 2
-        const cy = e.clientY - rect.top - rect.height / 2
-        const delta = computeTranslateDelta(cx, cy)
+      const onDown = (e: PointerEvent) => {
+        if (e.button !== 0) return
+        dragging = true
+        moved = false
+        lastX = e.clientX
+        lastY = e.clientY
+        startX = e.clientX
+        startY = e.clientY
+        minimap.setPointerCapture(e.pointerId)
+        minimap.style.cursor = 'grabbing'
+      }
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging) return
+        const dx = e.clientX - lastX
+        const dy = e.clientY - lastY
+        lastX = e.clientX
+        lastY = e.clientY
+        if (Math.abs(e.clientX - startX) > 2 || Math.abs(e.clientY - startY) > 2) moved = true
+        const delta = computeTranslateDelta(dx, dy)
         area.translate(delta.dx, delta.dy)
+      }
+
+      const onUp = (e: PointerEvent) => {
+        if (!dragging) return
+        dragging = false
+        minimap.style.cursor = 'grab'
+        try { minimap.releasePointerCapture(e.pointerId) } catch { /* 已释放 */ }
+        // 点击（无显著 move）：把点击点对齐视口中心
+        if (!moved) {
+          const rect = minimap.getBoundingClientRect()
+          const cx = e.clientX - rect.left - rect.width / 2
+          const cy = e.clientY - rect.top - rect.height / 2
+          const delta = computeTranslateDelta(cx, cy)
+          area.translate(delta.dx, delta.dy)
+        }
+      }
+
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault()
+        onWheelZoom(e.deltaY)
+      }
+
+      minimap.style.cursor = 'grab'
+      minimap.addEventListener('pointerdown', onDown)
+      minimap.addEventListener('pointermove', onMove)
+      minimap.addEventListener('pointerup', onUp)
+      minimap.addEventListener('wheel', onWheel, { passive: false })
+
+      return () => {
+        minimap.style.cursor = ''
+        minimap.removeEventListener('pointerdown', onDown)
+        minimap.removeEventListener('pointermove', onMove)
+        minimap.removeEventListener('pointerup', onUp)
+        minimap.removeEventListener('wheel', onWheel)
       }
     }
 
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      onWheelZoom(e.deltaY)
+    const minimap = findMinimap()
+    if (minimap) {
+      cleanup = bind(minimap)
+    } else {
+      // minimap 由 Rete MinimapPlugin 的 React render preset 异步渲染，effect 跑时尚未
+      // 挂到 DOM。此处 observe 子树，待 minimap 出现后绑定并 disconnect（保证空图态
+      // 重挂载/异步渲染下交互也能稳定生效）。
+      const observer = new MutationObserver(() => {
+        const mm = findMinimap()
+        if (mm && !cleanup) {
+          cleanup = bind(mm)
+          observer.disconnect()
+        }
+      })
+      observer.observe(cont, { childList: true, subtree: true })
+      // 兜底：observer 最终未命中也要可被清理。
+      return () => {
+        observer.disconnect()
+        cleanup?.()
+      }
     }
 
-    minimap.style.cursor = 'grab'
-    minimap.addEventListener('pointerdown', onDown)
-    minimap.addEventListener('pointermove', onMove)
-    minimap.addEventListener('pointerup', onUp)
-    minimap.addEventListener('wheel', onWheel, { passive: false })
-
     return () => {
-      minimap.style.cursor = ''
-      minimap.removeEventListener('pointerdown', onDown)
-      minimap.removeEventListener('pointermove', onMove)
-      minimap.removeEventListener('pointerup', onUp)
-      minimap.removeEventListener('wheel', onWheel)
+      cleanup?.()
     }
   }, [containerRef, editor, isEmpty, onWheelZoom])
 }

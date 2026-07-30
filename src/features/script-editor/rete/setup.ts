@@ -2,7 +2,7 @@ import { ClassicPreset, NodeEditor } from 'rete'
 import { createElement } from 'react'
 import type { ComponentType, ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import { AreaExtensions, AreaPlugin, Drag } from 'rete-area-plugin'
+import { AreaExtensions, AreaPlugin, Drag, Zoom } from 'rete-area-plugin'
 import { AutoArrangePlugin, Presets as ArrangePresets } from 'rete-auto-arrange-plugin'
 import { ClassicFlow, ConnectionPlugin } from 'rete-connection-plugin'
 import type { SocketData } from 'rete-connection-plugin'
@@ -13,6 +13,15 @@ import type { RenderEmit } from 'rete-react-plugin'
 import type { ControlSpec, NodeDef, ReteGraphExport, SocketKind } from '@shared/types'
 import { NODE_CATEGORIES, NODE_DEFINITIONS } from '@/features/script-editor/nodes/definitions'
 import { SOCKETS, canConnectSockets } from '@/features/script-editor/nodes/sockets'
+import { orthogonalConnectionPath } from '@/features/script-editor/rete/connectionPath'
+import {
+  CANVAS_ZOOM_MAX,
+  MINIMAP_MIN_DISTANCE,
+  MINIMAP_RATIO,
+  MINIMAP_SIZE,
+  computeCanvasPanBounds,
+  computeCanvasZoomMin
+} from '@/features/script-editor/viewModel'
 import {
   debugScriptNodeInteraction,
   describeInteractionTarget,
@@ -21,6 +30,8 @@ import {
 import type { GraphEditorConnection, GraphEditorNode, GraphEditorState } from '@/features/script-editor/rete/graphState'
 import type { ScriptAreaExtra, ScriptConnection, ScriptNode, ScriptSchemes } from '@/features/script-editor/rete/types'
 import { KeyListControl, KeyListControlView, type KeyEntry } from '@/features/script-editor/rete/KeyListControl'
+import { BitfieldControl, BitfieldControlView, type BitfieldEntry } from '@/features/script-editor/rete/BitfieldControl'
+import { parseBitfieldEntries, parseKeyEntries, resolveNodePorts } from '@/features/script-editor/rete/dynamicPorts'
 
 const socketInstances: Record<SocketKind, ClassicPreset.Socket> = {
   dataSocket: new ClassicPreset.Socket(SOCKETS.dataSocket.label),
@@ -101,9 +112,17 @@ export function createScriptEditorRuntime(): ScriptEditorRuntime {
   }
 }
 
+/** 普通节点默认宽度（px）。 */
+export const DEFAULT_NODE_WIDTH = 216
+/**
+ * 位域节点宽度：字段名 + 位宽 + bit 标签 + 删除钮并排，216 会把名称输入挤到只剩两三个字。
+ * 与 CSS `.script-rete-node__control--full` 配套，让 fields 控件占满整行。
+ */
+export const BITFIELD_NODE_WIDTH = 300
+
 export function createClassicNodeFromDefinition(definition: NodeDef): ScriptNode {
   const node = new ClassicPreset.Node(definition.name) as ScriptNode
-  node.width = 216
+  node.width = isBitfieldNode(definition.key) ? BITFIELD_NODE_WIDTH : DEFAULT_NODE_WIDTH
   node.height = calculateNodeHeight(definition)
   node.key = definition.key
   node.data = Object.fromEntries(definition.controls.map((control) => [control.key, control.default ?? '']))
@@ -144,13 +163,24 @@ export function createClassicNodeFromGraphNode(graphNode: GraphEditorNode): Scri
     }
   })
 
-  if (graphNode.key === OBJECT_NODE_KEY) {
-    const keys = objectNodeKeys(graphNode.data as Record<string, unknown> | undefined)
-    syncObjectNodePorts(node, keys)
+  if (isKeyListNode(graphNode.key)) {
+    const keys = parseKeyEntries(graphNode.data as Record<string, unknown> | undefined)
+    syncKeyListNodePorts(node, keys)
     if (!node.controls['keys']) {
       node.addControl('keys', new KeyListControl(keys, () => {}))
     }
-    node.height = objectNodeHeight(keys.length)
+    node.height = keyListNodeHeight(keys.length)
+  }
+
+  if (isBitfieldNode(graphNode.key)) {
+    const fields = parseBitfieldEntries(graphNode.data as Record<string, unknown> | undefined)
+    const mode = String((graphNode.data as Record<string, unknown> | undefined)?.mode ?? '打包')
+    syncBitfieldNodePorts(node, fields, mode)
+    if (!node.controls['fields']) {
+      node.addControl('fields', new BitfieldControl(fields, () => {}))
+    }
+    node.width = BITFIELD_NODE_WIDTH
+    node.height = bitfieldNodeHeight(fields.length)
   }
 
   return node
@@ -171,6 +201,46 @@ export function createClassicConnectionFromGraphConnection(
   return classicConnection
 }
 
+export async function syncReteNodePositionsFromGraph(
+  instance: Pick<ReteEditorInstance, 'area'>,
+  graph: GraphEditorState,
+  nodeIds: string[]
+): Promise<void> {
+  const graphNodes = new Map(graph.nodes.map((node) => [node.id, node]))
+
+  for (const id of nodeIds) {
+    const graphNode = graphNodes.get(id)
+    if (!graphNode) continue
+    await instance.area.translate(id, graphNode.position)
+  }
+}
+
+export async function syncReteNodeDataFromGraph(
+  instance: Pick<ReteEditorInstance, 'editor' | 'area'>,
+  graph: GraphEditorState,
+  nodeIds: string[]
+): Promise<void> {
+  const graphNodes = new Map(graph.nodes.map((node) => [node.id, node]))
+
+  for (const id of nodeIds) {
+    const graphNode = graphNodes.get(id)
+    const reteNode = instance.editor.getNode(id)
+    if (!graphNode || !reteNode) continue
+
+    reteNode.data = { ...graphNode.data }
+    const definition = NODE_DEFINITIONS[graphNode.key]
+    for (const control of definition.controls) {
+      const inputControl = reteNode.controls[control.key]
+      if (!(inputControl instanceof ClassicPreset.InputControl)) continue
+      const value = graphNode.data[control.key]
+      inputControl.value = control.type === 'number'
+        ? Number(value ?? control.default ?? 0)
+        : String(value ?? control.default ?? '')
+    }
+    await instance.area.update('node', id)
+  }
+}
+
 export async function syncReteEditorFromGraph(instance: ReteEditorInstance, graph: GraphEditorState): Promise<void> {
   await instance.editor.clear()
   const nodeMap = new Map<string, ScriptNode>()
@@ -182,13 +252,14 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
       instance.options.onGraphChange?.({ type: 'node-data', id: node.id, key, value })
     }
 
-    if (node.key === OBJECT_NODE_KEY) {
-      const initialKeys = objectNodeKeys(graphNode.data as Record<string, unknown> | undefined)
+    if (isKeyListNode(node.key)) {
+      const initialKeys = parseKeyEntries(graphNode.data as Record<string, unknown> | undefined)
       if (node.controls['keys']) node.removeControl('keys')
       const handleKeysChange = (next: KeyEntry[]): void => {
         // 1) 更新内存 data
         node.data = { ...(node.data || {}), keys: next }
-        // 1.5) 删除将失去端口的连接（removeInput 不自动清理连接）
+        // 1.5) 删除将失去端口的连接（removeInput 不自动清理连接）。
+        // 仅对 transform-object（有 key_* 动态端口）生效；transform-namefields 无此类端口，此处为 no-op。
         const nextPortKeys = new Set(next.map((entry) => `key_${entry.id}`))
         instance.editor.getConnections()
           .filter((connection) => connection.target === String(node.id)
@@ -196,17 +267,65 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
             && !nextPortKeys.has(connection.targetInput))
           .forEach((connection) => { void instance.editor.removeConnection(connection.id) })
         // 2) 同步端口
-        syncObjectNodePorts(node, next)
+        syncKeyListNodePorts(node, next)
         // 3) 重算高度
-        node.height = objectNodeHeight(next.length)
+        node.height = keyListNodeHeight(next.length)
         // 4) 轻量刷新节点视图
         void instance.area.update('node', String(node.id))
         // 5) 通知上层持久化
         instance.options.onGraphChange?.({ type: 'node-data', id: node.id, key: 'keys', value: next })
       }
       node.addControl('keys', new KeyListControl(initialKeys, handleKeysChange))
-      syncObjectNodePorts(node, initialKeys)
-      node.height = objectNodeHeight(initialKeys.length)
+      syncKeyListNodePorts(node, initialKeys)
+      node.height = keyListNodeHeight(initialKeys.length)
+    }
+
+    if (isBitfieldNode(node.key)) {
+      const initialFields = parseBitfieldEntries(graphNode.data as Record<string, unknown> | undefined)
+      const initialMode = String(graphNode.data?.mode ?? '打包')
+      if (node.controls['fields']) node.removeControl('fields')
+      const applyFieldsChange = (next: BitfieldEntry[], mode: string): void => {
+        // 1) 更新内存 data
+        node.data = { ...(node.data || {}), fields: next }
+        // 1.5) 清理将失去端口的连接（removeInput/removeOutput 不自动清理连接）
+        const nextPortKeys = new Set(next.map((entry) => `field_${entry.id}`))
+        instance.editor.getConnections()
+          .filter((connection) =>
+            (connection.target === String(node.id) || connection.source === String(node.id))
+            && (connection.targetInput.startsWith('field_') || connection.sourceOutput.startsWith('field_'))
+            && !nextPortKeys.has(connection.targetInput)
+            && !nextPortKeys.has(connection.sourceOutput)
+          )
+          .forEach((connection) => { void instance.editor.removeConnection(connection.id) })
+        // 2) 同步端口
+        syncBitfieldNodePorts(node, next, mode)
+        // 3) 重算尺寸（宽固定，高随字段数）
+        node.width = BITFIELD_NODE_WIDTH
+        node.height = bitfieldNodeHeight(next.length)
+        // 4) 轻量刷新
+        void instance.area.update('node', String(node.id))
+        // 5) 通知上层持久化
+        instance.options.onGraphChange?.({ type: 'node-data', id: node.id, key: 'fields', value: next })
+      }
+      const handleFieldsChange = (next: BitfieldEntry[]): void => {
+        const mode = String(node.data?.mode ?? '打包')
+        applyFieldsChange(next, mode)
+      }
+      // mode 切换：拦截 mode control 的 data change，触发端口方向反转。
+      // createClassicNodeFromDefinition 里 mode 是普通 select control，change 时只更新 data.mode；
+      // 这里覆盖 onDataChange，额外同步端口。
+      const baseOnDataChange = node.onDataChange
+      node.onDataChange = (key: string, value: unknown) => {
+        baseOnDataChange?.(key, value)
+        if (key === 'mode') {
+          const fields = parseBitfieldEntries(node.data as Record<string, unknown> | undefined)
+          applyFieldsChange(fields, String(value ?? '打包'))
+        }
+      }
+      node.addControl('fields', new BitfieldControl(initialFields, handleFieldsChange))
+      syncBitfieldNodePorts(node, initialFields, initialMode)
+      node.width = BITFIELD_NODE_WIDTH
+      node.height = bitfieldNodeHeight(initialFields.length)
     }
 
     nodeMap.set(node.id, node)
@@ -281,15 +400,41 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
           // Cast bridges the contravariant prop-shape mismatch.
           return KeyListControlView as unknown as ComponentType<{ data: ClassicPreset.Control }>
         }
+        if (context.payload instanceof BitfieldControl) {
+          return BitfieldControlView as unknown as ComponentType<{ data: ClassicPreset.Control }>
+        }
         return null
       }
     }
   }))
-  render.addPreset(ReactPresets.minimap.setup({ size: 200 }))
+  // 缩略图略放大、略宽：复杂协议横向节点流更易一眼看全。
+  render.addPreset(ReactPresets.minimap.setup({ size: MINIMAP_SIZE }))
+  // 正交折线：减少默认贝塞尔交叉/穿节点；回边走外绕。
+  render.addPipe((context) => {
+    if (context.type !== 'connectionpath') return context
+    const points = context.data.points
+    if (!points || points.length < 2) return context
+    const start = points[0]
+    const end = points[points.length - 1]
+    return {
+      ...context,
+      data: {
+        ...context.data,
+        path: orthogonalConnectionPath(start, end)
+      }
+    }
+  })
   arrange.addPreset(ArrangePresets.classic.setup())
   dock.addPreset(DockPresets.classic.setup({ area }))
 
-  const minimap = new MinimapPlugin<ScriptSchemes>()
+  // boundViewport 关闭：缩小时若把视口并进包围盒，节点会被压成几乎看不见，
+  // 导航框铺满缩略图 → 用户看到「整块发灰且像失能」。飞出图外改由 pan restrictor 管。
+  // ratio 必须为 1（rete-react-plugin 用宽度同时映射 X/Y）。
+  const minimap = new MinimapPlugin<ScriptSchemes>({
+    boundViewport: false,
+    minDistance: MINIMAP_MIN_DISTANCE,
+    ratio: MINIMAP_RATIO
+  })
 
   editor.use(area)
   area.use(connection)
@@ -301,6 +446,41 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
   const selector = AreaExtensions.selector()
   AreaExtensions.selectableNodes(area, selector, { accumulating: AreaExtensions.accumulateOnCtrl() })
   AreaExtensions.simpleNodesOrder(area)
+  // 缩放 + 平移限幅：
+  // - 缩放 min 按节点包围盒动态下调（大图可低于默认 50%，保证 fit 得下）
+  // - 平移始终与节点包围盒「contain」约束，防止缩略图/空白处拖出界
+  const collectNodeRects = () => [...area.nodeViews].map(([id, view]) => {
+    const node = editor.getNode(id)
+    return {
+      x: view.position.x,
+      y: view.position.y,
+      width: node?.width || view.element.offsetWidth || 216,
+      height: node?.height || view.element.offsetHeight || 120
+    }
+  })
+  AreaExtensions.restrictor(area, {
+    scaling: () => {
+      const container = area.container
+      const min = computeCanvasZoomMin(
+        collectNodeRects(),
+        { width: container.clientWidth, height: container.clientHeight }
+      )
+      return { min, max: CANVAS_ZOOM_MAX }
+    },
+    translation: () => {
+      const k = area.area.transform.k
+      const container = area.container
+      return computeCanvasPanBounds(
+        collectNodeRects(),
+        { width: container.clientWidth, height: container.clientHeight },
+        k
+      )
+    }
+  })
+
+  // 滚轮方向：Windows 惯例向前放大 / 向后缩小（与 Rete 默认一致，符号集中在 wheelZoomDelta）。
+  // 只替换 wheel；pinch / dblclick 仍走 Zoom 父类。
+  area.area.setZoomHandler(new WindowsWheelZoom(0.1))
 
   let areaPanAllowed = true
   area.area.setDragHandler(new Drag({
@@ -319,6 +499,38 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
     options,
     setAreaPanEnabled: (enabled: boolean) => { areaPanAllowed = enabled },
     destroy: () => area.destroy()
+  }
+}
+
+/**
+ * 画布滚轮 → Rete onzoom 的 delta。
+ * Windows / 地图类惯例：向前（deltaY<0）放大，向后（deltaY>0）缩小。
+ * 与 rete-area-plugin 默认 Zoom.wheel 一致；集中在此便于单测与 minimap 侧对齐。
+ */
+export function wheelZoomDelta(deltaY: number, intensity: number): number {
+  return deltaY < 0 ? intensity : -intensity
+}
+
+/**
+ * 画布滚轮缩放（Windows：向前放大 / 向后缩小）。
+ * 在 super.initialize 前替换 wheel，避免重复绑定（destroy 只 remove 当前 this.wheel）。
+ * pinch / dblclick 仍走父类逻辑。
+ */
+export class WindowsWheelZoom extends Zoom {
+  initialize(
+    container: HTMLElement,
+    element: HTMLElement,
+    onzoom: (delta: number, ox: number, oy: number, source?: 'wheel' | 'touch' | 'dblclick') => void
+  ): void {
+    this.wheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const { left, top } = this.element.getBoundingClientRect()
+      const delta = wheelZoomDelta(e.deltaY, this.intensity)
+      const ox = (left - e.clientX) * delta
+      const oy = (top - e.clientY) * delta
+      this.onzoom(delta, ox, oy, 'wheel')
+    }
+    super.initialize(container, element, onzoom)
   }
 }
 
@@ -379,43 +591,91 @@ function calculateNodeHeight(definition: NodeDef): number {
   return Math.max(86, 58 + ports * 28 + controlRows * 24 + serialSummary)
 }
 
-const OBJECT_NODE_KEY = 'transform-object'
-
-function objectNodeKeys(data: Record<string, unknown> | undefined): KeyEntry[] {
-  const raw = data?.keys
-  return Array.isArray(raw)
-    ? (raw as unknown[]).map((entry) => ({
-        id: String((entry as KeyEntry)?.id ?? ''),
-        name: String((entry as KeyEntry)?.name ?? '')
-      })).filter((entry) => entry.id)
-    : []
+// 支持 KeyListControl（键列表控件）的节点 key 集合。
+// transform-object：每个键是一个动态输入端口，组装对象；
+// transform-namefields：输入单个数组，按位置把元素映射为带名对象。
+// 二者都复用 KeyListControl 编辑标签，但 namefields 不产生端口（见 syncKeyListNodePorts）。
+const KEY_LIST_NODE_KEYS = new Set(['transform-object', 'transform-namefields'])
+function isKeyListNode(key: string | undefined): boolean {
+  return !!key && KEY_LIST_NODE_KEYS.has(key)
 }
 
-function objectNodeHeight(keyCount: number): number {
+function keyListNodeHeight(keyCount: number): number {
   const ports = Math.max(keyCount, 1)
   return Math.max(86, 58 + ports * 28 + 24)
 }
 
 /**
- * 同步 transform-object 节点的输入端口，使其与 keys 列表一致。
+ * 同步支持 KeyListControl 节点的输入端口，使其与 keys 列表一致。
+ * 仅 transform-object 会产生 key_* 动态输入端口；transform-namefields
+ * 的输入是单个数组端口（由节点定义提供），不在此同步。
  * 可安全重复调用：补齐缺失端口、移除多余端口，不触碰控件。
  */
-function syncObjectNodePorts(node: ScriptNode, keys: KeyEntry[]): void {
-  const desired = new Set(keys.map((entry) => `key_${entry.id}`))
+function syncKeyListNodePorts(node: ScriptNode, keys: KeyEntry[]): void {
+  if (node.key !== 'transform-object') return
+  const desiredInputs = resolveNodePorts(node.key, { keys }).inputs
+  const desired = new Map(desiredInputs.map((port) => [port.key, port]))
   Object.keys(node.inputs).forEach((portKey) => {
     if (portKey.startsWith('key_') && !desired.has(portKey)) {
       node.removeInput(portKey as keyof ScriptNode['inputs'])
     }
   })
-  keys.forEach((entry) => {
-    const portKey = `key_${entry.id}`
-    if (!node.hasInput(portKey)) {
-      node.addInput(
-        portKey,
-        new ClassicPreset.Input(socketInstances.dataSocket, entry.name || `key_${entry.id}`, false)
-      )
+  for (const port of desired.values()) {
+    if (!node.hasInput(port.key)) {
+      node.addInput(port.key, new ClassicPreset.Input(socketInstances[port.socket], port.label, false))
+    }
+  }
+}
+
+// ── 位域节点（protocol-bitfield）动态端口 ──────────────────────────
+// 位域是通用协议模式（CAN/Modbus/自定义协议到处都是）。fields 由用户配置驱动，
+// 默认值中性（单 8 位字段），不预设任何具体协议的位段布局。
+// 打包模式：N 个 field_* 输入 → 1 个 HEX 输出
+// 解包模式：1 个 HEX 输入 → N 个 field_* 输出（多输出节点，下游按 sourceOutput 取值）
+const BITFIELD_NODE_KEYS = new Set(['protocol-bitfield'])
+function isBitfieldNode(key: string | undefined): boolean {
+  return !!key && BITFIELD_NODE_KEYS.has(key)
+}
+
+function bitfieldNodeHeight(fieldCount: number): number {
+  const ports = Math.max(fieldCount, 1)
+  return Math.max(86, 58 + ports * 28 + 24 + 36) // +36 给 footer 总位宽提示
+}
+
+/**
+ * 同步位域节点的输入/输出端口，使其与 fields 列表 + mode 一致。
+ * mode 决定端口方向：
+ *   - 打包：fields → 输入端口（field_${id}）；解包模式遗留的 field_* 输出清掉
+ *   - 解包：fields → 输出端口（field_${id}）；打包模式遗留的 field_* 输入清掉
+ * 可安全重复调用：补齐缺失端口、移除多余端口，不触碰控件。
+ */
+function syncBitfieldNodePorts(node: ScriptNode, fields: BitfieldEntry[], mode: string): void {
+  if (node.key !== 'protocol-bitfield') return
+  const desired = resolveNodePorts(node.key, { fields, mode })
+  const desiredInputs = new Map(desired.inputs.map((port) => [port.key, port]))
+  const desiredOutputs = new Map(desired.outputs.map((port) => [port.key, port]))
+
+  Object.keys(node.inputs).forEach((portKey) => {
+    if ((portKey === 'hex' || portKey.startsWith('field_')) && !desiredInputs.has(portKey)) {
+      node.removeInput(portKey as keyof ScriptNode['inputs'])
     }
   })
+  Object.keys(node.outputs).forEach((portKey) => {
+    if (portKey.startsWith('field_') && !desiredOutputs.has(portKey)) {
+      node.removeOutput(portKey as keyof ScriptNode['outputs'])
+    }
+  })
+
+  for (const port of desiredInputs.values()) {
+    if (!node.hasInput(port.key)) {
+      node.addInput(port.key, new ClassicPreset.Input(socketInstances[port.socket], port.label, false))
+    }
+  }
+  for (const port of desiredOutputs.values()) {
+    if (!node.hasOutput(port.key)) {
+      node.addOutput(port.key, new ClassicPreset.Output(socketInstances[port.socket], port.label, true))
+    }
+  }
 }
 
 // 串口节点标题下方摘要：显示当前选中的 COM 端口 + 波特率。
@@ -440,7 +700,7 @@ const ScriptClassicNode: ComponentType<ClassicNodeProps> = ({ data, emit }) => {
   const definition = data.key ? NODE_DEFINITIONS[data.key] : null
   const controlSpecs = new Map(definition?.controls.map((control) => [control.key, control]) || [])
   const controls = sortEntries(data.controls).filter(([key]) => {
-    if (key === 'keys' && data.key === OBJECT_NODE_KEY) return true
+    if (key === 'keys' && isKeyListNode(data.key)) return true
     return controlSpecs.get(key)?.type !== 'select'
   })
   const controlLabels = new Map(definition?.controls.map((control) => [control.key, control.label]) || [])
@@ -519,20 +779,28 @@ const ScriptClassicNode: ComponentType<ClassicNodeProps> = ({ data, emit }) => {
     controls.length > 0 ? createElement(
       'div',
       { className: 'script-rete-node__controls' },
-      controls.map(([key, control]) => control ? createElement(
-        'div',
-        {
-          className: 'script-rete-node__control',
-          'data-testid': `control-${key}`,
-          key
-        },
-        createElement('span', null, controlLabels.get(key) || key),
-        createElement(RefControl, {
-          emit,
-          name: 'control',
-          payload: control
-        })
-      ) : null)
+      controls.map(([key, control]) => {
+        if (!control) return null
+        // 位域/键列表是多行编辑器，不要和普通单行 control 共用「62px 标签 + 输入」栅格，
+        // 否则名称输入会被挤成两三个字符宽。
+        const isFullControl = control instanceof BitfieldControl || control instanceof KeyListControl
+        return createElement(
+          'div',
+          {
+            className: isFullControl
+              ? 'script-rete-node__control script-rete-node__control--full'
+              : 'script-rete-node__control',
+            'data-testid': `control-${key}`,
+            key
+          },
+          createElement('span', null, controlLabels.get(key) || key),
+          createElement(RefControl, {
+            emit,
+            name: 'control',
+            payload: control
+          })
+        )
+      })
     ) : null
   )
 }

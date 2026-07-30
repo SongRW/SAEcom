@@ -1,4 +1,4 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, clickReady, createModbusTcpPanel } from './fixtures'
 import { startModbusSlave } from './helpers/mock-modbus-slave'
 
 /**
@@ -33,34 +33,12 @@ test.describe('Modbus 面板基础流程', () => {
   })
 
   test('新建 Modbus 面板 → 连接 → 手动读 → 加区块 → 断开', async ({ page }) => {
-    // ---- 1) 打开新建面板对话框，切 Modbus 模式 ----
-    await page.getByText(NAV.newPanel, { exact: true }).click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-
-    // 三个类型按钮（串口/TCP/Modbus），点 Modbus
-    await dialog.getByRole('button', { name: 'Modbus', exact: true }).click()
-    // Modbus 模式下出现「Modbus TCP」标签，确认切换成功
-    await expect(dialog.locator('label', { hasText: 'Modbus TCP' })).toBeVisible()
-
-    // ---- 2) 填主机/端口：主机默认 127.0.0.1；端口默认 502，需改成从站端口 ----
-    // 与 tcp-panel.spec 一致：Label 与 Input 是兄弟节点无 htmlFor，按 input 顺序填。
-    // Modbus 表单里输入框顺序 = 主机(0) / 端口(1)。
-    await dialog.locator('input').nth(0).fill('127.0.0.1')
-    await dialog.locator('input').nth(1).fill(String(slave.port))
-
-    // ---- 3) 创建面板 ----
-    await dialog.getByRole('button', { name: '创建' }).click()
-    await expect(dialog).toHaveCount(0)
-
-    // ---- 4) 面板出现：ModbusPanelBody 的工具栏按钮是稳定的可见锚点 ----
-    // 工具栏的「新增区块」「全部刷新」等中文按钮是面板渲染成功的可靠锚点。
-    // （连接栏的「未连接」状态徽章存在 Radix portal 副本，非严格匹配，故用工具栏按钮。）
-    await expect(page.getByRole('button', { name: /新增区块/ })).toBeVisible({ timeout: 10000 })
+    // ---- 1-4) 新建 Modbus TCP 面板（统一 helper：DOM 创建 + 侧栏/工具栏锚点）----
+    await createModbusTcpPanel(page, slave.port)
     await expect(page.getByRole('button', { name: /全部刷新/ })).toBeVisible({ timeout: 10000 })
 
     // ---- 5) 点击「连接」按钮（连接栏，未连接时文案=连接）----
-    await page.getByRole('button', { name: '连接', exact: true }).click()
+    await clickReady(page, page.getByRole('button', { name: '连接', exact: true }))
 
     // 状态徽章转「已连接」；连接是真实 TCP，留足时间。
     // 状态徽章文本可能被 Radix 渲染成嵌套 span（外层/内层各含文案），用 first() 去重。

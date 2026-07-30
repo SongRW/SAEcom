@@ -1,4 +1,4 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, clickReady, createModbusTcpPanel } from './fixtures'
 import { startModbusSlave } from './helpers/mock-modbus-slave'
 
 /**
@@ -34,20 +34,11 @@ test.describe('Modbus 连接中断检测', () => {
   })
 
   test('从站中途掉线后面板反映断开（徽章或区块错误）', async ({ page }) => {
-    // ---- 1) 新建 Modbus TCP 面板（沿用 basic/poll 的已验证流程）----
-    await page.getByText(NAV.newPanel, { exact: true }).click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-    await dialog.getByRole('button', { name: 'Modbus', exact: true }).click()
-    await expect(dialog.locator('label', { hasText: 'Modbus TCP' })).toBeVisible()
-    await dialog.locator('input').nth(0).fill('127.0.0.1')
-    await dialog.locator('input').nth(1).fill(String(slave.port))
-    await dialog.getByRole('button', { name: '创建' }).click()
-    await expect(dialog).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /新增区块/ })).toBeVisible({ timeout: 10000 })
+    // ---- 1) 新建 Modbus TCP 面板 ----
+    await createModbusTcpPanel(page, slave.port)
 
     // ---- 2) 连接，状态徽章转「已连接」----
-    await page.getByRole('button', { name: '连接', exact: true }).click()
+    await clickReady(page, page.getByRole('button', { name: '连接', exact: true }))
     await expect(page.getByText('已连接', { exact: true }).first()).toBeVisible({ timeout: 10000 })
 
     // ---- 3) 加区块：FC3 slave=1 addr=0 qty=4，启用轮询，间隔 300ms（缩短以加快检测）----

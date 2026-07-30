@@ -103,6 +103,20 @@ function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
         .filter((p): p is string => p !== null)
       return `{ ${pairs.join(', ')} }`
     }
+    case 'transform-namefields': {
+      // 输入是单个数组（通常来自 split-* 节点）。按位置把元素映射为带名对象。
+      // 标签多于数组项 → 缺失项填 null；标签少于数组项 → 多余项丢弃。
+      const rawKeys = config.keys
+      const keys = Array.isArray(rawKeys) ? (rawKeys as Array<{ id: string; name: string }>) : []
+      const pairs = keys
+        .map((entry, index) => {
+          const trimmed = String(entry?.name ?? '').trim()
+          if (!trimmed) return null
+          return `${jsString(trimmed)}: (${input}[${index}] == null ? null : ${input}[${index}])`
+        })
+        .filter((p): p is string => p !== null)
+      return pairs.length > 0 ? `{ ${pairs.join(', ')} }` : `{}`
+    }
     default:
       return input
   }

@@ -35,16 +35,34 @@ export function jsLiteral(value: unknown): string {
   return jsString(text)
 }
 
+/**
+ * 解析上游输出变量。
+ * 优先查复合 key `${sourceId}:${sourceOutput}` —— 用于多输出节点（如 protocol-bitfield 解包：
+ * 一个节点按位段表产出多个不同值，每值对应一个输出端口）。
+ * 单输出节点只往 varMap 写裸 id，复合 key 查不到时回退到裸 id，行为与历史一致（零回归）。
+ */
+function lookupSourceVar(ctx: EmitContext, source: string | number, sourceOutput: string): string | undefined {
+  const id = nodeId(source)
+  if (sourceOutput) {
+    const composite = ctx.varMap.get(`${id}:${sourceOutput}`)
+    if (composite !== undefined) return composite
+  }
+  return ctx.varMap.get(id)
+}
+
 export function getInputVar(ctx: EmitContext, node: ReteGraphNode, inputKey = 'in', fallback = '_last_recv'): string {
   const connection = incomingForInput(ctx.graph, node, inputKey)[0]
   if (!connection) return fallback
-  return ctx.varMap.get(nodeId(connection.source)) || outVar(ctx.graph.nodeMap.get(nodeId(connection.source)) || { id: connection.source, key: '' })
+  return lookupSourceVar(ctx, connection.source, String(connection.sourceOutput))
+    || outVar(ctx.graph.nodeMap.get(nodeId(connection.source)) || { id: connection.source, key: '' })
 }
 
 export function getInputVars(ctx: EmitContext, node: ReteGraphNode): string[] {
   const connections = ctx.graph.incomingByNode.get(nodeId(node.id)) || []
   if (!connections.length) return ['_last_recv']
-  return connections.map((connection) => ctx.varMap.get(nodeId(connection.source)) || `_out_${nodeId(connection.source).replace(/\W/g, '_')}`)
+  return connections.map((connection) =>
+    lookupSourceVar(ctx, connection.source, String(connection.sourceOutput))
+    || `_out_${nodeId(connection.source).replace(/\W/g, '_')}`)
 }
 
 export function emitStopGuard(indent: string): string {
@@ -74,11 +92,22 @@ export function emitBranch(ctx: EmitContext, node: ReteGraphNode, outputKey: str
       ctx.branchVisited = nextVisited
       if (branchAvailable) ctx.branchAvailable = branchAvailable
       try {
-        let code = ctx.emitNode(child, indent)
+        // 先就地 emit 未 processed 的纯叶子来源（非 listener 闭包内）
+        // 这样分支/循环内引用循环外的纯叶子时，叶子 var 声明就地在当前作用域生成
+        let code = emitLeafSources(ctx, child, indent)
+        code += ctx.emitNode(child, indent)
         branchAvailable?.add(childId)
         if (shouldEmitChildBranches(ctx, child)) {
-          const outputs = ctx.registry[child.key]?.outputs || []
-          code += outputs.map((output) => emitBranch(ctx, child, output.key, indent, nextVisited)).join('')
+          // 动态端口节点（protocol-bitfield 解包等）的实际输出端口不在静态 NodeDef 里，
+          // 必须从 graph 的实际连接推导 sourceOutput keys，否则多输出下游漏 emit。
+          const staticOutputs = ctx.registry[child.key]?.outputs || []
+          const staticKeys = new Set(staticOutputs.map((o) => o.key))
+          const dynamicKeys: string[] = []
+          for (const oc of ctx.graph.outgoingByNode.get(childId) || []) {
+            if (!staticKeys.has(oc.sourceOutput)) dynamicKeys.push(oc.sourceOutput)
+          }
+          const allOutputKeys = [...staticOutputs.map((o) => o.key), ...dynamicKeys]
+          code += allOutputKeys.map((outputKey) => emitBranch(ctx, child, outputKey, indent, nextVisited)).join('')
         }
         return code
       } finally {
@@ -87,6 +116,30 @@ export function emitBranch(ctx: EmitContext, node: ReteGraphNode, outputKey: str
       }
     })
     .join('')
+}
+
+/**
+ * 就地 emit child 的未 processed 纯叶子来源（仅非 listener 闭包）。
+ * 解决：分支/循环内引用循环外的 input-manual 等纯叶子时，
+ * 叶子的 var 声明需就地生成在当前作用域，而非 top-level（否则引用未声明变量）。
+ */
+function emitLeafSources(ctx: EmitContext, child: ReteGraphNode, indent: string): string {
+  if (ctx.inListenerClosure) return ''
+  const id = nodeId(child.id)
+  const connections = ctx.graph.incomingByNode.get(id) || []
+  let code = ''
+  for (const conn of connections) {
+    const sid = nodeId(conn.source)
+    if (ctx.processedNodes.has(sid)) continue
+    const srcNode = ctx.graph.nodeMap.get(sid)
+    if (!srcNode) continue
+    const srcIncoming = ctx.graph.incomingByNode.get(sid) || []
+    // 纯叶子（无 incoming 且非根节点）才就地 emit
+    if (srcIncoming.length !== 0) continue
+    if (isRootSourceKey(srcNode.key)) continue
+    code += ctx.emitNode(srcNode, indent)
+  }
+  return code
 }
 
 export function jsObjectLiteral(value: unknown): string {
@@ -105,14 +158,33 @@ function allIncomingSourcesAvailable(ctx: EmitContext, node: ReteGraphNode, avai
   const connections = ctx.graph.incomingByNode.get(id) || []
   return connections.every((connection) => {
     const sourceId = nodeId(connection.source)
-    return sourceId === id || availableSources.has(sourceId)
+    if (sourceId === id || availableSources.has(sourceId)) return true
+    // 非 listener 闭包时（control-loop 循环体、control-if 分支）：
+    // 来源已在 top-level 处理过则可用（循环体引用循环外常量）
+    if (!ctx.inListenerClosure && ctx.processedNodes.has(sourceId)) return true
+    // 非 listener 闭包时：来源是纯叶子（无 incoming 且非根节点）可就地求值
+    // （control-if 分支内的 input-manual 等纯输入，分支作用域可就地 emit）
+    if (!ctx.inListenerClosure) {
+      const sourceNode = ctx.graph.nodeMap.get(sourceId)
+      if (sourceNode) {
+        const sourceIncoming = ctx.graph.incomingByNode.get(sourceId) || []
+        if (sourceIncoming.length === 0 && !isRootSourceKey(sourceNode.key)) return true
+      }
+    }
+    return false
   })
+}
+
+function isRootSourceKey(key: string): boolean {
+  // 持续监听根：输出在 listener 闭包内，跨闭包/跨作用域不可见，任何时候都不能就地 emit
+  // （one-shot root 在非 listener 作用域可就地 emit，由 inListenerClosure 守护）
+  return key === 'input-serial' || key === 'input-tcp' || key === 'input-tcp-server' || key === 'input-panel'
 }
 
 export function delimiter(config: Record<string, unknown>): string {
   if (config.delimiter === '逗号') return ','
   if (config.delimiter === '空格') return ' '
-  if (config.delimiter === '换行') return '\\n'
-  if (config.delimiter === '制表符') return '\\t'
+  if (config.delimiter === '换行') return '\n'
+  if (config.delimiter === '制表符') return '\t'
   return valueAsString(config.custom, ',')
 }

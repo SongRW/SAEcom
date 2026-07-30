@@ -4,6 +4,7 @@ import { Code } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useAppShell } from '@/shared/store/appShell'
 import { getIPC } from '@/shared/ipc'
+import type { ScriptEditorGraphPayload } from '@shared/types'
 import { CommandsPage } from '@/features/commands/CommandsPage'
 import { ActivePanelConfigPanel } from '@/features/main-window/components/ActivePanelConfigPanel'
 import { ScriptEditorDialog } from '@/features/script-editor/ScriptEditorDialog'
@@ -19,12 +20,18 @@ export function BottomNav() {
   const { t } = useTranslation()
   const activeTab = useAppShell((s) => s.activeTab)
   const [scriptEditorOpen, setScriptEditorOpen] = useState(false)
+  // dock 回主窗时携带的图快照：存到 pendingGraphPayload，再把它作为 prop 交给重新挂载的
+  // ScriptEditorDialog（挂载时消费一次，避免 dock 回后画布是空图、缩略图/拖动失效——问题2）。
+  const [pendingGraphPayload, setPendingGraphPayload] = useState<ScriptEditorGraphPayload | null>(null)
 
-  // 弹出窗 dock 回主窗：收到 script-editor:dock 时重新显示内嵌弹层
+  // 弹出窗 dock 回主窗：收到 script-editor:dock（携带弹窗带回的图快照）时重新显示内嵌弹层。
   useEffect(() => {
     const ipc = getIPC()
     if (!ipc.scriptEditor?.onDock) return
-    return ipc.scriptEditor.onDock(() => setScriptEditorOpen(true))
+    return ipc.scriptEditor.onDock((payload) => {
+      setPendingGraphPayload(payload || null)
+      setScriptEditorOpen(true)
+    })
   }, [])
 
   let content: React.ReactNode
@@ -47,7 +54,12 @@ export function BottomNav() {
   return (
     <>
       <div className="h-full">{content}</div>
-      <ScriptEditorDialog open={scriptEditorOpen} onClose={() => setScriptEditorOpen(false)} />
+      <ScriptEditorDialog
+        open={scriptEditorOpen}
+        initialGraphPayload={pendingGraphPayload}
+        onClose={() => setScriptEditorOpen(false)}
+        onConsumedPayload={() => setPendingGraphPayload(null)}
+      />
     </>
   )
 }

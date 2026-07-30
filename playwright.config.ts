@@ -15,15 +15,16 @@ export default defineConfig({
   // Electron 测试共享图形会话，串行更稳
   fullyParallel: false,
   workers: 1,
-  // 多窗口 / Rete 画布交互偶有延迟，放宽整体上限
-  globalTimeout: 5 * 60 * 1000,
+  // 多窗口 / Rete 画布交互偶有延迟；串行 workers=1 时 5 分钟不够整套跑完。
+  // 单测 60s × 30+ 条，给 15 分钟全局上限，避免前半程超时直接中止后半程。
+  globalTimeout: 15 * 60 * 1000,
   timeout: 60 * 1000,
   expect: { timeout: 10 * 1000 },
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
-    actionTimeout: 15 * 1000,
-    navigationTimeout: 15 * 1000,
+    actionTimeout: 20 * 1000,
+    navigationTimeout: 20 * 1000,
     trace: 'on-first-retry'
   },
   globalSetup: require('path').resolve(__dirname, 'e2e/global-setup.ts')

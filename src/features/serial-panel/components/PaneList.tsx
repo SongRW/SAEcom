@@ -66,12 +66,18 @@ export function PaneList({ onNewPanel }: { onNewPanel: () => void }) {
   }
 
   /**
-   * 点击面板名：显示 + 置顶 + 滚到底（顺带清零未读）。
-   * setAutoScroll(true) 触发 DataDisplay 既有滚动 effect：false→true 时 effect 重跑；
-   * 从隐藏→显示时 FloatingPane 重挂载、DataDisplay 首次 effect 也会因 autoScroll=true 滚到底。
-   * 不再承担"隐藏"（隐藏改由标题栏 Eye 按钮 / 右键菜单）。
+   * 点击面板名：toggle 显示/隐藏。
+   * - 已显示：隐藏（与「点一下显示、再点一下取消显示」的旧交互一致）。
+   * - 已隐藏：显示 + 置顶 + 滚到底（顺带清零未读）。setAutoScroll(true) 触发 DataDisplay
+   *   既有滚动 effect：false→true 时 effect 重跑；从隐藏→显示时 FloatingPane 重挂载、
+   *   DataDisplay 首次 effect 也会因 autoScroll=true 滚到底。
+   * 隐藏入口不止此处：标题栏 Eye 按钮 / 右键菜单 亦可隐藏。
    */
-  function handleToggle(id: string) {
+  function handleToggle(id: string, hidden: boolean) {
+    if (!hidden) {
+      setHidden(id, true)
+      return
+    }
     setHidden(id, false)
     setActive(id)
     setAutoScroll(id, true)
@@ -96,8 +102,8 @@ export function PaneList({ onNewPanel }: { onNewPanel: () => void }) {
 
   return (
     <>
-      <ScrollArea className="h-full">
-        <div className="flex flex-col gap-0.5 p-1">
+      <ScrollArea className="h-full w-full min-w-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
+        <div className="flex w-full min-w-0 flex-col gap-0.5 p-1">
           {panels.map((p, idx) => (
             <PaneContextMenu
               key={p.id}
@@ -149,7 +155,7 @@ export function PaneList({ onNewPanel }: { onNewPanel: () => void }) {
                 setDragIndex(null)
                 setOverIndex(null)
               }}
-              className={`group flex items-center gap-1 rounded px-1.5 py-1 text-sm hover:bg-accent ${p.hidden ? 'opacity-50' : ''} ${overIndex === idx && dragIndex !== null && dragIndex !== idx ? 'border-t-2 border-primary' : ''} ${dragIndex === idx ? 'opacity-40' : ''}`}
+              className={`group flex w-full min-w-0 items-center gap-1 overflow-hidden rounded px-1.5 py-1 text-sm hover:bg-accent ${p.hidden ? 'opacity-50' : ''} ${overIndex === idx && dragIndex !== null && dragIndex !== idx ? 'border-t-2 border-primary' : ''} ${dragIndex === idx ? 'opacity-40' : ''}`}
             >
               <button
                 type="button"
@@ -163,7 +169,7 @@ export function PaneList({ onNewPanel }: { onNewPanel: () => void }) {
                 type="button"
                 className="flex min-w-0 flex-1 items-center justify-start gap-1 text-left"
                 title={displayName(p) + '（双击重命名）'}
-                onClick={() => handleToggle(p.id)}
+                onClick={() => handleToggle(p.id, p.hidden)}
                 onDoubleClick={() => handleRename(p.id, p.note)}
               >
                 <span className="truncate">{displayName(p)}</span>

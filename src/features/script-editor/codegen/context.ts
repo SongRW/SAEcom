@@ -9,5 +9,7 @@ export interface EmitContext {
   blockedNodes: Set<string>
   branchVisited?: Set<string>
   branchAvailable?: Set<string>
+  /** 是否在持续监听 listener 闭包内（output 变量是闭包私有，不能跨闭包引用 processedNodes） */
+  inListenerClosure: boolean
   emitNode: (node: ReteGraphNode, indent?: string) => string
 }

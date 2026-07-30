@@ -25,11 +25,139 @@ export const NAV = {
   newPanel: '新建面板'
 } as const
 
+export type NavPage = typeof NAV.pageSerial | typeof NAV.pageCommands | typeof NAV.pageScript
+
 export interface ElectronFixtures {
   /** 已启动的 Electron 应用实例。 */
   electronApp: ElectronApplication
-  /** 主窗口（第一个窗口）的 Page。 */
+  /** 主窗口（第一个窗口）的 Page。已等待冷启动加载层消失。 */
   page: Page
+}
+
+/**
+ * 等待主窗口冷启动遮罩消失。
+ * mainwindow 有 #app-loader：React 首帧后隐藏，最坏 8s 兜底。
+ * 在此之前侧栏按钮虽已在 DOM，但 click 会卡在 actionability。
+ */
+export async function waitForAppReady(page: Page) {
+  await expect(page.locator('#app-loader')).toBeHidden({ timeout: 15000 })
+  // 等侧栏操作区与底部页签都渲染完，避免首帧后 transition 仍在跑。
+  await expect(newPanelButton(page)).toBeVisible()
+  await expect(navPageButton(page, NAV.pageSerial)).toBeVisible()
+  await expect(navPageButton(page, NAV.pageScript)).toBeVisible()
+  await expect(page.getByRole('button', { name: NAV.about, exact: true })).toBeVisible()
+}
+
+/**
+ * 点击可能因 transition/Tooltip/Dialog 动画而卡在 Playwright "stable" 检查的按钮。
+ * 顺序：常规 click（3s）→ force click → 原生 DOM click。
+ * 原生 DOM click 能稳定触发 React onClick，适合 Dialog 创建/完成、极小 hit-box。
+ */
+export async function clickReady(
+  page: Page,
+  target: {
+    click: (opts?: { force?: boolean; timeout?: number }) => Promise<void>
+    evaluate: (fn: (el: HTMLElement) => void) => Promise<void>
+    first?: () => any
+  }
+) {
+  const locator = typeof target.first === 'function' ? target.first() : target
+  await expect(locator).toBeVisible()
+  try {
+    await locator.click({ timeout: 3000 })
+    return
+  } catch {
+    /* stable 检查卡住时继续 */
+  }
+  try {
+    await locator.click({ force: true, timeout: 2000 })
+    return
+  } catch {
+    /* 再退到原生 DOM click */
+  }
+  await locator.evaluate((el: HTMLElement) => el.click())
+}
+
+/** 等 Dialog 关闭（节点离开 DOM，或 data-state 不再是 open）。 */
+export async function expectDialogClosed(page: Page, name?: string | RegExp) {
+  const dialog = name
+    ? page.getByRole('dialog', { name })
+    : page.getByRole('dialog')
+  await expect
+    .poll(async () => {
+      const count = await dialog.count()
+      if (count === 0) return true
+      // 动画中可能短暂残留；open 以外（closed / null）都视为可继续
+      const state = await dialog.first().getAttribute('data-state').catch(() => null)
+      return state !== 'open'
+    }, { timeout: 10000 })
+    .toBe(true)
+}
+
+/**
+ * 点击侧栏 SidebarMenuButton。
+ * 这些按钮包在 Tooltip 里且常有 width/padding transition；Playwright 的
+ * "stable" 检查偶发 30s 超时（元素已找到、可见、enabled，但布局持续微抖）。
+ */
+async function clickSidebarMenuButton(page: Page, button: ReturnType<Page['getByRole']>) {
+  await clickReady(page, button)
+}
+
+/** 侧栏底部页签按钮（role=button，避免命中内部 span 导致 actionability 超时）。 */
+export function navPageButton(page: Page, label: NavPage) {
+  return page.getByRole('button', { name: label, exact: true })
+}
+
+/** 侧栏「新建面板」按钮（exact，避免与空态「（新建面板）」冲突）。 */
+export function newPanelButton(page: Page) {
+  return page.getByRole('button', { name: NAV.newPanel, exact: true })
+}
+
+/** 切换侧栏底部页签。 */
+export async function openNavPage(page: Page, label: NavPage) {
+  await clickSidebarMenuButton(page, navPageButton(page, label))
+}
+
+/** 打开「新建面板」对话框。 */
+export async function openNewPanelDialog(page: Page) {
+  await clickSidebarMenuButton(page, newPanelButton(page))
+  const dialog = page.getByRole('dialog')
+  await dialog.waitFor()
+  return dialog
+}
+
+/**
+ * 新建并确认关闭「新建面板」对话框。
+ * Dialog 的「创建」回调对 Playwright force 点击不稳定，统一用原生 DOM click；
+ * 关闭后以侧栏列表项为锚点确认面板已创建。
+ */
+export async function confirmNewPanelDialog(page: Page, dialog: ReturnType<Page['getByRole']>) {
+  await dialog.getByRole('button', { name: '创建' }).evaluate((el: HTMLElement) => el.click())
+  await expectDialogClosed(page)
+  await expect(page.locator('[title*="双击重命名"]').first()).toBeVisible({ timeout: 15000 })
+}
+
+/**
+ * 新建 Modbus TCP 面板（打开对话框 → 切 Modbus → 填 host/port → 创建）。
+ * 返回推导出的 panelId（与 NewPanelDialog 命名规则一致）。
+ */
+export async function createModbusTcpPanel(page: Page, port: number, host = '127.0.0.1') {
+  const dialog = await openNewPanelDialog(page)
+  await expect(dialog).toBeVisible()
+  // 模式切换按钮偶发卡 stable，优先 force / DOM click
+  await dialog.getByRole('button', { name: 'Modbus', exact: true }).evaluate((el: HTMLElement) => el.click())
+  await expect(dialog.locator('label', { hasText: 'Modbus TCP' })).toBeVisible()
+  await dialog.locator('input').nth(0).fill(host)
+  await dialog.locator('input').nth(1).fill(String(port))
+  await confirmNewPanelDialog(page, dialog)
+  // 工具栏挂载略晚于侧栏列表；创建成功后应出现「新增区块」
+  await expect(page.getByRole('button', { name: /新增区块/ })).toBeVisible({ timeout: 15000 })
+  return `modbus://tcp/${host}:${port}`
+}
+
+/** 打开关于独立窗口（侧栏 Footer「关于」）。 */
+export async function openAbout(page: Page) {
+  await clickSidebarMenuButton(page, page.getByRole('button', { name: NAV.about, exact: true }))
 }
 
 /**
@@ -58,6 +186,8 @@ export const test = base.extend<ElectronFixtures>({
   },
   page: async ({ electronApp }, use) => {
     const page = await electronApp.firstWindow()
+    // 统一等冷启动遮罩消失，避免各 spec 在「按钮已出现但不可点」时 30s 超时。
+    await waitForAppReady(page)
     await use(page)
   }
 })

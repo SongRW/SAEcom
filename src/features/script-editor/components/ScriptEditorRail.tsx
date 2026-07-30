@@ -40,7 +40,7 @@ export function ScriptEditorRail({
         />
         <RailButton
           active={outputExpanded}
-          description="展开或收起运行输出"
+          description="展开或收起底部输出 dock"
           icon={TerminalSquare}
           label="输出"
           onClick={onToggleOutput}

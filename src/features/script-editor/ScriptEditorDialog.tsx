@@ -22,9 +22,11 @@ import {
   openSidePanel,
   restoreFromMinimized,
   setCanvasTool,
+  setViewMode,
   toggleScriptOutput,
   toggleSidePanel
 } from '@/features/script-editor/uiState'
+import { useGraphHistory } from '@/features/script-editor/useGraphHistory'
 import {
   buildSerialPanelOptions,
   buildSerialPortOptions,
@@ -52,6 +54,7 @@ import { GraphCanvas } from '@/features/script-editor/components/GraphCanvas'
 import type { GraphCanvasHandle } from '@/features/script-editor/components/GraphCanvas'
 import { NodeConfigPanel } from '@/features/script-editor/components/NodeConfigPanel'
 import { NodePalette } from '@/features/script-editor/components/NodePalette'
+import { ScriptCodePanel } from '@/features/script-editor/components/ScriptCodePanel'
 import { ScriptEditorDrawer } from '@/features/script-editor/components/ScriptEditorDrawer'
 import { ScriptEditorRail } from '@/features/script-editor/components/ScriptEditorRail'
 import { ScriptEditorSidePanel } from '@/features/script-editor/components/ScriptEditorSidePanel'
@@ -70,15 +73,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
-import { detectPlatform } from '@/features/titlebar'
+import { detectPlatform, TitleBarChrome } from '@/features/titlebar'
 
 interface ScriptEditorDialogProps {
   open: boolean
   isPopout?: boolean
+  /** 主窗：dock 回时由外层 BottomNav 传入的待恢复图快照（挂载时消费一次） */
+  initialGraphPayload?: { graphStr: string; activeScriptName: string } | null
+  /** 主窗：图快照被消费后清除外层待恢复态，避免下次打开误灌回旧图 */
+  onConsumedPayload?: () => void
   onClose: () => void
 }
 
-export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEditorDialogProps) {
+export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload, onConsumedPayload, onClose }: ScriptEditorDialogProps) {
   const groups = useMemo(() => groupNodesForPalette(), [])
   const activeScriptName = useScriptEditorStore((state) => state.activeScriptName)
   const runningScriptId = useScriptEditorStore((state) => state.runningScriptId)
@@ -93,13 +100,25 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   const [scripts, setScripts] = useState<string[]>([])
   const [loadingScripts, setLoadingScripts] = useState(false)
   const [scriptError, setScriptError] = useState<string | null>(null)
-  const [graph, setGraph] = useState<GraphEditorState>(() => createEmptyGraphState())
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const singleSelectedNodeId = selectedNodeIds.length === 1 ? selectedNodeIds[0] : null
   const [legacyCode, setLegacyCode] = useState('')
   const [zoom, setZoom] = useState(1)
+  const [graphRevision, setGraphRevision] = useState(0)
   const [minimapVisible, setMinimapVisible] = useState(true)
+  /** 输出是否已弹出独立窗：host 侧收起 dock 面板，日志仍 sync 过去。 */
+  const [outputPoppedOut, setOutputPoppedOut] = useState(false)
   const graphCanvasRef = useRef<GraphCanvasHandle | null>(null)
+  const {
+    graph,
+    setGraphCommit,
+    setGraphReplace,
+    setGraphTransient,
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useGraphHistory(createEmptyGraphState())
   const [uiState, setUiState] = useState(() => createScriptEditorUiState())
   const windowMode = uiState.windowMode
   const [activeGroupKey, setActiveGroupKey] = useState<string>(groups[0]?.key || 'input')
@@ -112,8 +131,46 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   const [confirmOverwrite, setConfirmOverwrite] = useState<{ name: string; source: OverwriteSource } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [renameTarget, setRenameTarget] = useState<string | null>(null)
+  // 本地 echo 模拟服务：null=未启动；启动后存 { id, port }，便于停止
+  const [simulator, setSimulator] = useState<{ id: string; port: number } | null>(null)
   const serialPanelOptions = useMemo(() => buildSerialPanelOptions(serialPanels), [serialPanels])
   const serialPortOptions = useMemo(() => buildSerialPortOptions(serialPorts, serialPanels), [serialPanels, serialPorts])
+  // 无流程图节点 + 有源码 → 纯代码视图（示例脚本/手写 JS）。
+  // viewMode='canvas' 时强制显示空画布（用户从纯代码脚本切回去加节点）。
+  const isPureCodeScript = graph.nodes.length === 0 && legacyCode.trim().length > 0
+  const showCodeView = isPureCodeScript && uiState.viewMode !== 'canvas'
+
+  // 编辑器关闭时停掉本地模拟服务，避免 TCP 端口泄漏
+  useEffect(() => {
+    if (open) return
+    if (!simulator) return
+    const id = simulator.id
+    setSimulator(null)
+    void getIPC().tcpServer.stop(id).catch(() => { /* ignore */ })
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 撤销/重做快捷键：Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做
+  // 焦点在 input/textarea（如节点配置输入框）时不拦截，避免影响文本编辑
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      const mod = event.ctrlKey || event.metaKey
+      if (!mod) return
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      const key = event.key.toLowerCase()
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault()
+        undo()
+      } else if ((key === 'z' && event.shiftKey) || key === 'y') {
+        event.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, undo, redo])
 
   useEffect(() => {
     if (!open) return
@@ -187,6 +244,30 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
     })
   }, [appendOutputLine, open, setRunningScriptId])
 
+  // 输出弹出窗：host 持有日志，变更后 sync；弹出窗 clear/close 反向通知。
+  useEffect(() => {
+    if (!open) return
+    const api = getIPC().scriptOutput
+    if (!api) return
+    const offClear = api.onClearRequest(() => {
+      clearOutput()
+    })
+    const offClosed = api.onClosed(() => {
+      setOutputPoppedOut(false)
+    })
+    return () => {
+      offClear()
+      offClosed()
+    }
+  }, [clearOutput, open])
+
+  useEffect(() => {
+    if (!open || !outputPoppedOut) return
+    const api = getIPC().scriptOutput
+    if (!api) return
+    api.sync(outputLines, activeScriptName || '')
+  }, [activeScriptName, open, outputLines, outputPoppedOut])
+
   async function refreshScripts() {
     setLoadingScripts(true)
     setScriptError(null)
@@ -220,14 +301,21 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
     }
   }
 
+  function replaceGraph(next: GraphEditorState) {
+    setGraphRevision((revision) => revision + 1)
+    setGraphReplace(next)
+  }
+
   async function selectScript(name: string) {
     const content = await getIPC().scripts.read(name)
     const parsed = parseScriptFile(content)
     setActiveScriptName(name)
     setSelectedNodeIds([])
-    setUiState(closeConfig)
+    // 切脚本重置视图模式到 auto：按新内容自动决定显示源码还是画布。
+    setUiState((current) => setViewMode(closeConfig(current), 'auto'))
+    setScriptError(null)
     if (parsed.ok) {
-      setGraph(importGraphState(parsed.graph))
+      replaceGraph(importGraphState(parsed.graph))
       setLegacyCode(parsed.code)
     } else if (parsed.reason === 'invalid-json') {
       // 图形 JSON 损坏：不清空当前图（避免用户保存时空图覆盖原文件——数据丢失），
@@ -239,9 +327,13 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
       window.requestAnimationFrame(() => graphCanvasRef.current?.fitView())
       return
     } else {
-      // missing-markers：无图形标记的纯代码脚本，正常建空图 + 回填原始代码。
-      setGraph(createEmptyGraphState())
+      // missing-markers：无图形标记的纯代码脚本，建空图 + 回填源码；
+      // 画布壳内会渲染 ScriptCodePanel，避免「打开了但什么都看不见」。
+      replaceGraph(createEmptyGraphState())
       setLegacyCode(parsed.code)
+      toast.message('已打开纯代码脚本', {
+        description: '当前文件没有流程图，已切换到源码视图。连接并选中面板后可直接运行。'
+      })
     }
     // 下一帧再触发 fit-to-view：此时 graphRef 已指向新 graph，
     // GraphCanvas 会检测到签名未同步，延后到 Rete 同步完成后执行。
@@ -270,10 +362,21 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   async function writeScriptAs(name: string) {
     const graphExport = exportGraphState(graph)
     const generatedCode = graph.nodes.length > 0 ? generateCodeFromRete(graphExport) : legacyCode || generateCodeFromRete(graphExport)
-    await getIPC().scripts.write(name, buildScriptFile(graphExport, generatedCode))
+    try {
+      const result = await getIPC().scripts.write(name, buildScriptFile(graphExport, generatedCode))
+      if (!result.ok) {
+        toast.error(`保存失败：${result.error || '未知错误'}`)
+        return false
+      }
+    } catch (error) {
+      toast.error(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+      return false
+    }
     setActiveScriptName(name)
     setLegacyCode(generatedCode)
     await refreshScripts()
+    toast.success(`已保存：${name}`)
+    return true
   }
 
   /** 收集当前图形所有节点的校验错误（必填控件 + 按节点类型的配置校验）。空数组 = 有效。 */
@@ -314,7 +417,7 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
     // 仅当删的是活动脚本时才清空画布（删别的脚本不影响当前编辑）
     if (target === activeScriptName) {
       setActiveScriptName(null)
-      setGraph(createEmptyGraphState())
+      replaceGraph(createEmptyGraphState())
       setLegacyCode('')
       setSelectedNodeIds([])
       setUiState(closeConfig)
@@ -378,13 +481,24 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   /** 用给定名称创建一个空脚本并切换到它（沿用原 createScript 的写入/重置逻辑）。 */
   async function createScriptNamed(name: string) {
     const emptyGraph = createEmptyGraphState()
-    await getIPC().scripts.write(name, buildScriptFile(exportGraphState(emptyGraph), generateCodeFromRete(exportGraphState(emptyGraph))))
+    const content = buildScriptFile(exportGraphState(emptyGraph), generateCodeFromRete(exportGraphState(emptyGraph)))
+    try {
+      const result = await getIPC().scripts.write(name, content)
+      if (!result.ok) {
+        toast.error(`新建脚本失败：${result.error || '未知错误'}`)
+        return
+      }
+    } catch (error) {
+      toast.error(`新建脚本失败：${error instanceof Error ? error.message : String(error)}`)
+      return
+    }
     setActiveScriptName(name)
-    setGraph(emptyGraph)
+    replaceGraph(emptyGraph)
     setLegacyCode('')
     setSelectedNodeIds([])
     setUiState(closeConfig)
     await refreshScripts()
+    toast.success(`已新建：${name}`)
   }
 
   async function runScript() {
@@ -417,11 +531,29 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
     setRunningScriptId(null)
   }
 
+  /** 切换本地 echo 模拟服务：启动（端口 0=系统分配）或停止。 */
+  async function toggleSimulator() {
+    if (simulator) {
+      try { await getIPC().tcpServer.stop(simulator.id) } catch { /* ignore */ }
+      setSimulator(null)
+      return
+    }
+    const res = await getIPC().tcpServer.start(0, true)
+    if (!res?.ok || !res.id || !res.port) {
+      toast.error(`本地模拟启动失败：${res?.error || '未知错误'}`)
+      return
+    }
+    setSimulator({ id: res.id, port: res.port })
+    toast.success(`本地 echo 已启动：127.0.0.1:${res.port}`, {
+      description: `把脚本里「接收TCP / 发送TCP」节点的主机填 127.0.0.1、端口填 ${res.port}，即可收发闭环自测。`
+    })
+  }
+
   function addNode(
     key: string,
     position?: { x: number; y: number } | ((graph: GraphEditorState) => { x: number; y: number })
   ) {
-    setGraph((current) => {
+    setGraphCommit((current) => {
       const nodePosition = typeof position === 'function'
         ? position(current)
         : position || getNextCanvasNodePosition(current)
@@ -433,7 +565,7 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   }
 
   function duplicateNode(id: string) {
-    setGraph((current) => {
+    setGraphCommit((current) => {
       const next = duplicateGraphNode(current, id)
       const duplicated = next.nodes[next.nodes.length - 1]
       if (duplicated?.id !== id) setSelectedNodeIds(duplicated?.id ? [duplicated.id] : [])
@@ -441,19 +573,47 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
     })
   }
 
-  // 弹出窗 dock 回主窗：主窗收到 main 的 script-editor:dock 时由外层（脚本入口）
-  // 通过 open prop 重新显示弹层。此处仅注册监听占位，确保 IPC 链路连通；
-  // 主窗是否在收到 dock 时重开弹层，由外层挂载点决定（见集成 Task）。
+  // 图快照恢复（双向传图）：
+  // - 主窗：dock 回后 BottomNav 把带回的图快照作为 initialGraphPayload 传入，挂载时灌回 graph。
+  // - 弹窗：监听主进程 did-finish-load 回灌的 popout-payload（主窗弹出时带去的图）。
+  // 二者都避免「弹窗/dock 回后画布是空图、缩略图/拖动失效」（问题2）。
   useEffect(() => {
-    if (isPopout) return
-    const ipc = getIPC()
-    if (!ipc.scriptEditor?.onDock) return
-    return ipc.scriptEditor.onDock(() => { /* 重新可见由外层 open 控制 */ })
-  }, [isPopout])
+    if (isPopout) {
+      const ipc = getIPC()
+      if (!ipc.scriptEditor?.onPopoutPayload) return
+      return ipc.scriptEditor.onPopoutPayload((payload) => {
+        applyGraphPayload(payload)
+      })
+    }
+    // 主窗：消费外层传入的待恢复图快照（仅挂载/open 时一次）。
+    if (!open || !initialGraphPayload) return
+    applyGraphPayload(initialGraphPayload)
+    onConsumedPayload?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPopout, open])
+
+  /** 把图快照解析灌入 graph/activeScriptName 并 fit-to-view。损坏则忽略，保留当前图。 */
+  function applyGraphPayload(payload: { graphStr?: string; activeScriptName?: string } | null) {
+    if (!payload) return
+    if (payload.graphStr) {
+      try {
+        const parsed = JSON.parse(payload.graphStr)
+        replaceGraph(importGraphState(parsed))
+      } catch {
+        /* 图快照损坏：忽略 */
+      }
+    }
+    if (payload.activeScriptName) setActiveScriptName(payload.activeScriptName)
+    setSelectedNodeIds([])
+    setUiState(closeConfig)
+    window.requestAnimationFrame(() => graphCanvasRef.current?.fitView())
+  }
 
   function handlePopout() {
     try {
-      void getIPC().scriptEditor?.popout?.().then((res) => {
+      // 把当前图快照 + 活动脚本名一并带去弹窗（双向传图-去程），避免弹窗/dock 回后图丢失
+      const graphStr = JSON.stringify(exportGraphState(graph))
+      void getIPC().scriptEditor?.popout?.(graphStr, activeScriptName || '').then((res) => {
         if (res?.ok) onClose() // 弹出成功后隐藏内嵌弹层
       })
     } catch {
@@ -463,7 +623,9 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
 
   function handleDock() {
     try {
-      getIPC().scriptEditor?.requestDock?.()
+      // dock 回主窗：把弹窗内最新图带回去（双向传图-回程）
+      const graphStr = JSON.stringify(exportGraphState(graph))
+      getIPC().scriptEditor?.requestDock?.(graphStr, activeScriptName || '')
     } catch {
       /* web 预览无 ipc，静默 */
     }
@@ -602,6 +764,9 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
   function renderEditorBody(modeClass: string) {
     return (
       <section className={`script-editor-dialog${modeClass}`} aria-label="脚本编辑器" role="dialog">
+        {isPopout ? (
+          <TitleBarChrome title={`脚本编辑器${activeScriptName ? ' · ' + activeScriptName : ''}`} />
+        ) : null}
         <Toolbar
           activeScriptName={activeScriptName}
           running={Boolean(runningScriptId)}
@@ -615,8 +780,16 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
           onDelete={deleteScript}
           onRun={runScript}
           onStop={stopScript}
-          onZoomIn={() => setZoom((value) => clampCanvasZoom(value + 0.1))}
-          onZoomOut={() => setZoom((value) => clampCanvasZoom(value - 0.1))}
+          simulator={simulator ? { port: simulator.port } : null}
+          onToggleSimulator={() => { void toggleSimulator() }}
+          onZoomIn={() => setZoom((value) => {
+            const minZoom = graphCanvasRef.current?.getZoomMin()
+            return clampCanvasZoom(value + 0.1, minZoom)
+          })}
+          onZoomOut={() => setZoom((value) => {
+            const minZoom = graphCanvasRef.current?.getZoomMin()
+            return clampCanvasZoom(value - 0.1, minZoom)
+          })}
           onOpenScripts={() => setUiState((current) => openSidePanel(current, 'scripts'))}
           onToggleMaximize={() => setUiState(nextWindowMode)}
           onMinimize={() => setUiState((current) => nextWindowMode(current, 'minimize'))}
@@ -659,67 +832,100 @@ export function ScriptEditorDialog({ open, isPopout = false, onClose }: ScriptEd
             </ScriptEditorSidePanel>
           ) : null}
           <div className="script-editor-canvas-shell">
-            <CanvasToolBar
-              value={uiState.canvasTool}
-              minimapVisible={minimapVisible}
-              onChange={(tool) => setUiState((current) => setCanvasTool(current, tool))}
-              onToggleMinimap={() => setMinimapVisible((value) => !value)}
-            />
-            <GraphCanvas
-              ref={graphCanvasRef}
-              graph={graph}
-              selectedNodeIds={selectedNodeIds}
-              tool={uiState.canvasTool}
-              zoom={zoom}
-              minimapVisible={minimapVisible}
-              onZoomChange={(value) => setZoom(value)}
-              onDeleteSelectedNodes={() => {
-                setSelectedNodeIds([])
-                setUiState(onSelectedNodeDeleted)
-              }}
-              onDropNode={addNode}
-              onDuplicateNode={duplicateNode}
-              onGraphChange={setGraph}
-              onOpenNodes={() => setUiState((current) => openSidePanel(current, 'components'))}
-              onResetView={() => graphCanvasRef.current?.fitView()}
-              onNodeDoubleClick={(id) => {
-                setSelectedNodeIds([id])
-                setUiState(onNodeDoubleClick)
-              }}
-              onSelectNodes={setSelectedNodeIds}
-            />
-            <ScriptEditorDrawer
-              open={uiState.configOpen}
-              placement="right"
-              subtitle="参数与输入连线"
-              title="节点配置"
-              onClose={() => setUiState(closeConfig)}
-            >
-              <NodeConfigPanel
-                graph={graph}
-                selectedNodeId={singleSelectedNodeId}
-                selectedCount={selectedNodeIds.length}
-                refreshingPanels={refreshingPanels}
-                refreshingPorts={refreshingPorts}
-                serialPanelOptions={serialPanelOptions}
-                serialPortOptions={serialPortOptions}
-                onDeleted={() => {
-                  setSelectedNodeIds([])
-                  setUiState(onNodeDeleted)
-                }}
-                onGraphChange={setGraph}
-                onRefreshPanels={refreshSerialPanels}
-                onRefreshPorts={refreshSerialPorts}
+            {showCodeView ? (
+              <ScriptCodePanel
+                code={legacyCode}
+                scriptName={activeScriptName}
+                onChange={setLegacyCode}
+                onShowCanvas={() => setUiState((current) => setViewMode(current, 'canvas'))}
               />
-            </ScriptEditorDrawer>
+            ) : (
+              <>
+                <CanvasToolBar
+                  value={uiState.canvasTool}
+                  minimapVisible={minimapVisible}
+                  onChange={(tool) => setUiState((current) => setCanvasTool(current, tool))}
+                  onToggleMinimap={() => setMinimapVisible((value) => !value)}
+                  onArrangeLayout={() => { void graphCanvasRef.current?.arrangeLayout() }}
+                  hasLegacyCode={isPureCodeScript}
+                  onShowCode={() => setUiState((current) => setViewMode(current, 'auto'))}
+                />
+                <GraphCanvas
+                  ref={graphCanvasRef}
+                  graph={graph}
+                  selectedNodeIds={selectedNodeIds}
+                  tool={uiState.canvasTool}
+                  zoom={zoom}
+                  graphRevision={graphRevision}
+                  minimapVisible={minimapVisible}
+                  onZoomChange={(value) => setZoom(value)}
+                  onDeleteSelectedNodes={() => {
+                    setSelectedNodeIds([])
+                    setUiState(onSelectedNodeDeleted)
+                  }}
+                  onDropNode={addNode}
+                  onDuplicateNode={duplicateNode}
+                  onGraphChange={setGraphTransient}
+                  onOpenNodes={() => setUiState((current) => openSidePanel(current, 'components'))}
+                  onResetView={() => graphCanvasRef.current?.fitView()}
+                  onNodeDoubleClick={(id) => {
+                    setSelectedNodeIds([id])
+                    setUiState(onNodeDoubleClick)
+                  }}
+                  onSelectNodes={setSelectedNodeIds}
+                />
+                <ScriptEditorDrawer
+                  open={uiState.configOpen}
+                  placement="right"
+                  subtitle="参数与输入连线"
+                  title="节点配置"
+                  onClose={() => setUiState(closeConfig)}
+                >
+                  <NodeConfigPanel
+                    graph={graph}
+                    selectedNodeId={singleSelectedNodeId}
+                    selectedCount={selectedNodeIds.length}
+                    refreshingPanels={refreshingPanels}
+                    refreshingPorts={refreshingPorts}
+                    serialPanelOptions={serialPanelOptions}
+                    serialPortOptions={serialPortOptions}
+                    onDeleted={() => {
+                      setSelectedNodeIds([])
+                      setUiState(onNodeDeleted)
+                    }}
+                    onGraphChange={setGraphTransient}
+                    onRefreshPanels={refreshSerialPanels}
+                    onRefreshPorts={refreshSerialPorts}
+                  />
+                </ScriptEditorDrawer>
+              </>
+            )}
+            {/* 底部输出 dock：叠在画布上，不占用 dialog 纵向 flex 高度。 */}
+            <ScriptOutputPanel
+              expanded={uiState.outputExpanded}
+              lines={outputLines}
+              poppedOut={outputPoppedOut}
+              onClear={clearOutput}
+              onPopout={() => {
+                const api = getIPC().scriptOutput
+                if (!api) {
+                  toast.error('当前环境不支持弹出输出窗')
+                  return
+                }
+                void api.popout(outputLines, activeScriptName || '').then((res) => {
+                  if (res?.ok === false) {
+                    toast.error(res.error || '弹出输出窗失败')
+                    return
+                  }
+                  setOutputPoppedOut(true)
+                  // 弹出后收起内嵌 dock，避免双份占屏
+                  if (uiState.outputExpanded) setUiState(toggleScriptOutput)
+                })
+              }}
+              onToggle={() => setUiState(toggleScriptOutput)}
+            />
           </div>
         </div>
-        <ScriptOutputPanel
-          expanded={uiState.outputExpanded}
-          lines={outputLines}
-          onClear={clearOutput}
-          onToggle={() => setUiState(toggleScriptOutput)}
-        />
       </section>
     )
   }

@@ -18,6 +18,7 @@ function mockCtx(): EmitContext {
     varMap: new Map(),
     processedNodes: new Set(),
     blockedNodes: new Set(),
+    inListenerClosure: false,
     emitNode: () => ''
   }
 }

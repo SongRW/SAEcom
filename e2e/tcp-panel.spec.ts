@@ -1,4 +1,5 @@
-import { test, expect, NAV } from './fixtures'
+import { test, expect, openNewPanelDialog, clickReady, confirmNewPanelDialog } from './fixtures'
+
 import { startEchoServer } from './helpers/tcp-echo'
 
 /**
@@ -15,27 +16,32 @@ test.describe('TCP 面板收发', () => {
     const payload = `E2E-${Date.now()}`
 
     // 1) 打开新建面板对话框，所有表单操作限定在 dialog 内
-    await page.getByText(NAV.newPanel, { exact: true }).click()
-    const dialog = page.getByRole('dialog')
-    await dialog.waitFor()
+    const dialog = await openNewPanelDialog(page)
 
     // 2) 切 TCP 模式 + 填主机/端口
     // Label 与 Input 是兄弟节点、无 htmlFor 关联；TCP 模式下对话框内仅 2 个 input（主机/端口）
-    await dialog.getByRole('button', { name: 'TCP' }).click()
+    await clickReady(page, dialog.getByRole('button', { name: 'TCP' }))
     await expect(dialog.locator('label', { hasText: '主机' })).toBeVisible()
     await dialog.locator('input').nth(0).fill('127.0.0.1')
     await dialog.locator('input').nth(1).fill(String(echo.port))
 
     // 3) 创建
-    await dialog.getByRole('button', { name: '创建' }).click()
+    await confirmNewPanelDialog(page, dialog)
+
 
     // 4) 侧栏面板行出现 → 点击连接开关
-    await page.locator('[title="点击连接"]').click()
+    // 4px hit-box + draggable 父行：DOM click 比 Playwright 指针序列更稳
+    await page.locator('[title="点击连接"]').evaluate((el: HTMLElement) => el.click())
     await expect(page.locator('[title="点击断开"]')).toBeVisible()
 
-    // 5) 发送数据（SendBar 输入框）
-    await page.getByPlaceholder('发送内容').fill(payload)
-    await page.getByRole('button', { name: '发送', exact: true }).click()
+    // 5) 发送数据（SendBar 在浮动面板底部）
+    const sendInput = page.getByPlaceholder('发送内容')
+    await expect(sendInput).toBeVisible({ timeout: 10000 })
+    await sendInput.fill(payload)
+    // 连接后按钮从 disabled 变为可点
+    const sendBtn = page.getByRole('button', { name: '发送', exact: true })
+    await expect(sendBtn).toBeEnabled()
+    await sendBtn.click()
 
     // 6) 断言：发送内容 + echo 回显出现在数据区（DataDisplay 的虚拟行带 data-index）
     //    回显行额外带 .text-primary；用 hasText 覆盖「发送出去」与「回弹回来」两行
@@ -50,20 +56,19 @@ test.describe('TCP 面板收发', () => {
   test('断开 TCP 连接', async ({ page }) => {
     const echo = await startEchoServer()
 
-    await page.getByText(NAV.newPanel, { exact: true }).click()
-    const dialog = page.getByRole('dialog')
-    await dialog.waitFor()
-    await dialog.getByRole('button', { name: 'TCP' }).click()
+    const dialog = await openNewPanelDialog(page)
+    await clickReady(page, dialog.getByRole('button', { name: 'TCP' }))
     await expect(dialog.locator('label', { hasText: '主机' })).toBeVisible()
     await dialog.locator('input').nth(0).fill('127.0.0.1')
     await dialog.locator('input').nth(1).fill(String(echo.port))
-    await dialog.getByRole('button', { name: '创建' }).click()
+    await confirmNewPanelDialog(page, dialog)
 
-    await page.locator('[title="点击连接"]').click()
+
+    await page.locator('[title="点击连接"]').evaluate((el: HTMLElement) => el.click())
     await expect(page.locator('[title="点击断开"]')).toBeVisible()
 
     // 点击断开
-    await page.locator('[title="点击断开"]').click()
+    await page.locator('[title="点击断开"]').evaluate((el: HTMLElement) => el.click())
     await expect(page.locator('[title="点击连接"]')).toBeVisible()
 
     await echo.close()

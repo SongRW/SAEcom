@@ -71,7 +71,7 @@ export function Sidebar() {
         </SidebarGroup>
         <SidebarGroup className="group-data-[collapsible=icon]:hidden flex-1 min-h-0 flex flex-col">
           <SidebarGroupLabel>{t('mainWindow.sidebar.panels')}</SidebarGroupLabel>
-          <SidebarGroupContent className="flex-1 min-h-0">
+          <SidebarGroupContent className="flex-1 min-h-0 min-w-0 overflow-hidden">
             <PaneList onNewPanel={() => setNewPanelDialogOpen(true)} />
           </SidebarGroupContent>
         </SidebarGroup>

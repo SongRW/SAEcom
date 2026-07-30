@@ -9,6 +9,7 @@ import type {
 import { NODE_DEFINITIONS, getNodeDefinition } from '@/features/script-editor/nodes/definitions'
 import { canConnectSockets } from '@/features/script-editor/nodes/sockets'
 import { createDefaultNodeData, migrateNodeData, updateConfigRefForControl, validateNodeConfig } from '@/features/script-editor/panelConfig'
+import { resolveNodePorts } from '@/features/script-editor/rete/dynamicPorts'
 
 export interface GraphPort {
   key: string
@@ -116,14 +117,16 @@ export function addGraphNode(
   delete cleanData.__panels
   const migratedData = Object.keys(cleanData).length > 0 ? migrateNodeData(key, cleanData) : {}
 
+  const nodeData = { ...defaultNodeData(key, panels), ...migratedData }
+  const ports = resolveNodePorts(key, nodeData)
   const node: GraphEditorNode = {
     id: String(id),
     key,
     label: label || definition.name,
     position: { x: position.x, y: position.y },
-    data: { ...defaultNodeData(key, panels), ...migratedData },
-    inputs: portMap(definition.inputs),
-    outputs: portMap(definition.outputs)
+    data: nodeData,
+    inputs: portMap(ports.inputs),
+    outputs: portMap(ports.outputs)
   }
 
   return {
@@ -146,12 +149,21 @@ export function updateGraphNodeData(
   value: unknown
 ): GraphEditorState {
   const id = String(nodeId)
-  return {
-    ...state,
-    nodes: state.nodes.map((node) => (
-      node.id === id ? { ...node, data: updateConfigRefForControl(node.key, node.data, controlKey, value) } : node
-    ))
-  }
+  const updatedNodes = state.nodes.map((node) => {
+    if (node.id !== id) return node
+    const data = updateConfigRefForControl(node.key, node.data, controlKey, value)
+    const ports = resolveNodePorts(node.key, data)
+    return { ...node, data, inputs: portMap(ports.inputs), outputs: portMap(ports.outputs) }
+  })
+  const nodesById = new Map(updatedNodes.map((node) => [node.id, node]))
+  const connections = state.connections.filter((connection) => {
+    const source = nodesById.get(connection.source)
+    const target = nodesById.get(connection.target)
+    const sourceOutput = source?.outputs[connection.sourceOutput]
+    const targetInput = target?.inputs[connection.targetInput]
+    return !!sourceOutput && !!targetInput && canConnectSockets(sourceOutput.socket, targetInput.socket)
+  })
+  return { ...state, nodes: updatedNodes, connections }
 }
 
 export function updateGraphNodePosition(
@@ -166,6 +178,23 @@ export function updateGraphNodePosition(
       node.id === id ? { ...node, position: { x: position.x, y: position.y } } : node
     ))
   }
+}
+
+/** 批量更新节点坐标（自动排版一次写回，避免 N 次 setState）。 */
+export function updateGraphNodePositions(
+  state: GraphEditorState,
+  positions: Record<string, { x: number; y: number }>
+): GraphEditorState {
+  if (Object.keys(positions).length === 0) return state
+  let changed = false
+  const nodes = state.nodes.map((node) => {
+    const next = positions[node.id]
+    if (!next) return node
+    if (node.position.x === next.x && node.position.y === next.y) return node
+    changed = true
+    return { ...node, position: { x: next.x, y: next.y } }
+  })
+  return changed ? { ...state, nodes } : state
 }
 
 export function removeGraphNode(state: GraphEditorState, nodeId: string | number): GraphEditorState {

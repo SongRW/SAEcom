@@ -9,6 +9,7 @@ import {
   onSelectedNodeDeleted,
   openSidePanel,
   setCanvasTool,
+  setViewMode,
   toggleScriptOutput,
   toggleSidePanel
 } from '../src/features/script-editor/uiState'
@@ -19,7 +20,8 @@ describe('script editor UI state', () => {
       sidePanel: null,
       configOpen: false,
       outputExpanded: false,
-      canvasTool: 'pointer'
+      canvasTool: 'pointer',
+      viewMode: 'auto'
     })
   })
 
@@ -81,5 +83,12 @@ describe('script editor UI state', () => {
     expect(state.outputExpanded).toBe(true)
     state = toggleScriptOutput(state)
     expect(state.outputExpanded).toBe(false)
+  })
+
+  it('switches view mode between auto and forced canvas', () => {
+    let state = setViewMode(createScriptEditorUiState(), 'canvas')
+    expect(state.viewMode).toBe('canvas')
+    state = setViewMode(state, 'auto')
+    expect(state.viewMode).toBe('auto')
   })
 })

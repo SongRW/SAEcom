@@ -1,5 +1,5 @@
 import type { NodeDef, ReteGraphNode } from '@shared/types'
-import { NODE_DEFINITIONS } from '@/features/script-editor/nodes/definitions'
+import { NODE_DEFINITIONS, getNodeComponent } from '@/features/script-editor/nodes/definitions'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
 import { emitCompare } from '@/features/script-editor/codegen/emit/compare'
 import { emitControl } from '@/features/script-editor/codegen/emit/control'
@@ -7,6 +7,7 @@ import { emitInput } from '@/features/script-editor/codegen/emit/input'
 import { emitLogical } from '@/features/script-editor/codegen/emit/logical'
 import { emitModbus } from '@/features/script-editor/codegen/emit/modbus'
 import { emitOutput } from '@/features/script-editor/codegen/emit/output'
+import { emitProtocol } from '@/features/script-editor/codegen/emit/protocol'
 import { emitStopGuard } from '@/features/script-editor/codegen/emit/shared'
 import { emitTransform } from '@/features/script-editor/codegen/emit/transform'
 
@@ -14,19 +15,28 @@ export type NodeEmitter = (ctx: EmitContext, node: ReteGraphNode, indent: string
 
 export const DEFAULT_NODE_REGISTRY: Record<string, NodeDef> = NODE_DEFINITIONS
 
+/**
+ * 按节点组件类分发 codegen。
+ * 若组件类不存在（测试注入的临时 NodeDef，如 output-panel），回退到 category emit。
+ */
 export function emitNodeByKey(ctx: EmitContext, node: ReteGraphNode, indent = '  '): string {
+  const component = getNodeComponent(node.key)
+  if (component) {
+    return emitStopGuard(indent) + component.emit(ctx, node, indent)
+  }
+
   const def = ctx.registry[node.key]
   if (!def) return ''
 
+  // 兼容：registry 注入但尚未注册为组件类的节点（测试 / 实验性节点）
   let code = emitStopGuard(indent)
-
   if (def.category === 'input') code += emitInput(ctx, node, indent)
   else if (def.category === 'compare') code += emitCompare(ctx, node, indent)
   else if (def.category === 'logical') code += emitLogical(ctx, node, indent)
   else if (def.category === 'control') code += emitControl(ctx, node, indent)
   else if (def.category === 'output') code += emitOutput(ctx, node, indent)
   else if (def.category === 'modbus') code += emitModbus(ctx, node, indent)
+  else if (def.category === 'protocol') code += emitProtocol(ctx, node, indent)
   else code += emitTransform(ctx, node, indent)
-
   return code
 }

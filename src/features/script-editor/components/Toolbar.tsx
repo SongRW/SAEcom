@@ -13,7 +13,8 @@ import {
   Trash as Trash2,
   X,
   MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut
+  MagnifyingGlassMinus as ZoomOut,
+  ArrowsClockwise
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import type { ScriptEditorWindowMode } from '@/features/script-editor/uiState'
@@ -25,6 +26,8 @@ interface ToolbarProps {
   isPopout: boolean
   /** 图形损坏（如 JSON 解析失败）时禁用保存，避免空图覆盖原文件。 */
   saveDisabled?: boolean
+  /** 本地 echo 模拟服务状态：null=未启动，否则含端口 */
+  simulator: { port: number } | null
   onNew: () => void
   onSave: () => void
   onRename: () => void
@@ -32,6 +35,7 @@ interface ToolbarProps {
   onDelete: () => void
   onRun: () => void
   onStop: () => void
+  onToggleSimulator: () => void
   onZoomIn: () => void
   onZoomOut: () => void
   onOpenScripts: () => void
@@ -48,6 +52,7 @@ export function Toolbar({
   windowMode,
   isPopout,
   saveDisabled,
+  simulator,
   onNew,
   onSave,
   onRename,
@@ -55,6 +60,7 @@ export function Toolbar({
   onDelete,
   onRun,
   onStop,
+  onToggleSimulator,
   onZoomIn,
   onZoomOut,
   onOpenScripts,
@@ -99,6 +105,16 @@ export function Toolbar({
         <Button size="sm" variant="destructive" title="停止" onClick={onStop} disabled={!running}>
           <Square data-icon="inline-start" />
           停止
+        </Button>
+        <span className="script-editor-separator" />
+        <Button
+          size="sm"
+          variant={simulator ? 'default' : 'outline'}
+          title={simulator ? `本地 echo 运行中：127.0.0.1:${simulator.port}（点击停止）` : '启动本地 echo 模拟服务（用于 TCP 收发自测）'}
+          onClick={onToggleSimulator}
+        >
+          <ArrowsClockwise data-icon="inline-start" />
+          {simulator ? `本地模拟 :${simulator.port}` : '本地模拟'}
         </Button>
         <span className="script-editor-window-controls">
           <Button size="icon" variant="ghost" title="缩小" onClick={onZoomOut}>

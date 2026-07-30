@@ -19,6 +19,13 @@ describe('script sandbox helpers', () => {
     const roundTrip = convertEncoding(gbkBinary, 'gbk', 'utf8')
 
     expect(roundTrip).toBe('中文')
+    // gbk 字节容器可被 textToHex 风格消费（每 char 一字节）
+    expect([...gbkBinary].every((ch) => ch.charCodeAt(0) <= 0xff)).toBe(true)
+  })
+
+  it('round-trips utf8 payload carried in a latin1 byte bag', () => {
+    const raw = Buffer.from('应答UTF8', 'utf8').toString('binary')
+    expect(convertEncoding(raw, 'latin1', 'utf8')).toBe('应答UTF8')
   })
 
   it('swaps bytes in fixed-size groups', () => {

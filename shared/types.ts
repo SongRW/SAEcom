@@ -171,6 +171,7 @@ export type NodeCategory =
   | 'control'
   | 'output'
   | 'modbus'
+  | 'protocol'
 
 export interface SocketSpec {
   key: string
@@ -199,6 +200,36 @@ export interface NodeDef {
   controls: ControlSpec[]
   icon?: string
   color?: string
+  /** 节点说明（供配置面板 / MCP 工具描述复用） */
+  description?: string
+}
+
+/** 精简 JSON Schema（MCP tools/list 用，非完整 draft 实现） */
+export type JsonSchemaType = 'string' | 'number' | 'boolean' | 'object' | 'array'
+
+export interface JsonSchema {
+  type?: JsonSchemaType | JsonSchemaType[]
+  description?: string
+  properties?: Record<string, JsonSchema>
+  required?: string[]
+  enum?: Array<string | number | boolean>
+  items?: JsonSchema
+  additionalProperties?: boolean
+}
+
+/**
+ * 节点导出的 MCP Tool 描述（描述层；不绑定传输/Server）。
+ * name 使用节点 key，便于 AI 与图结构对齐。
+ */
+export interface McpToolDescriptor {
+  name: string
+  description: string
+  inputSchema: JsonSchema
+  annotations?: {
+    category: NodeCategory
+    sandboxApis: string[]
+    nodeKey: string
+  }
 }
 
 export interface ReteGraphNode {
@@ -255,7 +286,7 @@ export interface TcpAPI {
 }
 
 export interface TcpServerAPI {
-  start: (port: number) => Promise<{ ok: boolean; id?: string; error?: string }>
+  start: (port: number, echo?: boolean) => Promise<{ ok: boolean; id?: string; port?: number; error?: string; echo?: boolean }>
   stop: (id: string) => Promise<{ ok: boolean; error?: string }>
   status: (id: string) => Promise<unknown>
   broadcast: (id: string, data: string, mode?: WriteMode, append?: AppendMode, encoding?: string) => Promise<WriteResult>
@@ -321,15 +352,68 @@ export interface PanelAPI {
   setAlwaysOnTop: (id: string, onTop: boolean) => void
 }
 
+/** 弹出/dock 双向传图时承载的图快照 + 活动脚本名 */
+export interface ScriptEditorGraphPayload {
+  graphStr: string
+  activeScriptName: string
+}
+
 /** 脚本编辑器弹出窗 IPC 契约 */
 export interface ScriptEditorAPI {
-  /** 弹出为独立窗口（单例：已有则聚焦） */
-  popout: () => Promise<{ ok: boolean; error?: string }>
-  /** 从弹出窗请求 dock 回主窗 */
-  requestDock: () => void
-  /** 主窗监听 dock 信号（弹出窗关闭/请求 dock 时触发） */
-  onDock: (cb: () => void) => () => void
+  /**
+   * 弹出为独立窗口（单例：已有则聚焦）。携带主窗当前图快照 + 活动脚本名，
+   * 主进程缓存后于弹窗 did-finish-load 回灌，使弹窗不丢图（双向传图-去程）。
+   */
+  popout: (graphStr: string, activeScriptName: string) => Promise<{ ok: boolean; error?: string }>
+  /**
+   * 从弹出窗请求 dock 回主窗。携带弹窗内最新图快照，主窗据以恢复（双向传图-回程）。
+   */
+  requestDock: (graphStr: string, activeScriptName: string) => void
+  /** 弹出窗挂载时监听主进程回灌的图快照（did-finish-load 触发） */
+  onPopoutPayload: (cb: (payload: ScriptEditorGraphPayload) => void) => () => void
+  /**
+   * 主窗监听 dock 信号（携带弹窗带回的图快照 + 活动脚本名），据此恢复内嵌弹层图。
+   */
+  onDock: (cb: (payload: ScriptEditorGraphPayload) => void) => () => void
   /** renderer 自检是否在弹出窗内（main 经 additionalArguments 注入 --script-editor-popout） */
+  isPopout: () => boolean
+}
+
+/** 脚本输出行（跨进程同步用；与 renderer store 的 OutputLine 同形） */
+export interface ScriptOutputLine {
+  text: string
+  ts: number
+}
+
+/** 输出栏弹出窗初始/同步载荷 */
+export interface ScriptOutputPayload {
+  lines: ScriptOutputLine[]
+  scriptName: string
+}
+
+/**
+ * 脚本输出弹出窗 IPC。
+ * 宿主（脚本编辑器）为 source of truth：运行日志仍由 host 收 scripts:log，
+ * 再 sync 到弹出窗；弹出窗 clear 反向通知 host。
+ */
+export interface ScriptOutputAPI {
+  /** 弹出独立输出窗（单例：已有则聚焦并刷新快照） */
+  popout: (lines: ScriptOutputLine[], scriptName: string) => Promise<{ ok: boolean; error?: string }>
+  /** host → 弹出窗：推送最新完整日志列表 */
+  sync: (lines: ScriptOutputLine[], scriptName?: string) => void
+  /** 弹出窗请求关闭（嵌回）；host 侧也可用来主动关窗 */
+  requestClose: () => void
+  /** 弹出窗请求清空：main 转给 host，host clearOutput 后再 sync([]) */
+  requestClear: () => void
+  /** 弹出窗：首包 + 二次聚焦刷新 */
+  onPopoutPayload: (cb: (payload: ScriptOutputPayload) => void) => () => void
+  /** 弹出窗：host 推送的实时同步 */
+  onSync: (cb: (payload: ScriptOutputPayload) => void) => () => void
+  /** host：弹出窗点了清空 */
+  onClearRequest: (cb: () => void) => () => void
+  /** host：弹出窗已关闭 */
+  onClosed: (cb: () => void) => () => void
+  /** 当前 renderer 是否是输出弹出窗 */
   isPopout: () => boolean
 }
 
@@ -362,7 +446,7 @@ export interface ScriptsAPI {
   dir: () => Promise<string>
   list: () => Promise<string[]>
   read: (name: string) => Promise<string>
-  write: (name: string, content: string) => Promise<unknown>
+  write: (name: string, content: string) => Promise<{ ok: boolean; error?: string }>
   delete: (name: string) => Promise<unknown>
   rename: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>
   exportScript: (name: string) => Promise<{ ok: boolean; canceled?: boolean; error?: string; filePath?: string }>
@@ -420,6 +504,7 @@ export interface WindowAPI {
   window: WindowControlAPI
   panel: PanelAPI
   scriptEditor: ScriptEditorAPI
+  scriptOutput: ScriptOutputAPI
   config: ConfigAPI
   commands: CommandsAPI
   file: FileAPI

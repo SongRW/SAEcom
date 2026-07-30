@@ -253,6 +253,25 @@ describe('script editor panel config', () => {
     })
   })
 
+  // 回归：defaultNodeData 给串口节点带顶层 portPath:""，加载已选好端口的脚本时
+  // 该空串不得覆盖从 configRef 提取出的真实端口，否则 configRef.portPath 被清空
+  // → 校验报「未选择串口」→ saveScript 拦截，表现为「修改脚本后保存不了」。
+  it('preserves a selected serial port when the legacy top-level portPath is empty', () => {
+    const migrated = migrateNodeData('input-serial', {
+      portPath: '',
+      configRef: {
+        kind: 'serial-port',
+        portPath: 'COM3',
+        serialOptions: { baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none' },
+        usesFallbackOptions: true
+      }
+    })
+    expect(migrated.portPath).toBe('COM3')
+    expect((migrated.configRef as { portPath?: string }).portPath).toBe('COM3')
+    // 迁移后该校验必须通过（无「未选择串口」）
+    expect(validateNodeConfig('input-serial', migrated)).toEqual([])
+  })
+
   it('replaces invalid existing config refs with defaults during migration', () => {
     expect(migrateNodeData('input-panel', { label: 'legacy', configRef: { kind: 'bogus' } })).toEqual({
       label: 'legacy',

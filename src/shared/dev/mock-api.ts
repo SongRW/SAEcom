@@ -93,6 +93,24 @@ import type { WindowAPI } from '@shared/types'
       saveLog: asyncOk,
       setAlwaysOnTop: noop
     },
+    scriptEditor: {
+      popout: asyncOk,
+      requestDock: noop,
+      onPopoutPayload: () => emptyUnsubscribe,
+      onDock: () => emptyUnsubscribe,
+      isPopout: () => false
+    },
+    scriptOutput: {
+      popout: asyncOk,
+      sync: noop,
+      requestClose: noop,
+      requestClear: noop,
+      onPopoutPayload: () => emptyUnsubscribe,
+      onSync: () => emptyUnsubscribe,
+      onClearRequest: () => emptyUnsubscribe,
+      onClosed: () => emptyUnsubscribe,
+      isPopout: () => false
+    },
     config: {
       load: async () => panelConfigs,
       save: noop

@@ -14,33 +14,21 @@ interface SettingsDialogProps {
 
 /**
  * zcode 风格设置对话框:左导航 + 右分区,沿用 shadcn Dialog(加宽 max-w-2xl)。
- * 副作用 effect 监听关键字段:
- * - dark → ipc.theme.set + documentElement .dark class
+ * 副作用 effect:
  * - fullscreen → ipc.window.setFullscreen
- * - fontSize → documentElement --font-size-base
+ * 注：主题（dark）与字号（fontSize）的 <html> 应用已上移到 MainWindow（始终挂载，
+ * 更可靠；此前仅在此对话框挂载时生效，运行时切换若未开对话框则 <html>.dark 不更新，
+ * 画板区等 var(--background) 元素会露出浅色）。
  */
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const ipc = useIPC()
   const { t } = useTranslation()
-  const dark = useSettingsStore((s) => s.dark)
   const fullscreen = useSettingsStore((s) => s.fullscreen)
-  const fontSize = useSettingsStore((s) => s.fontSize)
   const [section, setSection] = useState<SettingsSection>('general')
-
-  useEffect(() => {
-    const el = document.documentElement
-    el.classList.toggle('dark', !!dark)
-    el.classList.toggle('theme-dark', !!dark)
-    ipc.theme.set(!!dark)
-  }, [dark, ipc])
 
   useEffect(() => {
     ipc.window.setFullscreen(!!fullscreen)
   }, [fullscreen, ipc])
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--font-size-base', `${fontSize}px`)
-  }, [fontSize])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

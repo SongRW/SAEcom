@@ -19,18 +19,56 @@ export function updateLastRecv(state: SandboxState, value: unknown): string {
   return text
 }
 
+/**
+ * 编码转换约定（脚本协议拼包常用）：
+ * - utf8：JS 字符串（Unicode 文本）
+ * - latin1/binary：字节容器（每 char 一字节 0..255），TCP 收包/HEX 还原后常用
+ * - gbk 等：源为「该编码的字节容器」；目标为「该编码的字节容器」
+ *
+ * 例：
+ *   convertEncoding('中文', 'utf8', 'gbk') → gbk 字节串
+ *   convertEncoding(gbkBytes, 'gbk', 'utf8') → '中文'
+ *   convertEncoding(utf8BytesAsLatin1, 'latin1', 'utf8') → 按 UTF-8 解码文本
+ */
 export function convertEncoding(value: unknown, from = 'utf8', to = 'utf8'): string {
   const source = normalizeEncoding(from)
   const target = normalizeEncoding(to)
   const text = String(value ?? '')
 
-  if (!iconv || source === target) return text
-  if (!iconv.encodingExists(source) || !iconv.encodingExists(target)) return text
+  if (source === target) return text
 
-  const sourceBuffer = Buffer.from(text, source === 'utf8' ? 'utf8' : 'binary')
-  const decoded = iconv.decode(sourceBuffer, source)
-  const encoded = iconv.encode(decoded, target)
-  return target === 'utf8' ? encoded.toString('utf8') : encoded.toString('binary')
+  const unicode = decodeToUnicode(text, source)
+  if (unicode == null) return text
+  return encodeFromUnicode(unicode, target) ?? text
+}
+
+function isByteContainerEncoding(encoding: string): boolean {
+  return encoding === 'latin1' || encoding === 'binary' || encoding === 'iso88591'
+}
+
+function decodeToUnicode(text: string, encoding: string): string | null {
+  if (encoding === 'utf8') return text
+  if (isByteContainerEncoding(encoding)) {
+    // 字节袋 → 按 UTF-8 解释（协议里 UTF-8 变长字段经 latin1 传输的典型路径）
+    return Buffer.from(text, 'binary').toString('utf8')
+  }
+  if (iconv && iconv.encodingExists(encoding)) {
+    // gbk 等：输入已是该编码的字节容器
+    return iconv.decode(Buffer.from(text, 'binary'), encoding)
+  }
+  return null
+}
+
+function encodeFromUnicode(unicode: string, encoding: string): string | null {
+  if (encoding === 'utf8') return unicode
+  if (isByteContainerEncoding(encoding)) {
+    return Buffer.from(unicode, 'utf8').toString('binary')
+  }
+  if (iconv && iconv.encodingExists(encoding)) {
+    // 目标 gbk 等：返回字节容器，便于 textToHex 拼帧
+    return iconv.encode(unicode, encoding).toString('binary')
+  }
+  return null
 }
 
 export function swapBytes(value: unknown, byteSize = 2): string {
@@ -115,7 +153,10 @@ export function crc32(data: unknown): string {
 
 function normalizeEncoding(encoding: string): string {
   const lowered = String(encoding || 'utf8').toLowerCase().replace(/-/g, '')
-  return lowered === 'utf8' ? 'utf8' : lowered
+  if (lowered === 'utf8' || lowered === 'utf8mb4') return 'utf8'
+  if (lowered === 'latin1' || lowered === 'binary' || lowered === 'iso88591') return 'latin1'
+  if (lowered === 'gb2312' || lowered === 'gbk' || lowered === 'gb18030') return 'gbk'
+  return lowered
 }
 
 function toBuffer(value: unknown): Buffer {

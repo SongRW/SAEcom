@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>脚本输出</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #root {
+            height: 100%;
+        }
+    </style>
+    <!-- 冷启动防闪烁：与 script-editor.html 一致，同步读 appSettings 应用主题。 -->
+    <script>
+        (function () {
+            try {
+                var raw = localStorage.getItem('appSettings')
+                var s = raw ? JSON.parse(raw) : {}
+                var el = document.documentElement
+                if (s.dark) { el.classList.add('dark'); el.classList.add('theme-dark') }
+                var fs = Number(s.fontSize)
+                if (fs > 0) el.style.setProperty('--font-size-base', fs + 'px')
+            } catch (e) { /* 容错 */ }
+        })()
+    </script>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script src="/src/shared/dev/mock-api.ts"></script>
+    <script type="module" src="./script-output.tsx"></script>
+</body>
+
+</html>
