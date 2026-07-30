@@ -2106,7 +2106,7 @@ function installCsp(): void {
     // Fast Refresh preamble 与 @vitejs/client 是内联脚本）、ws HMR。仅开发态，
     // 生产策略保持严格收口（见上方 prodPolicy），不放宽。
     `script-src 'self' ${devOrigin} 'unsafe-eval' 'unsafe-inline'`,
-    "style-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: ${devOrigin}`,
     "font-src 'self' data:",
     `connect-src 'self' ${devWsOrigin} ${devOrigin}`,
