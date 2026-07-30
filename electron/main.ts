@@ -31,7 +31,7 @@ try { iconv = require('iconv-lite') } catch { iconv = null }
 
 // ========== E2E 测试钩子（仅当对应环境变量存在时生效，开发/打包零影响） ==========
 // SAECOM_FORCE_PROD=1：直接跑 out/main/index.js 时 app.isPackaged 仍为 false，会误走 dev 分支连
-//   localhost:5173（dev server 没起 → 白屏）。此开关强制按 prod 加载 out/renderer 产物。
+//   127.0.0.1:5273（dev server 没起 → 白屏）。此开关强制按 prod 加载 out/renderer 产物。
 // SAECOM_USER_DATA=<dir>：隔离持久化目录，避免测试污染本地 ~/Library/Application Support/SAEcom。
 // SAECOM_E2E=1：关闭启动副作用（更新检查会弹模态 dialog 阻塞测试窗口）。
 const FORCE_PROD = process.env.SAECOM_FORCE_PROD === '1'
@@ -47,7 +47,9 @@ if (E2E_USER_DATA) {
 
 // electron-vite dev/prod 模式判断
 const isDev = !app.isPackaged && !FORCE_PROD
-const DEV_SERVER_URL = 'http://localhost:5173'
+// electron-vite 会把实际 dev server 地址写入 ELECTRON_RENDERER_URL；
+// 默认回退到本项目固定端口 5273（与常见前端 5173 错开，见 electron.vite.config.ts）。
+const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://127.0.0.1:5273'
 // preload 编译输出到 out/preload/index.js（与 main 同级的 ../preload/）
 const PRELOAD_PATH = path.join(__dirname, '../preload/index.js')
 // 渲染进程产物：dev 模式由 dev server 提供，prod 模式在 out/renderer/src/
@@ -102,8 +104,78 @@ function saveJsonSafe(file: string, data: any): void {
 function ensureScriptsDir(): void { try { fs.mkdirSync(scriptsDir, { recursive: true }) } catch { } }
 function safeScriptName(name: string): string {
   name = String(name || '').trim().replace(/[/\\]/g, '')
-  if (!name.endsWith('.js')) name += '.js'
+  // 数据文件(.txt)保留原名；脚本文件(.js)确保扩展名
+  if (!name.endsWith('.js') && !name.endsWith('.txt')) name += '.js'
   return name
+}
+
+/** 内置示例脚本源目录：dev/e2e 走仓库 shared/samples；打包后走 asar 内同路径。 */
+function resolveSampleScriptsDir(): string | null {
+  const candidates = [
+    path.join(__dirname, '../../shared/samples'),
+    path.join(app.getAppPath(), 'shared/samples'),
+    path.join(process.resourcesPath || '', 'shared/samples')
+  ]
+  for (const dir of candidates) {
+    try {
+      if (dir && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
+    } catch { /* ignore */ }
+  }
+  return null
+}
+
+/**
+ * 内置样本是否需要强制刷新。
+ * - 目标不存在：需要
+ * - 目标仍含已删除的测试特化节点 key：需要（否则加载后端口/节点失效，表现为「断线要重连」）
+ * - 源文件带 @sample-version 标记且与目标不一致：需要（示例脚本迭代后自动同步到 userData）
+ * 其它情况不覆盖，避免冲掉用户本地改过的同名脚本。
+ */
+const SAMPLE_VERSION_RE = /@sample-version\s+(\d+)/
+function shouldRefreshSampleScript(srcPath: string, dest: string): boolean {
+  if (!fs.existsSync(dest)) return true
+  try {
+    const destText = fs.readFileSync(dest, 'utf-8')
+    // 旧特化节点残留：强制刷新
+    if (/protocol-dual-seal|protocol-bitpack|protocol-bit-unpack/.test(destText)) return true
+    // 版本标记：源标记存在且与目标不同 → 刷新。源无标记时不动（保持旧行为）。
+    const srcText = fs.readFileSync(srcPath, 'utf-8')
+    const srcVer = srcText.match(SAMPLE_VERSION_RE)?.[1]
+    if (srcVer !== undefined) {
+      const destVer = destText.match(SAMPLE_VERSION_RE)?.[1]
+      return srcVer !== destVer
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
+/**
+ * 把 shared/samples 下的示例脚本拷到 userData/scripts。
+ * 默认不覆盖用户文件；若检测到旧版特化节点残留则强制刷新到最新通用节点版。
+ */
+function seedSampleScripts(): void {
+  ensureScriptsDir()
+  const sampleDir = resolveSampleScriptsDir()
+  if (!sampleDir) return
+  let entries: string[] = []
+  try {
+    // 示例脚本(.js) + 脚本配套数据文件(.txt，供 input-file 读取)
+    entries = fs.readdirSync(sampleDir).filter((f) => f.endsWith('.js') || f.endsWith('.txt'))
+  } catch { return }
+  for (const name of entries) {
+    const src = path.join(sampleDir, name)
+    const dest = path.join(scriptsDir, safeScriptName(name))
+    // 数据文件(.txt)每次覆盖（脚本读取的就是最新帧数据）；.js 走版本刷新判断
+    const isDataFile = name.endsWith('.txt')
+    if (!isDataFile && !shouldRefreshSampleScript(src, dest)) continue
+    try {
+      fs.copyFileSync(src, dest)
+    } catch (err) {
+      console.error('[seedSampleScripts]', name, err)
+    }
+  }
 }
 function getPortId(portPath: string): string { return portPath }
 
@@ -121,6 +193,23 @@ const popoutWindows = new Map<string, BrowserWindow>()
 
 /** 脚本编辑器弹出窗：单例（一次仅一个编辑器弹窗，二次弹窗聚焦已有） */
 let scriptEditorPopoutWindow: BrowserWindow | null = null
+
+/** 弹出窗图快照：主窗弹出时塞入，did-finish-load 后回灌弹窗；dock 时弹窗再带新图回主窗。 */
+let scriptEditorPopoutPayload: { graphStr: string; activeScriptName: string } = { graphStr: '', activeScriptName: '' }
+
+/** 脚本输出弹出窗：单例；host 持有日志 source of truth，经 sync 推到此窗。 */
+let scriptOutputPopoutWindow: BrowserWindow | null = null
+let scriptOutputPopoutPayload: { lines: Array<{ text: string; ts: number }>; scriptName: string } = {
+  lines: [],
+  scriptName: ''
+}
+
+/**
+ * 当前主题（深色？）。由 renderer 的 theme:set 维护。
+ * popout 窗创建时按此值初始化 win32 titleBarOverlay 的底色/图标色，
+ * 让弹出窗的窗口控件跟随深浅主题（此前只 mainWindow 跟随，popout 窗 overlay 不变）。
+ */
+let currentDark = false
 
 /**
  * 外链打开判定 + 副作用：http/https/mailto 走系统默认浏览器打开，并返回 true（表示已处理）。
@@ -170,6 +259,52 @@ function isRfc1918(ip: string): boolean {
   }
   if (/^192\.168\./.test(ip)) return true
   return false
+}
+
+/**
+ * 脚本 TCP 客户端连接池：listenTcpPackets 建立的连接按 runId+host:port 注册，
+ * sendTCP 优先复用同一条连接回写——这样「接收TCP + 发送TCP」可在同一条 TCP
+ * 连接上闭环（典型场景：echo server / 一收一发协议）。
+ * key = `${runId}|${host}|${port}`
+ */
+interface ScriptTcpClientEntry {
+  socket: net.Socket
+  host: string
+  port: number
+  runId: string
+}
+const scriptTcpClients = new Map<string, ScriptTcpClientEntry>()
+
+function scriptTcpClientKey(runId: string, host: string, port: number): string {
+  return `${runId}|${host}|${port}`
+}
+
+function registerScriptTcpClient(runId: string, host: string, port: number, socket: net.Socket): void {
+  const key = scriptTcpClientKey(runId, host, port)
+  const prev = scriptTcpClients.get(key)
+  if (prev && prev.socket !== socket) {
+    try { prev.socket.destroy() } catch { /* ignore */ }
+  }
+  scriptTcpClients.set(key, { socket, host, port, runId })
+  socket.once('close', () => {
+    const cur = scriptTcpClients.get(key)
+    if (cur && cur.socket === socket) scriptTcpClients.delete(key)
+  })
+}
+
+function findScriptTcpClient(runId: string, host: string, port: number): net.Socket | null {
+  const key = scriptTcpClientKey(runId, host, port)
+  const entry = scriptTcpClients.get(key)
+  return entry && !entry.socket.destroyed ? entry.socket : null
+}
+
+function removeScriptTcpClients(runId: string): void {
+  for (const [key, entry] of Array.from(scriptTcpClients.entries())) {
+    if (entry.runId === runId) {
+      try { entry.socket.destroy() } catch { /* ignore */ }
+      scriptTcpClients.delete(key)
+    }
+  }
 }
 
 function looksVirtual(ifname: string = ''): boolean {
@@ -356,8 +491,9 @@ ipcMain.handle('tcp:close', async (_e, { id }) => {
 const tcpServers = new Map<string, any>()
 const tcpServerStarts = new Map<string, Promise<any>>()
 
-ipcMain.handle('tcpServer:start', async (e: any, { port }) => {
-  const serverId = `tcpServer:${port}`
+ipcMain.handle('tcpServer:start', async (e: any, { port, echo }) => {
+  const wantEcho = !!echo
+  const serverId = `tcpServer:${port}${wantEcho ? ':echo' : ''}`
   if (tcpServers.has(serverId)) {
     return { ok: true, id: serverId, port, already: true }
   }
@@ -375,6 +511,8 @@ ipcMain.handle('tcpServer:start', async (e: any, { port }) => {
     sock.on('data', (buf) => {
       const dataBuffer = Buffer.isBuffer(buf) ? buf : Buffer.from(String(buf), 'utf8')
       const dataText = dataBuffer.toString('utf8')
+      // echo 模式：原样回写，用于脚本收发闭环自测（二进制安全）
+      if (wantEcho) { try { sock.write(dataBuffer) } catch { /* ignore */ } }
       // 直传 Buffer（Uint8Array 子类），structured clone 零拷贝，替代 base64 往返
       try { win.send('tcpServer:data', { serverId, clientId, bytes: dataBuffer, ts: Date.now() }) } catch { }
       pushTcpServerData(serverId, dataText)
@@ -398,8 +536,11 @@ ipcMain.handle('tcpServer:start', async (e: any, { port }) => {
 
   return await new Promise((resolve) => {
     server.listen(port, '0.0.0.0', () => {
-      tcpServers.set(serverId, { server, port, clients, win })
-      resolve({ ok: true, id: serverId, port })
+      const addr = server.address()
+      const realPort = addr && typeof addr === 'object' ? addr.port : port
+      const realId = `tcpServer:${realPort}${wantEcho ? ':echo' : ''}`
+      tcpServers.set(realId, { server, port: realPort, clients, win })
+      resolve({ ok: true, id: realId, port: realPort, echo: wantEcho })
     }).on('error', (err) => {
       resolve({ ok: false, error: err?.message || '启动失败' })
     })
@@ -641,7 +782,13 @@ function removeScriptWatcher(runIdOrWatcherId: string): void {
 }
 function notifyScriptWatchers(portId: string, buf: Buffer): void {
   const m = scriptWatchers.get(portId); if (!m) return
-  const payload = { bytes: Uint8Array.from(buf), text: (() => { try { return buf.toString('utf8') } catch { return '' } })() }
+  // text 用 latin1：逐字节映射到 charCode 0..255，二进制协议可经 textToHex 无损还原。
+  // UI 展示仍走 tcp:data/serial 的原始 bytes，不受影响。
+  const payload = {
+    bytes: Uint8Array.from(buf),
+    text: (() => { try { return buf.toString('latin1') } catch { return '' } })(),
+    hex: (() => { try { return buf.toString('hex').toUpperCase() } catch { return '' } })()
+  }
   for (const fn of m.values()) try { fn(payload) } catch { }
 }
 
@@ -835,16 +982,30 @@ ipcMain.on('window:subscribeMaximize', (e) => {
   win.on('unmaximize', emit)
   maximizeListeners.set(win, emit)
 })
-ipcMain.on('theme:set', (_e, { dark }) => {
-  if (process.platform === 'win32' && mainWindow?.setTitleBarOverlay) {
+
+/**
+ * 把 win32 titleBarOverlay 的底色/图标色按当前主题应用到所有可见 BrowserWindow。
+ * 此前仅 mainWindow 跟随主题，popout 面板/脚本编辑器弹窗的 overlay 保持初始浅色，
+ * 深色模式下弹出窗右上角控件与窗体格格不入（问题4）。popout 窗用 height:38（与
+ * 创建时一致），主窗用 height:30（与原行为一致）。
+ */
+function applyTitleBarOverlay(dark: boolean) {
+  if (process.platform !== 'win32') return
+  const color = dark ? '#0D1218' : '#f5f7fa'
+  const symbolColor = dark ? '#E6E9EF' : '#1f2937'
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (w.isDestroyed() || !w.setTitleBarOverlay) continue
+    // 主窗保持 30；其余（panel/script-editor popout）创建时用 38
+    const isMain = w === mainWindow
     try {
-      mainWindow.setTitleBarOverlay({
-        color: dark ? '#0D1218' : '#f5f7fa',
-        symbolColor: dark ? '#E6E9EF' : '#1f2937',
-        height: 30
-      })
-    } catch { }
+      w.setTitleBarOverlay({ color, symbolColor, height: isMain ? 30 : 38 })
+    } catch { /* 旧版 Electron 无 overlay */ }
   }
+}
+
+ipcMain.on('theme:set', (_e, { dark }) => {
+  currentDark = !!dark
+  applyTitleBarOverlay(dark)
   BrowserWindow.getAllWindows().forEach(w => w.webContents.send('theme:apply', { dark }))
 })
 
@@ -940,7 +1101,7 @@ ipcMain.handle('panel:popout', (_e, { id, title, historyStr, alwaysOnTop, isOpen
     show: showWindow,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     titleBarOverlay: process.platform === 'win32'
-      ? { color: '#f5f7fa', symbolColor: '#1f2937', height: 38 }
+      ? { color: currentDark ? '#0D1218' : '#f5f7fa', symbolColor: currentDark ? '#E6E9EF' : '#1f2937', height: 38 }
       : undefined,
     frame: process.platform === 'linux' ? false : undefined,
     resizable: true,
@@ -976,19 +1137,22 @@ ipcMain.handle('panel:popout', (_e, { id, title, historyStr, alwaysOnTop, isOpen
 })
 
 // 脚本编辑器弹出为独立窗口（单例：已有则聚焦，不重复创建）
-ipcMain.handle('script-editor:popout', () => {
+// 接收主窗当前图快照（graphStr）与活动脚本名，缓存在 payload 里，等弹窗 did-finish-load
+// 后回灌（双向传图：弹出时主窗→弹窗，dock 时弹窗→主窗），避免弹窗/dock 回后图丢失。
+ipcMain.handle('script-editor:popout', (_e, { graphStr, activeScriptName }: { graphStr?: string; activeScriptName?: string }) => {
+  scriptEditorPopoutPayload = { graphStr: graphStr || '', activeScriptName: activeScriptName || '' }
   if (scriptEditorPopoutWindow && !scriptEditorPopoutWindow.isDestroyed()) {
     if (scriptEditorPopoutWindow.isMinimized()) scriptEditorPopoutWindow.restore()
     scriptEditorPopoutWindow.show()
     scriptEditorPopoutWindow.focus()
+    // 已有窗：直接把最新图发过去（二次弹出聚焦场景）
+    scriptEditorPopoutWindow.webContents.send('script-editor:popout-payload', scriptEditorPopoutPayload)
     return { ok: true }
   }
 
-  // 三平台统一用 OS 原生标题栏：mac 红绿灯 / win 标准栏 / linux WM 栏。
-  // 此前 mac hiddenInset 的红绿灯压住 Toolbar 左上角、win hidden+overlay 的原生
-  // 控件与 Toolbar 关闭按钮重叠、linux frame:false 完全没有窗口控件，三平台表现
-  // 不一致。改原生栏后窗口控制交给 OS，应用层 Toolbar 仅保留「dock 回主窗」这一
-  // OS 不具备的应用语义按钮（见 Toolbar.tsx）。
+  // frameless + 自定义标题栏（与主窗/panel popout 一致）：
+  // mac hiddenInset（红绿灯）、win hidden + titleBarOverlay（跟随主题，见 applyTitleBarOverlay）、
+  // linux frame:false（自绘控件）。此前用 OS 原生栏导致弹窗顶部多一条栏，与主窗风格不一致（问题3）。
   const win = new BrowserWindow({
     width: 1200,
     height: 780,
@@ -997,6 +1161,11 @@ ipcMain.handle('script-editor:popout', () => {
     title: '脚本编辑器',
     resizable: true,
     show: showWindow,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    titleBarOverlay: process.platform === 'win32'
+      ? { color: currentDark ? '#0D1218' : '#f5f7fa', symbolColor: currentDark ? '#E6E9EF' : '#1f2937', height: 38 }
+      : undefined,
+    frame: process.platform === 'linux' ? false : undefined,
     webPreferences: {
       preload: PRELOAD_PATH,
       contextIsolation: true,
@@ -1013,15 +1182,111 @@ ipcMain.handle('script-editor:popout', () => {
     win.loadFile(path.join(RENDERER_DIST, 'app/script-editor.html'))
   }
 
+  win.webContents.once('did-finish-load', () => {
+    win.webContents.send('script-editor:popout-payload', scriptEditorPopoutPayload)
+  })
+
   return { ok: true }
 })
 
-// 弹出窗请求 dock 回主窗：关闭独立窗，并通知主窗重新显示内嵌弹层
-ipcMain.on('script-editor:request-dock', () => {
+// 弹出窗请求 dock 回主窗：关闭独立窗，并把弹窗内的图快照带回主窗（双向传图-回程）
+ipcMain.on('script-editor:request-dock', (_e, payload?: { graphStr?: string; activeScriptName?: string }) => {
   if (scriptEditorPopoutWindow && !scriptEditorPopoutWindow.isDestroyed()) {
     scriptEditorPopoutWindow.close()
   }
-  mainWindow?.webContents.send('script-editor:dock')
+  mainWindow?.webContents.send('script-editor:dock', {
+    graphStr: payload?.graphStr || '',
+    activeScriptName: payload?.activeScriptName || ''
+  })
+})
+
+// —— 脚本输出独立窗（单例）——
+ipcMain.handle(
+  'script-output:popout',
+  (
+    _e,
+    payload?: { lines?: Array<{ text: string; ts: number }>; scriptName?: string }
+  ) => {
+    scriptOutputPopoutPayload = {
+      lines: Array.isArray(payload?.lines) ? payload!.lines : [],
+      scriptName: payload?.scriptName || ''
+    }
+    if (scriptOutputPopoutWindow && !scriptOutputPopoutWindow.isDestroyed()) {
+      if (scriptOutputPopoutWindow.isMinimized()) scriptOutputPopoutWindow.restore()
+      scriptOutputPopoutWindow.show()
+      scriptOutputPopoutWindow.focus()
+      scriptOutputPopoutWindow.webContents.send('script-output:popout-payload', scriptOutputPopoutPayload)
+      return { ok: true }
+    }
+
+    const win = new BrowserWindow({
+      width: 720,
+      height: 480,
+      minWidth: 420,
+      minHeight: 280,
+      title: '脚本输出',
+      resizable: true,
+      show: showWindow,
+      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+      titleBarOverlay: process.platform === 'win32'
+        ? { color: currentDark ? '#0D1218' : '#f5f7fa', symbolColor: currentDark ? '#E6E9EF' : '#1f2937', height: 38 }
+        : undefined,
+      frame: process.platform === 'linux' ? false : undefined,
+      webPreferences: {
+        preload: PRELOAD_PATH,
+        contextIsolation: true,
+        additionalArguments: ['--script-output-popout']
+      }
+    })
+
+    scriptOutputPopoutWindow = win
+    win.on('closed', () => {
+      scriptOutputPopoutWindow = null
+      // 通知所有可能的 host（主窗 / 脚本编辑器弹窗）
+      for (const w of BrowserWindow.getAllWindows()) {
+        if (!w.isDestroyed()) w.webContents.send('script-output:closed')
+      }
+    })
+
+    if (isDev) {
+      win.loadURL(DEV_SERVER_URL + '/src/app/script-output.html')
+    } else {
+      win.loadFile(path.join(RENDERER_DIST, 'app/script-output.html'))
+    }
+
+    win.webContents.once('did-finish-load', () => {
+      win.webContents.send('script-output:popout-payload', scriptOutputPopoutPayload)
+    })
+
+    return { ok: true }
+  }
+)
+
+ipcMain.on(
+  'script-output:sync',
+  (_e, payload?: { lines?: Array<{ text: string; ts: number }>; scriptName?: string }) => {
+    scriptOutputPopoutPayload = {
+      lines: Array.isArray(payload?.lines) ? payload!.lines : [],
+      scriptName: payload?.scriptName ?? scriptOutputPopoutPayload.scriptName
+    }
+    if (scriptOutputPopoutWindow && !scriptOutputPopoutWindow.isDestroyed()) {
+      scriptOutputPopoutWindow.webContents.send('script-output:sync', scriptOutputPopoutPayload)
+    }
+  }
+)
+
+ipcMain.on('script-output:request-close', () => {
+  if (scriptOutputPopoutWindow && !scriptOutputPopoutWindow.isDestroyed()) {
+    scriptOutputPopoutWindow.close()
+  }
+})
+
+ipcMain.on('script-output:request-clear', () => {
+  // 转给所有非输出弹窗的 renderer（host 会 clearOutput）
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (w === scriptOutputPopoutWindow || w.isDestroyed()) continue
+    w.webContents.send('script-output:clear-request')
+  }
 })
 
 // 实时切换 popout 窗的 alwaysOnTop（取代 legacy 无实时切换的缺陷）
@@ -1454,7 +1719,37 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
         return { ok: true, sent: data, host, port }
       }
 
-      return { ok: true, sent: data }
+      // 优先复用 listenTcpPackets 已建立的同 host:port 连接，实现「接收+发送」闭环
+      const pooled = findScriptTcpClient(runId, String(host), Number(port))
+      if (pooled) {
+        let buf: Buffer
+        try { buf = buildWriteBuffer(String(data), mode, 'none', 'utf-8') } catch (e) {
+          return { ok: false, error: String((e as Error)?.message || e) }
+        }
+        return new Promise((resolve) => {
+          pooled.write(buf, (err?: Error | null) => resolve(
+            err ? { ok: false, error: String(err.message) } : { ok: true, sent: data, bytes: buf.length }
+          ))
+        })
+      }
+
+      // 无监听连接：建一次性连接发送后关闭
+      let buf: Buffer
+      try { buf = buildWriteBuffer(String(data), mode, 'none', 'utf-8') } catch (e) {
+        return { ok: false, error: String((e as Error)?.message || e) }
+      }
+      return new Promise((resolve) => {
+        const socket = net.createConnection({ host: String(host), port: Number(port) })
+        const done = (r: any) => { try { socket.destroy() } catch { /* ignore */ } resolve(r) }
+        socket.on('error', (err) => done({ ok: false, error: String(err.message) }))
+        socket.on('connect', () => {
+          socket.write(buf, (err?: Error | null) => done(
+            err ? { ok: false, error: String(err.message) } : { ok: true, sent: data, bytes: buf.length }
+          ))
+        })
+        // 兜底超时，避免悬挂
+        setTimeout(() => done({ ok: false, error: 'TCP 发送超时' }), 5000)
+      })
     },
 
     waitTcpServer: async (port: number, timeout: number = 5000) => {
@@ -1505,6 +1800,8 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
 
         let settled = false
         const socket = net.createConnection({ host, port })
+        // 注册到脚本 TCP 客户端池：sendTCP 可复用同一条连接回写
+        registerScriptTcpClient(runId, String(host), Number(port), socket)
         let stopNow: () => void
         const cleanup = () => {
           token.abortHandlers.delete(stopNow)
@@ -1530,14 +1827,20 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
 
         socket.on('data', async (buf) => {
           try {
-            await handler(updateLastRecv(sandboxState, buf.toString('utf8')))
+            // latin1：每字节映射到 charCode 0..255，二进制协议可经 textToHex 无损还原
+            await handler(updateLastRecv(sandboxState, buf.toString('latin1')))
             if (token.aborted) resolveOnce()
           } catch (err: any) {
             try { socket.destroy() } catch { }
             rejectOnce(err)
           }
         })
-        socket.on('error', (err) => rejectOnce(err))
+        // 连接失败（ECONNREFUSED 等）：不 reject（会变成未捕获 rejection 刷屏），
+        // 改为提示并 resolve，让脚本静默结束监听。
+        socket.on('error', (err) => {
+          try { console.log(`[listenTcpPackets] ${host}:${port} 连接失败: ${err.message}`) } catch { /* ignore */ }
+          resolveOnce()
+        })
         socket.on('close', () => resolveOnce())
       })
     },
@@ -1730,6 +2033,7 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
       runningScripts.delete(runId)
       removeScriptWatcher(runId)
       removeTcpServerWatchers(runId)
+      removeScriptTcpClients(runId)
     }
   })()
   return { ok: true, runId }
@@ -1779,9 +2083,11 @@ function installCsp(): void {
   const prodPolicy = [
     "default-src 'self'",
     "script-src 'self'",
-    // React 内联 style 极少（shadcn 用 className），但 styled 组件偶有内联；style-src 收到 'self'
-    // 若出现内联样式被拦，应改用 nonce 而非放开 unsafe-inline，故这里先不放 unsafe-inline。
-    "style-src 'self'",
+    // Rete 画布（rete-react-plugin → styled-components）在运行时通过 <style> 标签动态注入
+    // 大量节点 transform / 连线 / minimap 样式。这些样式内容在运行时生成、不可预测，
+    // 无法用固定 nonce 白名单。必须放 unsafe-inline，否则 styled-components 注入被 CSP 拦截
+    // 抛错，整个 Rete 渲染树（area 容器 / 连线 / minimap）崩溃。
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self' data:",
     // 串口/TCP 走 IPC 不走网络；connect-src 仅允许同源，挡住渲染层外联
@@ -1791,16 +2097,19 @@ function installCsp(): void {
     "frame-ancestors 'none'"
   ].join('; ')
 
+  // 开发 CSP 与 DEV_SERVER_URL 同源；端口由 electron.vite.config.ts 固定为 5273。
+  const devOrigin = DEV_SERVER_URL.replace(/\/$/, '')
+  const devWsOrigin = devOrigin.replace(/^http/, 'ws')
   const devPolicy = [
-    "default-src 'self' http://localhost:5173",
+    `default-src 'self' ${devOrigin}`,
     // Vite dev 三件套：eval（依赖按需 require）、unsafe-inline（@vitejs/plugin-react 的
     // Fast Refresh preamble 与 @vitejs/client 是内联脚本）、ws HMR。仅开发态，
     // 生产策略保持严格收口（见上方 prodPolicy），不放宽。
-    "script-src 'self' http://localhost:5173 'unsafe-eval' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: http://localhost:5173",
+    `script-src 'self' ${devOrigin} 'unsafe-eval' 'unsafe-inline'`,
+    "style-src 'self'",
+    `img-src 'self' data: ${devOrigin}`,
     "font-src 'self' data:",
-    "connect-src 'self' ws://localhost:5173 http://localhost:5173",
+    `connect-src 'self' ${devWsOrigin} ${devOrigin}`,
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'"
@@ -1820,6 +2129,7 @@ function installCsp(): void {
 app.whenReady().then(() => {
   installCsp()
   ensureScriptsDir()
+  seedSampleScripts()
   createMainWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMainWindow() })
 })
