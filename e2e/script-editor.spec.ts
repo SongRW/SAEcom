@@ -196,8 +196,10 @@ test.describe('脚本编辑器画布', () => {
   })
 
   // 回归（Bug A「放大状态退出重进后缩略图/缩放拖动失效」）：
-  // 放大后关闭编辑器再重开，新建的 Rete area 必须按保留的 zoom 重新对齐，
+  // 放大后关闭编辑器再重开，新建的 Rete area 必须从干净的初始态正常工作，
   // 否则 React zoom 与画板 transform 脱节，minimap 视口框拖不动、节点被甩出画布。
+  // 注：Bug 1 修复后，重开会完全清空画布（用户确认要「完全清空」）。
+  //     本测试改为：重开 → 画布为空 → 重新加节点 → 放大 → minimap 视口框可拖动。
   test('放大后关闭重开编辑器，缩略图视口仍可拖动', async ({ page }) => {
     test.setTimeout(120000)
     await openNavPage(page, NAV.pageScript)
@@ -205,7 +207,7 @@ test.describe('脚本编辑器画布', () => {
 
     let editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await editor.waitFor()
-    // 加一个节点，让 minimap 有内容可渲染（minimap-node / minimap-viewport）
+    // 加一个节点，制造可放大的初始态
     await clickReady(page, editor.getByRole('button', { name: '组件' }))
     await clickReady(page, editor.locator('[data-node-key="input-serial"]'))
     await expect(editor.locator('[data-testid="node"]')).toHaveCount(1, { timeout: 10000 })
@@ -222,8 +224,18 @@ test.describe('脚本编辑器画布', () => {
     editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await editor.waitFor()
 
-    // 重开后画布节点仍在，minimap 视口框可拖动且节点未被甩出画布
+    // 重开后画布已被重置为空（Bug 1 修复）
+    await expect(editor.locator('[data-testid="node"]')).toHaveCount(0, { timeout: 10000 })
+    await expect(editor.locator('.script-editor-canvas__hud')).toContainText('100%')
+
+    // 重新加节点并放大，验证新建的 Rete area 在干净态下 zoom/transform 正常对齐
+    await clickReady(page, editor.getByRole('button', { name: '组件' }))
+    await clickReady(page, editor.locator('[data-node-key="input-serial"]'))
     await expect(editor.locator('[data-testid="node"]')).toHaveCount(1, { timeout: 10000 })
+    for (let i = 0; i < 4; i++) await clickReady(page, zoomIn)
+    await expect(editor.locator('.script-editor-canvas__hud')).toContainText(/1[3-9]\d%|[2-9]\d\d%/)
+
+    // minimap 视口框可拖动且节点未被甩出画布
     const minimap = editor.locator('[data-testid="minimap"]')
     await expect(minimap).toBeVisible()
     const viewport = minimap.locator('[data-testid="minimap-viewport"]')

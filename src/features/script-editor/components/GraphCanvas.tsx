@@ -103,6 +103,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const arrangingRef = useRef(false)
   const onZoomChangeRef = useRef(onZoomChange)
   const lastGraphRevisionRef = useRef(graphRevision)
+  // 当前 Rete 实例是否已随 mount effect cleanup 而作废（dev StrictMode 双 mount 防残影）。
+  const instanceCancelledRef = useRef(false)
 
   // 主动把画布 transform 设置为算出的 fit 值（来自 fitGraphToView），并标记避免回调回灌。
   const applyFitTransform = (result: { zoom: number; x: number; y: number }) => {
@@ -244,6 +246,16 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   useEffect(() => {
     const container = canvasRef.current
     if (!container) return
+    instanceCancelledRef.current = false
+    // 清掉前一次 Rete 实例残留的 holder DOM。
+    // Rete area.destroy() 在「实例已无 nodeViews 时销毁」（dev StrictMode 双 mount、
+    // 或关闭重开时异步 sync 尚未把节点加成 view）不会移除任何 DOM，holder 留在容器里；
+    // 下一轮 mount 又 append 新 holder → 多个 holder 并存，旧的形成残影。
+    // 容器内只有两类子节点：React 管理的（script-editor-canvas__hud/__empty，由 JSX 渲染）
+    // 和 Rete 注入的无类名 holder。这里只移除后者，不碰 React 管理的节点，避免 removeChild 冲突。
+    for (const child of Array.from(container.children)) {
+      if (!child.className.startsWith('script-editor-canvas__')) container.removeChild(child)
+    }
 
     const instance = createReteEditor(container, {
       onGraphChange: (change) => {
@@ -348,6 +360,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     })
 
     return () => {
+      instanceCancelledRef.current = true
       reteRef.current = null
       setEditorInstance(null)
       instance.destroy()
@@ -401,6 +414,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     syncingRef.current = true
 
     const task = syncQueueRef.current.then(async () => {
+      // 实例已被 mount effect cleanup 作废（dev StrictMode 双 mount）：跳过同步，
+      // 避免把节点加到已脱离管理的旧 area holder 上造成残影。
+      if (instanceCancelledRef.current) return
       if (plan.kind === 'node-data') {
         await syncReteNodeDataFromGraph(instance, graph, plan.changedNodeIds)
       } else if (plan.kind === 'node-position') {
@@ -486,9 +502,17 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         if (!key) return
         event.preventDefault()
         const rect = event.currentTarget.getBoundingClientRect()
+        // 屏幕点 → 世界点逆变换：world = (screen - canvasOrigin - transform) / zoom。
+        // Rete 画布变换为 screen = world * zoom + transform，故必须减去 transform 平移量。
+        // 复杂脚本 fit 到低于 50% 时 transform.x/y 很大（把大包围盒居中），
+        // 旧实现只除 zoom 不减平移量 → 拖入落点严重偏移。
+        const t = reteRef.current?.area.area.transform ?? { x: 0, y: 0, k: zoom }
+        const k = t.k || zoom
+        const worldX = (event.clientX - rect.left - t.x) / k
+        const worldY = (event.clientY - rect.top - t.y) / k
         onDropNode(key, {
-          x: Math.max(12, (event.clientX - rect.left - 100) / zoom),
-          y: Math.max(12, (event.clientY - rect.top - 28) / zoom)
+          x: Math.max(12, worldX),
+          y: Math.max(12, worldY)
         })
       }}
       onPointerDown={(event) => {

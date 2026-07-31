@@ -109,6 +109,11 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   /** 输出是否已弹出独立窗：host 侧收起 dock 面板，日志仍 sync 过去。 */
   const [outputPoppedOut, setOutputPoppedOut] = useState(false)
   const graphCanvasRef = useRef<GraphCanvasHandle | null>(null)
+  // 跟踪上一次 open，用于检测 false→true 的「重开」边沿。
+  const wasOpenRef = useRef(false)
+  // 标记当前 open→false 是由「弹出为独立窗」触发的（去程），
+  // reset-on-reopen effect 应跳过它：dock 回来时要靠 state 恢复图。
+  const poppingOutRef = useRef(false)
   const {
     graph,
     setGraphCommit,
@@ -148,6 +153,26 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     setSimulator(null)
     void getIPC().tcpServer.stop(id).catch(() => { /* ignore */ })
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 关闭后重开：完全清空编辑态，避免残留上次脚本/画布（用户确认要「完全清空」）。
+  // - 仅在 false→true 边沿、且不是 popout 去程（poppingOutRef）、且无 dock 回灌的图快照时触发。
+  //   popout 去程的 open→false 不应清空：dock 回来要靠保留的 state（或 initialGraphPayload）恢复。
+  // - dock 回程有 initialGraphPayload，由下方的图快照恢复 effect 灌回，这里跳过避免冲突。
+  useEffect(() => {
+    if (open && !wasOpenRef.current && !poppingOutRef.current && !initialGraphPayload) {
+      replaceGraph(createEmptyGraphState())
+      setLegacyCode('')
+      setActiveScriptName(null)
+      setSelectedNodeIds([])
+      setZoom(1)
+      setUiState(createScriptEditorUiState())
+      setScriptError(null)
+    }
+    wasOpenRef.current = open
+    // 进入打开态后重置 popout 标记，为下一次「真正的关闭」做准备。
+    if (open) poppingOutRef.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialGraphPayload])
 
   // 撤销/重做快捷键：Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做
   // 焦点在 input/textarea（如节点配置输入框）时不拦截，避免影响文本编辑
@@ -622,6 +647,9 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   }
 
   function handlePopout() {
+    // 标记去程：随后 onClose() 把 open 置 false，但这是切到独立窗而非真正关闭，
+    // reset-on-reopen effect 须跳过，dock 回来才能靠保留的 state 恢复图。
+    poppingOutRef.current = true
     try {
       // 把当前图快照 + 活动脚本名一并带去弹窗（双向传图-去程），避免弹窗/dock 回后图丢失
       const graphStr = JSON.stringify(exportGraphState(graph))
