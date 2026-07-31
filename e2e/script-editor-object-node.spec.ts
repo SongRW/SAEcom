@@ -1,6 +1,6 @@
 import { test, expect, NAV, openNavPage, clickReady } from './fixtures'
 
-const SAFETY_SAMPLE = '安全监测报警终端-可视化.js'
+const COMPLEX_SAMPLE = '复杂协议v2-可视化.js'
 
 /**
  * transform-object 节点 E2E：覆盖动态键/端口交互 + 持久化（AGENTS.md 硬性门槛）。
@@ -74,15 +74,15 @@ test.describe('transform-object 节点', () => {
   })
 
 
-  test('右侧参数逐字编辑不会重建安全监测画布', async ({ page }) => {
+  test('右侧参数逐字编辑不会重建复杂协议画布', async ({ page }) => {
     await openNavPage(page, NAV.pageScript)
     await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await expect(editor).toBeVisible()
 
     await clickReady(page, editor.locator('[title="脚本"]'))
-    await clickReady(page, editor.getByRole('button', { name: SAFETY_SAMPLE, exact: true }))
-    await expect(editor.locator('[data-testid="node"]')).toHaveCount(61, { timeout: 15000 })
+    await clickReady(page, editor.getByRole('button', { name: COMPLEX_SAMPLE, exact: true }))
+    await expect(editor.locator('[data-testid="node"]')).toHaveCount(56, { timeout: 15000 })
 
     const log = editor.locator('[data-testid="node"][data-node-id="9"]')
     await log.evaluate((node) => { node.dataset.e2eInstance = 'before-edit' })
@@ -93,9 +93,9 @@ test.describe('transform-object 节点', () => {
     await prefix.focus()
     await prefix.pressSequentially('ABC')
 
-    await expect(prefix).toHaveValue('年ABC')
+    await expect(prefix).toHaveValue('发送结果ABC')
     await expect(prefix).toBeFocused()
-    await expect(editor.locator('[data-testid="node"]')).toHaveCount(61)
+    await expect(editor.locator('[data-testid="node"]')).toHaveCount(56)
     await expect(log).toHaveAttribute('data-e2e-instance', 'before-edit')
     await expect(log).toBeAttached()
     await expect

@@ -160,3 +160,10 @@ vite.config.ts.timestamp-*
 # macOS Finder directory metadata
 .DS_Store
 **/.DS_Store
+
+# 雄安林草协议可视化脚本及其帧数据：非内置示例资源，不入仓库。
+# （复杂协议v2-可视化.js 是内置示例，仍保留追踪。）
+shared/samples/通用位置报送协议-可视化.js
+shared/samples/安全监测报警终端-可视化.js
+shared/samples/位置报送帧.txt
+shared/samples/安全监测帧.txt

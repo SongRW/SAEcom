@@ -6,7 +6,7 @@ import { buildScriptFile, parseScriptFile } from '../src/features/script-editor/
 import { waitForAppReady } from './fixtures'
 
 const MAIN_ENTRY = resolve(__dirname, '../out/main/index.js')
-const SAMPLE_NAME = '安全监测报警终端-可视化.js'
+const SAMPLE_NAME = '复杂协议v2-可视化.js'
 
 test.describe('内置可视化脚本保存', () => {
   test('修改内置样例后重启应用仍保留图形节点', async () => {

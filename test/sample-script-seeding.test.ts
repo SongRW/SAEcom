@@ -27,15 +27,15 @@ afterEach(() => {
 describe('bundled sample seeding', () => {
   it('keeps user-modified scripts and data when bundled samples change', () => {
     const { sampleDir, scriptsDir, statePath } = makeFixture()
-    const sourceScript = path.join(sampleDir, '安全监测报警终端-可视化.js')
-    const sourceFrames = path.join(sampleDir, '安全监测帧.txt')
+    const sourceScript = path.join(sampleDir, '示例.js')
+    const sourceFrames = path.join(sampleDir, '示例.txt')
     fs.writeFileSync(sourceScript, '// @sample-version 1\nconst original = true\n')
     fs.writeFileSync(sourceFrames, 'ORIGINAL\n')
 
     seedSampleScripts({ sampleDir, scriptsDir, statePath })
 
-    const savedScript = path.join(scriptsDir, '安全监测报警终端-可视化.js')
-    const savedFrames = path.join(scriptsDir, '安全监测帧.txt')
+    const savedScript = path.join(scriptsDir, '示例.js')
+    const savedFrames = path.join(scriptsDir, '示例.txt')
     fs.writeFileSync(savedScript, '// user graph edit\n')
     fs.writeFileSync(savedFrames, 'USER FRAME\n')
     fs.writeFileSync(sourceScript, '// @sample-version 2\nconst original = false\n')
