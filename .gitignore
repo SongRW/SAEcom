@@ -86,6 +86,8 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+dist2
+dist-*
 .output
 
 # Gatsby files

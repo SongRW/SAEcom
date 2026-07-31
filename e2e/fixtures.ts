@@ -78,19 +78,35 @@ export async function clickReady(
   await locator.evaluate((el: HTMLElement) => el.click())
 }
 
-/** 等 Dialog 关闭（节点离开 DOM，或 data-state 不再是 open）。 */
+/**
+ * 等 Dialog 关闭（content 和 overlay 都不再 open）。
+ * Radix Dialog 的 content data-state 从 open→closed 后，overlay 仍有 ~100ms
+ * 退出动画，期间 overlay 仍捕获 pointer 事件并遮挡编辑器工具栏按钮。
+ * 仅检查 content data-state 会过早返回（overlay 拦截后续点击）。
+ * 因此在 content 关闭后再轮询 overlay 的 data-state，确保退出动画完成。
+ */
 export async function expectDialogClosed(page: Page, name?: string | RegExp) {
   const dialog = name
     ? page.getByRole('dialog', { name })
     : page.getByRole('dialog')
+  // 等 dialog content 不再 open
   await expect
     .poll(async () => {
       const count = await dialog.count()
       if (count === 0) return true
-      // 动画中可能短暂残留；open 以外（closed / null）都视为可继续
       const state = await dialog.first().getAttribute('data-state').catch(() => null)
       return state !== 'open'
     }, { timeout: 10000 })
+    .toBe(true)
+  // content 关闭后 overlay 仍有退出动画；等 overlay 也离开或不再 open
+  const overlay = page.locator('[data-slot="dialog-overlay"]')
+  await expect
+    .poll(async () => {
+      const count = await overlay.count()
+      if (count === 0) return true
+      const state = await overlay.first().getAttribute('data-state').catch(() => null)
+      return state !== 'open'
+    }, { timeout: 5000 })
     .toBe(true)
 }
 
@@ -158,6 +174,39 @@ export async function createModbusTcpPanel(page: Page, port: number, host = '127
 /** 打开关于独立窗口（侧栏 Footer「关于」）。 */
 export async function openAbout(page: Page) {
   await clickSidebarMenuButton(page, page.getByRole('button', { name: NAV.about, exact: true }))
+}
+
+/**
+ * 通过 IPC 往返确认脚本操作（创建/重命名/删除）已在主进程完成。
+ *
+ * Radix Dialog 嵌套关闭后，父 dialog 的 pointer-events/可见性恢复有延迟，
+ * 导致 Playwright 定位器在恢复期内找不到编辑器按钮。直接在 UI 层等待不可靠。
+ * 改为用 renderer→main→renderer 的 IPC 往返（scripts.list）作为屏障：
+ * 主进程文件操作完成后 list 才会返回最新结果，往返完成即可安全继续 UI 交互。
+ */
+export async function waitForScriptsSync(page: Page) {
+  await page.evaluate(async () => {
+    await window.api.scripts.list()
+  })
+}
+
+/**
+ * 填写 PromptDialog 输入框并提交，然后用 IPC 屏障等待操作完成。
+ *
+ * 用原生 DOM click 触发确定按钮的 React onClick（form submit），
+ * 不依赖焦点位置或 Playwright actionability。
+ * 提交后用 IPC 往返替代 expectDialogClosed 作为完成屏障。
+ */
+export async function fillPromptAndSubmit(
+  page: Page,
+  dialog: ReturnType<Page['getByRole']>,
+  value: string
+) {
+  const input = dialog.getByRole('textbox')
+  await input.waitFor()
+  await input.fill(value)
+  await dialog.getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+  await waitForScriptsSync(page)
 }
 
 /**

@@ -34,8 +34,8 @@ const registryWithOutputPanel: Record<string, NodeDef> = {
 }
 
 describe('Rete script editor codegen', () => {
-  it('defines the complete Phase 1 registry', () => {
-    expect(Object.keys(NODE_DEFINITIONS)).toHaveLength(51)
+  it('defines the complete node registry', () => {
+    expect(Object.keys(NODE_DEFINITIONS)).toHaveLength(64)
     expect(Object.keys(NODE_CATEGORIES)).toEqual([
       'input',
       'transform',
@@ -45,7 +45,9 @@ describe('Rete script editor codegen', () => {
       'compare',
       'logical',
       'control',
-      'output'
+      'output',
+      'modbus',
+      'protocol'
     ])
   })
 

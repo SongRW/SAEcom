@@ -20,7 +20,7 @@ const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'ut
 describe('external-link guard is a global authority', () => {
   it('全局 web-contents-created handler 的非 SerialWave 分支拦截外链（deny 外链 url）', () => {
     // 截取全局 web-contents-created handler 整块
-    const block = main.match(/app\.on\('web-contents-created'[\s\S]*?\n\}\)\napp\.on\('window-all-closed'/)
+    const block = main.match(/app\.on\('web-contents-created'[\s\S]*?\r?\n\}\)\r?\napp\.on\('window-all-closed'/)
     expect(block, 'web-contents-created → window-all-closed 块应存在').not.toBeNull()
     const handler = block![0]
     // 非 SerialWave 分支不能只是无条件 allow——必须对外链 url 调 openExternal 并 deny

@@ -20,7 +20,7 @@ describe('window-all-closed cleans up resource maps holding sender refs', () => 
   it('window-all-closed handler 同时清理 sockets/tcpServers/shares/runningScripts', () => {
     // 截取 window-all-closed handler 整块（多行，直到下一个顶层 app.on / 注释）。
     // 用从 'window-all-closed' 到下一个 '// ' 行注释或 'app.on(' 的区间。
-    const m = main.match(/app\.on\('window-all-closed'[\s\S]*?\n\}\)\n/)
+    const m = main.match(/app\.on\('window-all-closed'[\s\S]*?\r?\n\}\)\r?\n/)
     expect(m, 'window-all-closed handler 块应存在').not.toBeNull()
     const handler = m![0]
 

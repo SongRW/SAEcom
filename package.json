@@ -111,7 +111,15 @@
       "!**/__tests__/**",
       "!**/*.md",
       "CHANGELOG.md",
-      "!node_modules/.cache/**"
+      "!node_modules/.cache/**",
+      "!**/.superpowers/**",
+      "!**/.claude/**",
+      "!**/.agents/**",
+      "!**/.zcode/**",
+      "!docs/**",
+      "!test-results/**",
+      "!playwright-report/**",
+      "!**/.codex-dev-*.log"
     ],
     "asar": true,
     "asarUnpack": [

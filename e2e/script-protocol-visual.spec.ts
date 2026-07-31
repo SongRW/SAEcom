@@ -47,7 +47,8 @@ test.describe('脚本页协议可视化图（TCP 收发闭环）', () => {
     const parsed = parseScriptFile(content)
     if (!parsed.ok) throw new Error('parse sample failed')
     const g = JSON.parse(JSON.stringify(parsed.graph)) as typeof parsed.graph
-    for (const node of g.nodes) {
+    const nodes = Array.isArray(g.nodes) ? g.nodes : Object.values(g.nodes)
+    for (const node of nodes) {
       if (node.key === 'input-tcp' || node.key === 'output-tcp') {
         node.data = { ...node.data, host: '127.0.0.1', port: echo.port }
       }

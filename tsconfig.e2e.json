@@ -5,7 +5,12 @@
     "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@/*": ["src/*"]
+    }
   },
   "include": ["e2e", "playwright.config.ts"]
 }

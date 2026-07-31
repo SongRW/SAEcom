@@ -22,7 +22,7 @@ export interface PromptDialogProps {
    * 确定时回调，入参为当前输入值。
    * 关闭/取消/点 X 一律不回调（保持「取消=不写入」语义，对齐原生 prompt 返回 null 时调用方早退）。
    */
-  onConfirm: (value: string) => void
+  onConfirm: (value: string) => void | Promise<void>
   /**
    * 左下角副作用按钮（可选）。如「关闭限制」。不传则不渲染。
    * 点击后由调用方自行决定是否关闭弹窗（onAction 内可调 onOpenChange(false)）。
@@ -54,6 +54,7 @@ export function PromptDialog({
   onOpenChange
 }: PromptDialogProps) {
   const [value, setValue] = useState(defaultValue)
+  const [confirming, setConfirming] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // 打开时重置为 defaultValue 并聚焦选中（对齐原生 prompt 行为）
@@ -73,45 +74,59 @@ export function PromptDialog({
   }, [open, defaultValue])
 
   function close() {
-    onOpenChange(false)
+    if (!confirming) onOpenChange(false)
   }
 
-  function handleConfirm() {
-    onConfirm(value)
-    close()
+  async function handleConfirm() {
+    if (confirming) return
+    setConfirming(true)
+    try {
+      await onConfirm(value)
+      onOpenChange(false)
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && confirming) return
+    onOpenChange(nextOpen)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" showCloseButton>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
-        </DialogHeader>
-        <Input
-          ref={inputRef}
-          value={value}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleConfirm()
-            }
-          }}
-        />
-        <DialogFooter>
-          {extraAction ? (
-            <Button variant="outline" className="mr-auto" onClick={extraAction.onAction}>
-              {extraAction.text}
+        <form onSubmit={(e) => { e.preventDefault(); void handleConfirm() }}>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            {description ? <DialogDescription>{description}</DialogDescription> : null}
+          </DialogHeader>
+          <Input
+            ref={inputRef}
+            value={value}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            onChange={(e) => setValue(e.target.value)}
+            disabled={confirming}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void handleConfirm()
+              }
+            }}
+          />
+          <DialogFooter>
+            {extraAction ? (
+              <Button variant="outline" className="mr-auto" onClick={extraAction.onAction}>
+                {extraAction.text}
+              </Button>
+            ) : null}
+            <Button variant="outline" onClick={close} disabled={confirming}>
+              {cancelText}
             </Button>
-          ) : null}
-          <Button variant="outline" onClick={close}>
-            {cancelText}
-          </Button>
-          <Button onClick={handleConfirm}>{confirmText}</Button>
-        </DialogFooter>
+            <Button type="submit" disabled={confirming}>{confirmText}</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

@@ -1,4 +1,4 @@
-import { test, expect, NAV, openNavPage, clickReady } from './fixtures'
+import { test, expect, NAV, openNavPage, clickReady, fillPromptAndSubmit, waitForScriptsSync } from './fixtures'
 import { mkdtempSync, readFileSync, existsSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,6 +6,9 @@ import { join } from 'node:path'
 /**
  * 脚本列表右键菜单 + 工具栏重命名/导出 E2E。
  * 覆盖：右键重命名、重名边界、右键删除、工具栏重命名、导出（mock 原生保存对话框）。
+ *
+ * 同步策略：Radix Dialog 嵌套关闭后父 dialog 的 pointer-events 恢复有延迟，
+ * 不依赖 Dialog DOM 关闭作为屏障，改用 IPC 往返（scripts.list）确认主进程操作完成后才继续。
  */
 test.describe('脚本列表操作', () => {
   test('右键重命名脚本', async ({ page }) => {
@@ -14,36 +17,37 @@ test.describe('脚本列表操作', () => {
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await editor.waitFor()
 
-    // 新建一个脚本
+    // 新建一个目标明确的脚本（IPC 屏障等待写入+列表刷新完成）
     await clickReady(page, editor.getByRole('button', { name: '新建' }))
     const createDialog = page.getByRole('dialog', { name: '新建脚本' })
     await createDialog.waitFor()
-    await createDialog.getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+    await fillPromptAndSubmit(page, createDialog, 'RenameTargetE2E')
 
     // 打开脚本列表面板
     await clickReady(page, editor.getByRole('button', { name: '脚本页' }))
 
     const list = editor.locator('.script-editor-list__items')
-    const firstItem = list.locator('button').first()
-    const oldName = (await firstItem.textContent())?.trim() || ''
+    const oldName = 'RenameTargetE2E.js'
+    const targetItem = list.getByRole('button', { name: oldName, exact: true })
+    await expect(targetItem).toBeVisible()
 
-    // 右键 → 重命名
-    await firstItem.click({ button: 'right' })
-    await page.getByRole('menuitem', { name: '重命名' }).click()
+    // 右键目标脚本，在当前打开的菜单内选择重命名
+    await targetItem.click({ button: 'right' })
+    const contextMenu = page.locator('[data-slot="context-menu-content"][data-state="open"]')
+    await expect(contextMenu).toBeVisible()
+    await contextMenu.getByRole('menuitem', { name: '重命名', exact: true }).click()
 
     const renameDialog = page.getByRole('dialog', { name: '重命名脚本' })
     await renameDialog.waitFor()
     const input = renameDialog.getByRole('textbox')
     // 预填应已去掉 .js 后缀
-    await expect(input).toHaveValue(oldName.replace(/\.js$/i, ''))
+    await expect(input).toHaveValue('RenameTargetE2E')
 
-    // 输入新名
-    await input.fill('RenamedE2E')
-    await renameDialog.getByRole('button', { name: '确定' }).click()
+    await fillPromptAndSubmit(page, renameDialog, 'RenamedE2E')
 
     // 列表出现新名、旧名消失
-    await expect(list.locator('button', { hasText: 'RenamedE2E.js' })).toBeVisible({ timeout: 10000 })
-    await expect(list.locator('button', { hasText: oldName })).toHaveCount(0)
+    await expect(list.getByRole('button', { name: 'RenamedE2E.js', exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(targetItem).toHaveCount(0)
   })
 
   test('重命名冲突时报错且不覆盖', async ({ page }) => {
@@ -52,27 +56,33 @@ test.describe('脚本列表操作', () => {
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await editor.waitFor()
 
-    // 新建 A、B 两个脚本（用默认名 Script_1.js、Script_2.js）
+    // 新建两个名称明确的脚本
     await clickReady(page, editor.getByRole('button', { name: '新建' }))
-    await page.getByRole('dialog', { name: '新建脚本' }).getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+    const firstCreateDialog = page.getByRole('dialog', { name: '新建脚本' })
+    await fillPromptAndSubmit(page, firstCreateDialog, 'ConflictA')
+
     await clickReady(page, editor.getByRole('button', { name: '新建' }))
-    await page.getByRole('dialog', { name: '新建脚本' }).getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+    const secondCreateDialog = page.getByRole('dialog', { name: '新建脚本' })
+    await fillPromptAndSubmit(page, secondCreateDialog, 'ConflictB')
 
     await clickReady(page, editor.getByRole('button', { name: '脚本页' }))
     const list = editor.locator('.script-editor-list__items')
 
-    // 右键 Script_1 → 重命名为 Script_2
-    await list.locator('button', { hasText: 'Script_1.js' }).click({ button: 'right' })
-    await page.getByRole('menuitem', { name: '重命名' }).click()
+    // 右键 ConflictA → 重命名为 ConflictB
+    const sourceItem = list.getByRole('button', { name: 'ConflictA.js', exact: true })
+    await expect(sourceItem).toBeVisible()
+    await sourceItem.click({ button: 'right' })
+    const contextMenu = page.locator('[data-slot="context-menu-content"][data-state="open"]')
+    await expect(contextMenu).toBeVisible()
+    await contextMenu.getByRole('menuitem', { name: '重命名', exact: true }).click()
     const renameDialog = page.getByRole('dialog', { name: '重命名脚本' })
     await renameDialog.waitFor()
-    await renameDialog.getByRole('textbox').fill('Script_2')
-    await renameDialog.getByRole('button', { name: '确定' }).click()
+    await fillPromptAndSubmit(page, renameDialog, 'ConflictB')
 
     // 错误 toast 出现
     await expect(page.locator('[data-sonner-toast]').filter({ hasText: '已存在' })).toBeVisible({ timeout: 10000 })
-    // Script_1 仍在列表
-    await expect(list.locator('button', { hasText: 'Script_1.js' })).toHaveCount(1)
+    // ConflictA 仍在列表
+    await expect(sourceItem).toHaveCount(1)
   })
 
   test('右键删除脚本', async ({ page }) => {
@@ -82,22 +92,27 @@ test.describe('脚本列表操作', () => {
     await editor.waitFor()
 
     await clickReady(page, editor.getByRole('button', { name: '新建' }))
-    await page.getByRole('dialog', { name: '新建脚本' }).getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+    const createDialog = page.getByRole('dialog', { name: '新建脚本' })
+    await fillPromptAndSubmit(page, createDialog, 'DeleteTargetE2E')
 
     await clickReady(page, editor.getByRole('button', { name: '脚本页' }))
     const list = editor.locator('.script-editor-list__items')
-    const firstItem = list.locator('button').first()
-    const name = (await firstItem.textContent())?.trim() || ''
+    const targetItem = list.getByRole('button', { name: 'DeleteTargetE2E.js', exact: true })
+    await expect(targetItem).toBeVisible()
 
-    await firstItem.click({ button: 'right' })
-    await page.getByRole('menuitem', { name: '删除' }).click()
+    await targetItem.click({ button: 'right' })
+    const contextMenu = page.locator('[data-slot="context-menu-content"][data-state="open"]')
+    await expect(contextMenu).toBeVisible()
+    await contextMenu.getByRole('menuitem', { name: '删除', exact: true }).click()
 
     // 删除确认走 AlertDialog（Radix 渲染为 role="alertdialog"，区别于 PromptDialog 的 role="dialog"）
     const deleteDialog = page.getByRole('alertdialog', { name: '删除脚本' })
     await deleteDialog.waitFor()
-    await deleteDialog.getByRole('button', { name: '删除' }).click()
+    await deleteDialog.getByRole('button', { name: '删除' }).evaluate((el: HTMLElement) => el.click())
+    // IPC 屏障等待删除完成
+    await waitForScriptsSync(page)
 
-    await expect(list.locator('button', { hasText: name })).toHaveCount(0, { timeout: 10000 })
+    await expect(targetItem).toHaveCount(0, { timeout: 10000 })
   })
 
   test('工具栏重命名活动脚本', async ({ page }) => {
@@ -107,14 +122,15 @@ test.describe('脚本列表操作', () => {
     await editor.waitFor()
 
     await clickReady(page, editor.getByRole('button', { name: '新建' }))
-    await page.getByRole('dialog', { name: '新建脚本' }).getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+    const createDialog = page.getByRole('dialog', { name: '新建脚本' })
+    await fillPromptAndSubmit(page, createDialog, 'ToolbarRenameTarget')
+    await expect(editor.locator('.script-editor-current')).toHaveText('ToolbarRenameTarget.js')
 
     // 工具栏重命名按钮
-    await editor.getByRole('button', { name: '重命名' }).click()
+    await clickReady(page, editor.getByRole('button', { name: '重命名' }))
     const renameDialog = page.getByRole('dialog', { name: '重命名脚本' })
     await renameDialog.waitFor()
-    await renameDialog.getByRole('textbox').fill('ToolbarRenamed')
-    await renameDialog.getByRole('button', { name: '确定' }).click()
+    await fillPromptAndSubmit(page, renameDialog, 'ToolbarRenamed')
 
     // 工具栏标题区显示新名
     await expect(editor.locator('.script-editor-current')).toHaveText(/ToolbarRenamed\.js/, { timeout: 10000 })
@@ -199,13 +215,8 @@ test.describe('脚本列表操作', () => {
         scriptImportCancellationTest?: { settled: () => boolean }
       }).scriptImportCancellationTest?.settled() || false
     })).toBe(true)
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve) => {
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // IPC 屏障确保取消响应已被渲染层消费
+    await waitForScriptsSync(page)
 
     await expect(editor.locator('.script-editor-current')).toHaveText('未选中')
     await expect(page.locator('[data-sonner-toast]').filter({ hasText: '导入失败' })).toHaveCount(0)
@@ -221,7 +232,8 @@ test.describe('脚本列表操作', () => {
     await editor.waitFor()
 
     await clickReady(page, editor.getByRole('button', { name: '新建' }))
-    await page.getByRole('dialog', { name: '新建脚本' }).getByRole('button', { name: '确定' }).evaluate((el: HTMLElement) => el.click())
+    const createDialog = page.getByRole('dialog', { name: '新建脚本' })
+    await fillPromptAndSubmit(page, createDialog, 'ExportTargetE2E')
 
     // mock 原生保存对话框，避免 OS 模态阻塞测试
     await electronApp.evaluate(async ({ dialog }, path) => {
@@ -230,8 +242,12 @@ test.describe('脚本列表操作', () => {
 
     await clickReady(page, editor.getByRole('button', { name: '脚本页' }))
     const list = editor.locator('.script-editor-list__items')
-    await list.locator('button').first().click({ button: 'right' })
-    await page.getByRole('menuitem', { name: '导出' }).click()
+    const targetItem = list.getByRole('button', { name: 'ExportTargetE2E.js', exact: true })
+    await expect(targetItem).toBeVisible()
+    await targetItem.click({ button: 'right' })
+    const contextMenu = page.locator('[data-slot="context-menu-content"][data-state="open"]')
+    await expect(contextMenu).toBeVisible()
+    await contextMenu.getByRole('menuitem', { name: '导出', exact: true }).click()
 
     // 成功 toast + 文件被写入
     await expect(page.locator('[data-sonner-toast]').filter({ hasText: '已导出' })).toBeVisible({ timeout: 10000 })
