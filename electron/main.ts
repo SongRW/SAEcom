@@ -8,6 +8,7 @@ import https from 'node:https'
 import { spawn, execFile } from 'node:child_process'
 import os from 'node:os'
 import { seedSampleScripts } from './sampleScripts'
+import { importScriptFile } from './scriptImport'
 import net from 'node:net'
 import {
   bytesToNumber,
@@ -1299,6 +1300,15 @@ ipcMain.handle('scripts:export', async (_e, name: string) => {
   if (canceled || !filePath) return { ok: false, canceled: true }
   try { fs.writeFileSync(filePath, content, 'utf-8'); return { ok: true, filePath } }
   catch (e) { return { ok: false, error: String((e as Error)?.message || e) } }
+})
+ipcMain.handle('scripts:import', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: '导入脚本',
+    properties: ['openFile'],
+    filters: [{ name: 'JavaScript', extensions: ['js'] }]
+  })
+  if (canceled || filePaths.length === 0) return { ok: false, canceled: true }
+  return importScriptFile(filePaths[0], scriptsDir)
 })
 ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
   const runId = randomUUID()

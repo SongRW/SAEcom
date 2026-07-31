@@ -2,6 +2,7 @@ import {
   ArrowsInCardinal,
   ArrowsOutCardinal,
   DownloadSimple,
+  UploadSimple,
   FilePlus as FilePlus2,
   FloppyDisk as Save,
   FrameCorners,
@@ -31,6 +32,7 @@ interface ToolbarProps {
   onNew: () => void
   onSave: () => void
   onRename: () => void
+  onImport: () => void
   onExport: () => void
   onDelete: () => void
   onRun: () => void
@@ -56,6 +58,7 @@ export function Toolbar({
   onNew,
   onSave,
   onRename,
+  onImport,
   onExport,
   onDelete,
   onRun,
@@ -88,6 +91,10 @@ export function Toolbar({
         <Button size="sm" variant="outline" title="重命名" onClick={onRename} disabled={!activeScriptName}>
           <PencilSimple data-icon="inline-start" />
           重命名
+        </Button>
+        <Button size="sm" variant="outline" title="导入" onClick={onImport}>
+          <UploadSimple data-icon="inline-start" />
+          导入
         </Button>
         <Button size="sm" variant="outline" title="导出" onClick={onExport} disabled={!activeScriptName}>
           <DownloadSimple data-icon="inline-start" />

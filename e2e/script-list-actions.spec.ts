@@ -1,5 +1,5 @@
 import { test, expect, NAV, openNavPage, clickReady } from './fixtures'
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, readFileSync, existsSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -118,6 +118,97 @@ test.describe('脚本列表操作', () => {
 
     // 工具栏标题区显示新名
     await expect(editor.locator('.script-editor-current')).toHaveText(/ToolbarRenamed\.js/, { timeout: 10000 })
+  })
+
+  test('工具栏导入脚本并保留同名副本', async ({ page, electronApp }) => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'saecom-import-'))
+    const sourcePath = join(tempDir, '导入脚本.js')
+    writeFileSync(sourcePath, 'const importedFromE2E = true\n', 'utf8')
+
+    try {
+      await electronApp.evaluate(async ({ dialog }, filePath) => {
+        ;(dialog as unknown as {
+          showOpenDialog: () => Promise<{ canceled: boolean; filePaths: string[] }>
+        }).showOpenDialog = async () => ({ canceled: false, filePaths: [filePath] })
+      }, sourcePath)
+
+      await openNavPage(page, NAV.pageScript)
+      await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
+      const editor = page.getByRole('dialog', { name: '脚本编辑器' })
+      await editor.waitFor()
+
+      await clickReady(page, editor.getByRole('button', { name: '导入', exact: true }))
+      await expect(editor.locator('.script-editor-current')).toHaveText('导入脚本.js')
+      await expect(editor.getByTestId('script-code-editor')).toHaveValue('const importedFromE2E = true\n')
+
+      await clickReady(page, editor.getByRole('button', { name: '导入', exact: true }))
+      await clickReady(page, editor.getByRole('button', { name: '脚本页' }))
+      const list = editor.locator('.script-editor-list__items')
+      await expect(list.getByRole('button', { name: '导入脚本.js', exact: true })).toBeVisible()
+      await expect(list.getByRole('button', { name: '导入脚本 (1).js', exact: true })).toBeVisible()
+      await expect(editor.locator('.script-editor-current')).toHaveText('导入脚本 (1).js')
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true })
+    }
+  })
+
+  test('取消导入时保持当前状态且不报错', async ({ page, electronApp }) => {
+    await electronApp.evaluate(async ({ dialog }) => {
+      let invoked = false
+      let releaseCancellation: (() => void) | undefined
+      let cancellationSettled = false
+      const cancellationReleased = new Promise<void>((resolve) => {
+        releaseCancellation = resolve
+      })
+      ;(globalThis as typeof globalThis & {
+        scriptImportCancellationTest?: {
+          invoked: () => boolean
+          release: () => void
+          settled: () => boolean
+        }
+      }).scriptImportCancellationTest = {
+        invoked: () => invoked,
+        release: () => releaseCancellation?.(),
+        settled: () => cancellationSettled
+      }
+      ;(dialog as unknown as {
+        showOpenDialog: () => Promise<{ canceled: boolean; filePaths: string[] }>
+      }).showOpenDialog = async () => {
+        invoked = true
+        await cancellationReleased
+        setImmediate(() => { cancellationSettled = true })
+        return { canceled: true, filePaths: [] }
+      }
+    })
+
+    await openNavPage(page, NAV.pageScript)
+    await clickReady(page, page.getByRole('button', { name: '打开脚本编辑器' }))
+    const editor = page.getByRole('dialog', { name: '脚本编辑器' })
+    await editor.waitFor()
+    await clickReady(page, editor.getByRole('button', { name: '导入', exact: true }))
+    await expect.poll(async () => electronApp.evaluate(() => {
+      return (globalThis as typeof globalThis & {
+        scriptImportCancellationTest?: { invoked: () => boolean }
+      }).scriptImportCancellationTest?.invoked() || false
+    })).toBe(true)
+    await electronApp.evaluate(() => (globalThis as typeof globalThis & {
+      scriptImportCancellationTest?: { release: () => void }
+    }).scriptImportCancellationTest?.release())
+    await expect.poll(async () => electronApp.evaluate(() => {
+      return (globalThis as typeof globalThis & {
+        scriptImportCancellationTest?: { settled: () => boolean }
+      }).scriptImportCancellationTest?.settled() || false
+    })).toBe(true)
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
+    await expect(editor.locator('.script-editor-current')).toHaveText('未选中')
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: '导入失败' })).toHaveCount(0)
   })
 
   test('右键导出脚本到文件', async ({ page, electronApp }) => {

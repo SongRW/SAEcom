@@ -137,6 +137,7 @@ import type { WindowAPI } from '@shared/types'
       delete: asyncOk,
       rename: async () => ({ ok: true }),
       exportScript: async () => ({ ok: true, filePath: '/mock/export.js' }),
+      importScript: async () => ({ ok: true, name: 'Imported.js' }),
       run: async () => ({ ok: true, runId: 'web-preview-run' }),
       stop: asyncOk,
       onEnded: () => emptyUnsubscribe,

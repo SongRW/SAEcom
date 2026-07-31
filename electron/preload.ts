@@ -200,6 +200,7 @@ const api: WindowAPI = {
     delete: (name) => ipcRenderer.invoke('scripts:delete', name),
     rename: (oldName, newName) => ipcRenderer.invoke('scripts:rename', { oldName, newName }),
     exportScript: (name) => ipcRenderer.invoke('scripts:export', name),
+    importScript: () => ipcRenderer.invoke('scripts:import'),
     run: (code, ctx) => ipcRenderer.invoke('scripts:run', { code, ctx }),
     stop: (runId) => ipcRenderer.invoke('scripts:stop', { runId }),
     onEnded: (cb) => {

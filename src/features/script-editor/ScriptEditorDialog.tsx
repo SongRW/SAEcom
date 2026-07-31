@@ -453,6 +453,18 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     await exportScriptAs(activeScriptName)
   }
 
+  async function importScript() {
+    const result = await getIPC().scripts.importScript()
+    if (!result.ok) {
+      if (!result.canceled) toast.error(`导入失败：${result.error || '未知错误'}`)
+      return
+    }
+
+    await refreshScripts()
+    await selectScript(result.name)
+    toast.success(`已导入：${result.name}`)
+  }
+
   async function exportScriptAs(name: string) {
     const res = await getIPC().scripts.exportScript(name)
     if (res.ok) {
@@ -776,6 +788,7 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
           onNew={createScript}
           onSave={saveScript}
           onRename={renameScript}
+          onImport={importScript}
           onExport={exportScript}
           onDelete={deleteScript}
           onRun={runScript}

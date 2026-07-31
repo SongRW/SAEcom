@@ -442,6 +442,10 @@ export interface LoggerAPI {
   pickFile: () => Promise<string | null>
 }
 
+export type ScriptImportResult =
+  | { ok: true; name: string }
+  | { ok: false; canceled?: boolean; error?: string }
+
 export interface ScriptsAPI {
   dir: () => Promise<string>
   list: () => Promise<string[]>
@@ -450,6 +454,7 @@ export interface ScriptsAPI {
   delete: (name: string) => Promise<unknown>
   rename: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>
   exportScript: (name: string) => Promise<{ ok: boolean; canceled?: boolean; error?: string; filePath?: string }>
+  importScript: () => Promise<ScriptImportResult>
   run: (code: string, ctx: ScriptRunContext) => Promise<{ runId: string }>
   stop: (runId: string) => Promise<unknown>
   onEnded: (cb: (p: ScriptEndedPayload) => void) => () => void
