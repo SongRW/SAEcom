@@ -137,17 +137,21 @@ describe('雄安林草 协议1 (通用位置报送/树木状态采集) 可视化
     expect(code).not.toContain('protocol-bitfield')
 
     const logs = await runCode(code, FRAMES1)
-    // 10 帧 × 16 字段 = 160 行
-    expect(logs.length).toBe(160)
+    // 10 帧 × 11 行（年/月/日/时/分/秒 6 条已合并为 1 条「时间」日志）= 110 行
+    expect(logs.length).toBe(110)
     expect(logs.join('\n')).not.toContain('[object Object]')
 
+    // 时间已合并为单条 yyyy-mm-dd hh:mm:ss 日志（不再有独立的 [年]/[月]/...）
+    expect(logs.some((l) => /^\[时间\] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(l))).toBe(true)
+    expect(logs.some((l) => /^\[(年|月|日|时|分|秒)\] /.test(l))).toBe(false)
+
     // 第一帧抽查（031A070802191813D8FF2D337C022F0000643A02A0）
-    // 协议编号=3, 年=26, 纬度≈40.0735, 信号强度=-96
-    const first16 = logs.slice(0, 16)
-    expect(first16.some((l) => l.startsWith('[协议编号] 3'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[年] 26'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[纬度]') && l.includes('40.07'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[信号强度] -96'))).toBe(true)
+    // 协议编号=3, 年=26→2026, 纬度≈40.0735, 信号强度=-96
+    const first11 = logs.slice(0, 11)
+    expect(first11.some((l) => l.startsWith('[协议编号] 3'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[时间] 2026-'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[纬度]') && l.includes('40.07'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[信号强度] -96'))).toBe(true)
   })
 })
 
@@ -158,15 +162,21 @@ describe('雄安林草 协议2 (安全监测报警终端) 可视化脚本', () =
     expect(code).toContain('readFile')
 
     const logs = await runCode(code, FRAMES2)
-    expect(logs.length).toBe(160)
+    // 10 帧 × 11 行（年/月/日/时/分/秒 6 条已合并为 1 条「时间」日志）= 110 行
+    expect(logs.length).toBe(110)
     expect(logs.join('\n')).not.toContain('[object Object]')
+
+    // 时间已合并为单条 yyyy-mm-dd hh:mm:ss 日志（不再有独立的 [年]/[月]/...）
+    expect(logs.some((l) => /^\[时间\] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(l))).toBe(true)
+    expect(logs.some((l) => /^\[(年|月|日|时|分|秒)\] /.test(l))).toBe(false)
 
     // 第一帧（041A070603151013D9002D3379023C0000FFFFFF97）
     // 协议编号=4, 海拔=72, 定位状态=255(0xFF), 信号强度=-105
-    const first16 = logs.slice(0, 16)
-    expect(first16.some((l) => l.startsWith('[协议编号] 4'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[海拔] 72'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[定位状态] 255'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[信号强度] -105'))).toBe(true)
+    const first11 = logs.slice(0, 11)
+    expect(first11.some((l) => l.startsWith('[协议编号] 4'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[时间] 2026-'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[海拔] 72'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[定位状态] 255'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[信号强度] -105'))).toBe(true)
   })
 })

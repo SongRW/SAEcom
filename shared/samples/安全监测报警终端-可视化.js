@@ -100,18 +100,6 @@
       }
     },
     {
-      "id": "9",
-      "key": "output-log",
-      "position": {
-        "x": 1200,
-        "y": 100
-      },
-      "data": {
-        "prefix": "年",
-        "level": "info"
-      }
-    },
-    {
       "id": "10",
       "key": "protocol-slice",
       "position": {
@@ -133,18 +121,6 @@
       "data": {
         "width": 1,
         "endian": "大端"
-      }
-    },
-    {
-      "id": "12",
-      "key": "output-log",
-      "position": {
-        "x": 1200,
-        "y": 160
-      },
-      "data": {
-        "prefix": "月",
-        "level": "info"
       }
     },
     {
@@ -172,18 +148,6 @@
       }
     },
     {
-      "id": "15",
-      "key": "output-log",
-      "position": {
-        "x": 1200,
-        "y": 220
-      },
-      "data": {
-        "prefix": "日",
-        "level": "info"
-      }
-    },
-    {
       "id": "16",
       "key": "protocol-slice",
       "position": {
@@ -205,18 +169,6 @@
       "data": {
         "width": 1,
         "endian": "大端"
-      }
-    },
-    {
-      "id": "18",
-      "key": "output-log",
-      "position": {
-        "x": 1200,
-        "y": 280
-      },
-      "data": {
-        "prefix": "时",
-        "level": "info"
       }
     },
     {
@@ -244,18 +196,6 @@
       }
     },
     {
-      "id": "21",
-      "key": "output-log",
-      "position": {
-        "x": 1200,
-        "y": 340
-      },
-      "data": {
-        "prefix": "分",
-        "level": "info"
-      }
-    },
-    {
       "id": "22",
       "key": "protocol-slice",
       "position": {
@@ -277,18 +217,6 @@
       "data": {
         "width": 1,
         "endian": "大端"
-      }
-    },
-    {
-      "id": "24",
-      "key": "output-log",
-      "position": {
-        "x": 1200,
-        "y": 400
-      },
-      "data": {
-        "prefix": "秒",
-        "level": "info"
       }
     },
     {
@@ -734,6 +662,260 @@
         "prefix": "信号强度",
         "level": "info"
       }
+    },
+    {
+      "id": "62",
+      "key": "input-manual",
+      "position": {
+        "x": 1180,
+        "y": 0
+      },
+      "data": {
+        "content": "0",
+        "mode": "text"
+      }
+    },
+    {
+      "id": "63",
+      "key": "string-concat",
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "data": {
+        "separator": ""
+      }
+    },
+    {
+      "id": "64",
+      "key": "split-trimbytes",
+      "position": {
+        "x": 1580,
+        "y": 0
+      },
+      "data": {
+        "head": -2,
+        "tail": 0
+      }
+    },
+    {
+      "id": "65",
+      "key": "input-manual",
+      "position": {
+        "x": 1180,
+        "y": 0
+      },
+      "data": {
+        "content": "0",
+        "mode": "text"
+      }
+    },
+    {
+      "id": "66",
+      "key": "string-concat",
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "data": {
+        "separator": ""
+      }
+    },
+    {
+      "id": "67",
+      "key": "split-trimbytes",
+      "position": {
+        "x": 1580,
+        "y": 0
+      },
+      "data": {
+        "head": -2,
+        "tail": 0
+      }
+    },
+    {
+      "id": "68",
+      "key": "input-manual",
+      "position": {
+        "x": 1180,
+        "y": 0
+      },
+      "data": {
+        "content": "0",
+        "mode": "text"
+      }
+    },
+    {
+      "id": "69",
+      "key": "string-concat",
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "data": {
+        "separator": ""
+      }
+    },
+    {
+      "id": "70",
+      "key": "split-trimbytes",
+      "position": {
+        "x": 1580,
+        "y": 0
+      },
+      "data": {
+        "head": -2,
+        "tail": 0
+      }
+    },
+    {
+      "id": "71",
+      "key": "input-manual",
+      "position": {
+        "x": 1180,
+        "y": 0
+      },
+      "data": {
+        "content": "0",
+        "mode": "text"
+      }
+    },
+    {
+      "id": "72",
+      "key": "string-concat",
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "data": {
+        "separator": ""
+      }
+    },
+    {
+      "id": "73",
+      "key": "split-trimbytes",
+      "position": {
+        "x": 1580,
+        "y": 0
+      },
+      "data": {
+        "head": -2,
+        "tail": 0
+      }
+    },
+    {
+      "id": "74",
+      "key": "input-manual",
+      "position": {
+        "x": 1180,
+        "y": 0
+      },
+      "data": {
+        "content": "0",
+        "mode": "text"
+      }
+    },
+    {
+      "id": "75",
+      "key": "string-concat",
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "data": {
+        "separator": ""
+      }
+    },
+    {
+      "id": "76",
+      "key": "split-trimbytes",
+      "position": {
+        "x": 1580,
+        "y": 0
+      },
+      "data": {
+        "head": -2,
+        "tail": 0
+      }
+    },
+    {
+      "id": "77",
+      "key": "numeric-calc",
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "data": {
+        "operator": "加",
+        "operand2": "2000"
+      }
+    },
+    {
+      "id": "78",
+      "key": "string-concat",
+      "position": {
+        "x": 1780,
+        "y": 0
+      },
+      "data": {
+        "separator": "-"
+      }
+    },
+    {
+      "id": "79",
+      "key": "string-concat",
+      "position": {
+        "x": 1980,
+        "y": 0
+      },
+      "data": {
+        "separator": "-"
+      }
+    },
+    {
+      "id": "80",
+      "key": "string-concat",
+      "position": {
+        "x": 1780,
+        "y": 60
+      },
+      "data": {
+        "separator": ":"
+      }
+    },
+    {
+      "id": "81",
+      "key": "string-concat",
+      "position": {
+        "x": 1980,
+        "y": 60
+      },
+      "data": {
+        "separator": ":"
+      }
+    },
+    {
+      "id": "82",
+      "key": "string-concat",
+      "position": {
+        "x": 2180,
+        "y": 30
+      },
+      "data": {
+        "separator": " "
+      }
+    },
+    {
+      "id": "83",
+      "key": "output-log",
+      "position": {
+        "x": 2380,
+        "y": 30
+      },
+      "data": {
+        "prefix": "时间",
+        "level": "info"
+      }
     }
   ],
   "connections": [
@@ -787,13 +969,6 @@
       "targetInput": "hex"
     },
     {
-      "id": "8.out->9.in",
-      "source": "8",
-      "sourceOutput": "out",
-      "target": "9",
-      "targetInput": "in"
-    },
-    {
       "id": "3.out->10.hex",
       "source": "3",
       "sourceOutput": "out",
@@ -806,13 +981,6 @@
       "sourceOutput": "out",
       "target": "11",
       "targetInput": "hex"
-    },
-    {
-      "id": "11.out->12.in",
-      "source": "11",
-      "sourceOutput": "out",
-      "target": "12",
-      "targetInput": "in"
     },
     {
       "id": "3.out->13.hex",
@@ -829,13 +997,6 @@
       "targetInput": "hex"
     },
     {
-      "id": "14.out->15.in",
-      "source": "14",
-      "sourceOutput": "out",
-      "target": "15",
-      "targetInput": "in"
-    },
-    {
       "id": "3.out->16.hex",
       "source": "3",
       "sourceOutput": "out",
@@ -848,13 +1009,6 @@
       "sourceOutput": "out",
       "target": "17",
       "targetInput": "hex"
-    },
-    {
-      "id": "17.out->18.in",
-      "source": "17",
-      "sourceOutput": "out",
-      "target": "18",
-      "targetInput": "in"
     },
     {
       "id": "3.out->19.hex",
@@ -871,13 +1025,6 @@
       "targetInput": "hex"
     },
     {
-      "id": "20.out->21.in",
-      "source": "20",
-      "sourceOutput": "out",
-      "target": "21",
-      "targetInput": "in"
-    },
-    {
       "id": "3.out->22.hex",
       "source": "3",
       "sourceOutput": "out",
@@ -890,13 +1037,6 @@
       "sourceOutput": "out",
       "target": "23",
       "targetInput": "hex"
-    },
-    {
-      "id": "23.out->24.in",
-      "source": "23",
-      "sourceOutput": "out",
-      "target": "24",
-      "targetInput": "in"
     },
     {
       "id": "3.out->25.hex",
@@ -1156,9 +1296,197 @@
       "sourceOutput": "out",
       "target": "61",
       "targetInput": "in"
+    },
+    {
+      "id": "62.out->63.left",
+      "source": "62",
+      "sourceOutput": "out",
+      "target": "63",
+      "targetInput": "left"
+    },
+    {
+      "id": "11.out->63.right",
+      "source": "11",
+      "sourceOutput": "out",
+      "target": "63",
+      "targetInput": "right"
+    },
+    {
+      "id": "63.out->64.in",
+      "source": "63",
+      "sourceOutput": "out",
+      "target": "64",
+      "targetInput": "in"
+    },
+    {
+      "id": "65.out->66.left",
+      "source": "65",
+      "sourceOutput": "out",
+      "target": "66",
+      "targetInput": "left"
+    },
+    {
+      "id": "14.out->66.right",
+      "source": "14",
+      "sourceOutput": "out",
+      "target": "66",
+      "targetInput": "right"
+    },
+    {
+      "id": "66.out->67.in",
+      "source": "66",
+      "sourceOutput": "out",
+      "target": "67",
+      "targetInput": "in"
+    },
+    {
+      "id": "68.out->69.left",
+      "source": "68",
+      "sourceOutput": "out",
+      "target": "69",
+      "targetInput": "left"
+    },
+    {
+      "id": "17.out->69.right",
+      "source": "17",
+      "sourceOutput": "out",
+      "target": "69",
+      "targetInput": "right"
+    },
+    {
+      "id": "69.out->70.in",
+      "source": "69",
+      "sourceOutput": "out",
+      "target": "70",
+      "targetInput": "in"
+    },
+    {
+      "id": "71.out->72.left",
+      "source": "71",
+      "sourceOutput": "out",
+      "target": "72",
+      "targetInput": "left"
+    },
+    {
+      "id": "20.out->72.right",
+      "source": "20",
+      "sourceOutput": "out",
+      "target": "72",
+      "targetInput": "right"
+    },
+    {
+      "id": "72.out->73.in",
+      "source": "72",
+      "sourceOutput": "out",
+      "target": "73",
+      "targetInput": "in"
+    },
+    {
+      "id": "74.out->75.left",
+      "source": "74",
+      "sourceOutput": "out",
+      "target": "75",
+      "targetInput": "left"
+    },
+    {
+      "id": "23.out->75.right",
+      "source": "23",
+      "sourceOutput": "out",
+      "target": "75",
+      "targetInput": "right"
+    },
+    {
+      "id": "75.out->76.in",
+      "source": "75",
+      "sourceOutput": "out",
+      "target": "76",
+      "targetInput": "in"
+    },
+    {
+      "id": "8.out->77.left",
+      "source": "8",
+      "sourceOutput": "out",
+      "target": "77",
+      "targetInput": "left"
+    },
+    {
+      "id": "77.out->78.left",
+      "source": "77",
+      "sourceOutput": "out",
+      "target": "78",
+      "targetInput": "left"
+    },
+    {
+      "id": "64.out->78.right",
+      "source": "64",
+      "sourceOutput": "out",
+      "target": "78",
+      "targetInput": "right"
+    },
+    {
+      "id": "78.out->79.left",
+      "source": "78",
+      "sourceOutput": "out",
+      "target": "79",
+      "targetInput": "left"
+    },
+    {
+      "id": "67.out->79.right",
+      "source": "67",
+      "sourceOutput": "out",
+      "target": "79",
+      "targetInput": "right"
+    },
+    {
+      "id": "70.out->80.left",
+      "source": "70",
+      "sourceOutput": "out",
+      "target": "80",
+      "targetInput": "left"
+    },
+    {
+      "id": "73.out->80.right",
+      "source": "73",
+      "sourceOutput": "out",
+      "target": "80",
+      "targetInput": "right"
+    },
+    {
+      "id": "80.out->81.left",
+      "source": "80",
+      "sourceOutput": "out",
+      "target": "81",
+      "targetInput": "left"
+    },
+    {
+      "id": "76.out->81.right",
+      "source": "76",
+      "sourceOutput": "out",
+      "target": "81",
+      "targetInput": "right"
+    },
+    {
+      "id": "79.out->82.left",
+      "source": "79",
+      "sourceOutput": "out",
+      "target": "82",
+      "targetInput": "left"
+    },
+    {
+      "id": "81.out->82.right",
+      "source": "81",
+      "sourceOutput": "out",
+      "target": "82",
+      "targetInput": "right"
+    },
+    {
+      "id": "82.out->83.in",
+      "source": "82",
+      "sourceOutput": "out",
+      "target": "83",
+      "targetInput": "in"
     }
   ]
 }
-VS_FLOW_END */
-// Generated code:
+VS_FLOW_END */// Generated code:
 // 打开后由脚本页根据流程图重新生成代码

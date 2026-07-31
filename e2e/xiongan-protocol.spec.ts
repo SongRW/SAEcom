@@ -13,7 +13,7 @@ import { generateCodeFromRete } from '../src/features/script-editor/codegen'
  *   1. 把帧数据 txt 写到 tmpdir 已知路径
  *   2. 解析示例脚本图，把 input-file 节点的 path 重写为该 tmp 绝对路径
  *   3. codegen 生成代码后用真实 vm 沙箱跑（scripts.run + onEnded）
- *   4. 断言 10 帧 × 16 字段全部解析输出，且首帧关键字段值正确
+ *   4. 断言 10 帧全部解析输出（年/月/日/时/分/秒 6 条已合并为 1 条 yyyy-mm-dd hh:mm:ss「时间」日志），且首帧关键字段值正确
  *
  * 解码值 oracle 见 test/xiong-an-verify.test.ts。
  */
@@ -98,18 +98,22 @@ test.describe('雄安林草 终端协议可视化脚本', () => {
     const res = await runScript(page, code)
     expect(res.ok, res.error).toBe(true)
     expect(res.error).toBeUndefined()
-    // 10 帧 × 16 字段 = 160 行
-    expect(res.logs.length).toBe(160)
+    // 10 帧 × 11 行（年/月/日/时/分/秒 6 条已合并为 1 条「时间」日志）= 110 行
+    expect(res.logs.length).toBe(110)
+    // 时间已合并为单条 yyyy-mm-dd hh:mm:ss 日志（不再有独立的 [年]/[月]/...）
+    expect(res.logs.some((l) => /^\[时间\] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(l))).toBe(true)
+    expect(res.logs.some((l) => /^\[(年|月|日|时|分|秒)\] /.test(l))).toBe(false)
 
-    // 首帧（031A070802191813D8FF2D337C022F0000643A02A0）抽查
-    const first16 = res.logs.slice(0, 16)
-    expect(first16.some((l) => l.startsWith('[协议编号] 3'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[纬度]') && l.includes('40.07'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[信号强度] -96'))).toBe(true)
+    // 首帧（031A070802191813D8FF2D337C022F0000643A02A0）抽查（年=26→2026）
+    const first11 = res.logs.slice(0, 11)
+    expect(first11.some((l) => l.startsWith('[协议编号] 3'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[时间] 2026-'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[纬度]') && l.includes('40.07'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[信号强度] -96'))).toBe(true)
 
-    // 末帧也解析成功（协议编号=3，年=26）
-    const last16 = res.logs.slice(-16)
-    expect(last16.some((l) => l.startsWith('[协议编号] 3'))).toBe(true)
+    // 末帧也解析成功（协议编号=3）
+    const last11 = res.logs.slice(-11)
+    expect(last11.some((l) => l.startsWith('[协议编号] 3'))).toBe(true)
   })
 
   test('安全监测报警终端：读文件→拆行→遍历解析 10 帧', async ({ page }) => {
@@ -119,13 +123,17 @@ test.describe('雄安林草 终端协议可视化脚本', () => {
     const res = await runScript(page, code)
     expect(res.ok, res.error).toBe(true)
     expect(res.error).toBeUndefined()
-    expect(res.logs.length).toBe(160)
+    // 10 帧 × 11 行（年/月/日/时/分/秒 6 条已合并为 1 条「时间」日志）= 110 行
+    expect(res.logs.length).toBe(110)
+    expect(res.logs.some((l) => /^\[时间\] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(l))).toBe(true)
+    expect(res.logs.some((l) => /^\[(年|月|日|时|分|秒)\] /.test(l))).toBe(false)
 
     // 首帧（041A070603151013D9002D3379023C0000FFFFFF97）抽查
-    const first16 = res.logs.slice(0, 16)
-    expect(first16.some((l) => l.startsWith('[协议编号] 4'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[海拔] 72'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[定位状态] 255'))).toBe(true)
-    expect(first16.some((l) => l.startsWith('[信号强度] -105'))).toBe(true)
+    const first11 = res.logs.slice(0, 11)
+    expect(first11.some((l) => l.startsWith('[协议编号] 4'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[时间] 2026-'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[海拔] 72'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[定位状态] 255'))).toBe(true)
+    expect(first11.some((l) => l.startsWith('[信号强度] -105'))).toBe(true)
   })
 })
