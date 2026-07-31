@@ -19,6 +19,13 @@ let store: Record<string, string> = {}
   length: 0
 } as Storage
 
+async function loadFreshSettings(stored: Record<string, unknown> = {}) {
+  localStorage.clear()
+  localStorage.setItem('appSettings', JSON.stringify(stored))
+  vi.resetModules()
+  return import('@/shared/store/settings')
+}
+
 describe('settings store — fontSize', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -34,7 +41,7 @@ describe('settings store — fontSize', () => {
       bufferTime: 50,
       echoSend: false,
       longCommandThreshold: 80,
-      autoCheckUpdate: true
+      autoCheckUpdate: false
     })
   })
 
@@ -66,8 +73,9 @@ describe('settings store — fontSize', () => {
 })
 
 describe('settings store — autoCheckUpdate', () => {
-  it('默认 autoCheckUpdate 为 true', () => {
-    expect(useSettingsStore.getState().autoCheckUpdate).toBe(true)
+  it('新安装默认关闭 autoCheckUpdate', async () => {
+    const { useSettingsStore: fresh } = await loadFreshSettings()
+    expect(fresh.getState().autoCheckUpdate).toBe(false)
   })
 
   it('setField 可关闭并持久化', () => {
@@ -77,18 +85,24 @@ describe('settings store — autoCheckUpdate', () => {
     expect(stored.autoCheckUpdate).toBe(false)
   })
 
-  it('reset 恢复为 true', () => {
+  it('reset 恢复为 false', () => {
     useSettingsStore.getState().setField('autoCheckUpdate', false)
     useSettingsStore.getState().reset()
-    expect(useSettingsStore.getState().autoCheckUpdate).toBe(true)
+    expect(useSettingsStore.getState().autoCheckUpdate).toBe(false)
   })
 
-  it('loadFromStorage 仅在显式 false 时关闭', () => {
-    // 显式 false → 关闭
-    localStorage.setItem('appSettings', JSON.stringify({ autoCheckUpdate: false }))
-    vi.resetModules()
-    return import('@/shared/store/settings').then(({ useSettingsStore: fresh }) => {
-      expect(fresh.getState().autoCheckUpdate).toBe(false)
-    })
+  it('loadFromStorage 在缺少字段时保持关闭', async () => {
+    const { useSettingsStore: fresh } = await loadFreshSettings({ dark: true })
+    expect(fresh.getState().autoCheckUpdate).toBe(false)
+  })
+
+  it('loadFromStorage 保留显式 false', async () => {
+    const { useSettingsStore: fresh } = await loadFreshSettings({ autoCheckUpdate: false })
+    expect(fresh.getState().autoCheckUpdate).toBe(false)
+  })
+
+  it('loadFromStorage 保留显式 true', async () => {
+    const { useSettingsStore: fresh } = await loadFreshSettings({ autoCheckUpdate: true })
+    expect(fresh.getState().autoCheckUpdate).toBe(true)
   })
 })

@@ -37,7 +37,7 @@ export interface Settings {
   longCommandThreshold: number
   /** 基础字号 px，通过 CSS 变量 --font-size-base 应用到 <html>。 */
   fontSize: number
-  /** 启动时自动检查更新（关于分区，默认开启）。 */
+  /** 启动时自动检查更新（关于分区，默认关闭）。 */
   autoCheckUpdate: boolean
 }
 
@@ -58,7 +58,7 @@ const DEFAULTS: Settings = {
   echoSend: false,
   longCommandThreshold: 80,
   fontSize: 14,
-  autoCheckUpdate: true
+  autoCheckUpdate: false
 }
 
 function loadFromStorage(): Settings {
@@ -84,7 +84,7 @@ function loadFromStorage(): Settings {
         typeof s.fontSize === 'number' && s.fontSize >= 12 && s.fontSize <= 20
           ? s.fontSize
           : 14,
-      autoCheckUpdate: s.autoCheckUpdate !== false
+      autoCheckUpdate: s.autoCheckUpdate === true
     }
   } catch {
     return { ...DEFAULTS }

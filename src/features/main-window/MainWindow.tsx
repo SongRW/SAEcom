@@ -42,7 +42,7 @@ export default function MainWindow() {
     return off
   }, [])
 
-  // 启动时自动检查更新（按设置 appSettings.autoCheckUpdate，默认开启）。
+  // 启动时自动检查更新（按设置 appSettings.autoCheckUpdate，默认关闭）。
   // 仅在首次挂载触发一次；StrictMode 下双挂载用 ref guard 避免重复定时器。
   const autoChecked = useRef(false)
   useEffect(() => {
