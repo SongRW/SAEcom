@@ -45,6 +45,14 @@ Run `npm test`, `npm run typecheck`, and (for UI changes) `npm run test:e2e:buil
 
 Recent history follows Conventional Commits, often with a scope: `feat(phase0): ...`, `fix(phase0): ...`, `chore: ...`. Keep commits narrow and describe user-visible behavior. Pull requests should include a summary, test results, linked issues when available, and screenshots or recordings for UI changes. For UI changes, the PR must reference the E2E spec that covers the new behavior (or explain why none is needed). Call out impacts on serialport packaging or native rebuilds.
 
+### Repository Ownership (core convention)
+
+This project has **diverged too far architecturally** from upstream `tylhk/SAEcom`. There is **no longer any value in opening PRs back to `origin` (`tylhk/SAEcom`)**, and you must not do so. The canonical remote for this fork is `songrw` (`SongRW/SAEcom`):
+
+- All work, commits, tags, and release branches go to **`songrw`** only.
+- Never push to `origin` / never open PRs to `tylhk/SAEcom`.
+- Treat `songrw/develop_srw` (and `songrw/main`) as the source of truth. The `origin` remote is retained purely for occasional upstream-reference pulls if ever needed; do not treat it as a push/PR target.
+
 ## Security & Configuration Tips
 
 Do not commit local device data, serial-port logs, generated installers, or build outputs from `dist/` and `out/`. Keep native module changes reproducible with `package-lock.json`, and rebuild `serialport` after dependency or Electron upgrades.
