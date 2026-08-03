@@ -47,11 +47,11 @@ Recent history follows Conventional Commits, often with a scope: `feat(phase0): 
 
 ### Repository Ownership (core convention)
 
-This project has **diverged too far architecturally** from upstream `tylhk/SAEcom`. There is **no longer any value in opening PRs back to `origin` (`tylhk/SAEcom`)**, and you must not do so. The canonical remote for this fork is `songrw` (`SongRW/SAEcom`):
+This project has **diverged too far architecturally** from upstream `tylhk/SAEcom`. There is **no longer any value in opening PRs back to `origin` (`tylhk/SAEcom`)**, and you must not do so. The canonical remote is `songrw` (`SongRW/SAEcom`) — **this is the maintainer's own fork**, not a collaborator branch:
 
-- All work, commits, tags, and release branches go to **`songrw`** only.
-- Never push to `origin` / never open PRs to `tylhk/SAEcom`.
-- Treat `songrw/develop_srw` (and `songrw/main`) as the source of truth. The `origin` remote is retained purely for occasional upstream-reference pulls if ever needed; do not treat it as a push/PR target.
+- All push operations go to **`songrw`** only — commits, tags, release branches, everything.
+- Never push to `origin` / never open PRs to `tylhk/SAEcom`. `songrw/develop_srw` (and `songrw/main`) is the source of truth.
+- The `origin` remote is retained purely for occasional upstream-reference pulls if ever needed; do not treat it as a push/PR target.
 
 ## Security & Configuration Tips
 
