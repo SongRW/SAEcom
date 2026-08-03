@@ -547,9 +547,13 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     }
 
     const panelId = currentPanelId(serialPanels)
+    // 面板可选：不依赖面板的脚本（纯 TCP、显式 sendToSerial/sendToPanel、sleep/log/计算等）
+    // 无需先建面板即可运行。仅当脚本里用到隐式 send()/waitOnePacket()/listenCurrentPackets()
+    //（默认作用在当前面板）时，才会在运行期给出清晰错误，而非在此一刀切拦截。
     if (!panelId) {
-      toast.warning('请先选择一个面板（在工作区点击面板）')
-      return
+      toast.info('未选择面板', {
+        description: '隐式 send/wait 将失败；如需收发请用「发送到串口/面板」节点显式指定目标。'
+      })
     }
 
     clearOutput()
@@ -558,7 +562,7 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
 
     const graphExport = exportGraphState(graph)
     const generatedCode = graph.nodes.length > 0 ? generateCodeFromRete(graphExport) : legacyCode || generateCodeFromRete(graphExport)
-    const run = await getIPC().scripts.run(generatedCode, { id: panelId })
+    const run = await getIPC().scripts.run(generatedCode, panelId ? { id: panelId } : {})
     setRunningScriptId(run.runId)
   }
 

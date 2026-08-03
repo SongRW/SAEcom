@@ -1311,6 +1311,10 @@ ipcMain.handle('scripts:import', async () => {
   return importScriptFile(filePaths[0], scriptsDir)
 })
 ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
+  // ctx.id 可空（面板可选）。归一化为字符串：未提供面板时为 ''，便于后续 `=== 'test'`
+  // 等判断；隐式 send()/waitOnePacket()/listenCurrentPackets() 默认作用在当前面板，
+  // 无面板时各自抛清晰错误，提示改用显式目标 API。
+  ctx = { id: (ctx && typeof ctx.id === 'string') ? ctx.id : '' }
   const runId = randomUUID()
   const logs: string[] = []
   const sender = e.sender
@@ -1559,6 +1563,9 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
         setTimeout(() => resolve(updateLastRecv(sandboxState, '[测试模式: 无数据]')), 100)
         return
       }
+      if (!ctx.id) {
+        return reject(new Error('未选择面板：waitOnePacket 默认作用在当前面板，请先选择面板或改用 waitPanelPacket(panelId) 显式指定目标'))
+      }
 
       let onDataHandler: any
       let timeoutTimer: any
@@ -1628,6 +1635,9 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
 
       if (ctx.id === 'test') {
         return { ok: true, sent: d }
+      }
+      if (!ctx.id) {
+        throw new Error('未选择面板：send 默认作用在当前面板，请先选择面板或改用 sendToPanel(panelId)/sendToSerial(port) 显式指定目标')
       }
 
       const r = await writeGeneric(ctx.id, d, m, a)
@@ -1728,8 +1738,10 @@ ipcMain.handle('scripts:run', (e: any, { code, ctx }) => {
       }
     },
 
-    listenCurrentPackets: () => (handler: (value: string) => Promise<void> | void) =>
-      listenScriptPackets(ctx.id, handler),
+    listenCurrentPackets: () => (handler: (value: string) => Promise<void> | void) => {
+      if (!ctx.id) throw new Error('未选择面板：listenCurrentPackets 默认监听当前面板，请先选择面板或改用 listenPanelPackets(panelId)/listenSerialPackets(port) 显式指定目标')
+      return listenScriptPackets(ctx.id, handler)
+    },
     listenPanelPackets: (panelId: string) => (handler: (value: string) => Promise<void> | void) => {
       const targetId = String(panelId || '').trim()
       if (!targetId) throw new Error('未选择串口面板')

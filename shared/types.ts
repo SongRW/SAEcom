@@ -87,7 +87,13 @@ export interface SerialPanelSummary {
 }
 
 export interface ScriptRunContext {
-  id: string
+  /**
+   * 当前活动面板/串口 id，作为隐式 send()/waitOnePacket()/listenCurrentPackets()
+   * 的默认目标。可空：不依赖面板的脚本（纯 TCP、显式 sendToSerial/sendToPanel、
+   * sleep/log/计算等）无需先建面板即可运行。隐式 API 在 id 缺失时会给出
+   * 清晰的运行期错误，而非静默挂起。
+   */
+  id?: string
 }
 
 export interface ScriptEndedPayload {
