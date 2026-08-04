@@ -180,6 +180,32 @@ export function updateGraphNodePosition(
   }
 }
 
+/**
+ * 更新节点名称（顶层 label 字段，写入历史与持久化）。
+ *
+ * - 自动 trim：首尾空白会被裁掉。
+ * - 空 label（trim 后为空）保留原值，避免节点变成无名节点。
+ * - label 不写入 node.data，与节点类型参数解耦（参见 CONV-GRAPH-CANONICAL-STATE）。
+ * - 命中节点时返回新 state（新数组引用）；未命中返回原 state，便于 memo 判等。
+ */
+export function updateGraphNodeLabel(
+  state: GraphEditorState,
+  nodeId: string | number,
+  label: string
+): GraphEditorState {
+  const id = String(nodeId)
+  const trimmed = label.trim()
+  if (!trimmed) return state
+  let changed = false
+  const nodes = state.nodes.map((node) => {
+    if (node.id !== id) return node
+    if (node.label === trimmed) return node
+    changed = true
+    return { ...node, label: trimmed }
+  })
+  return changed ? { ...state, nodes } : state
+}
+
 /** 批量更新节点坐标（自动排版一次写回，避免 N 次 setState）。 */
 export function updateGraphNodePositions(
   state: GraphEditorState,

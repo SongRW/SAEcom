@@ -7,6 +7,7 @@ import {
   getCompatibleSources,
   importGraphState,
   updateGraphNodeData,
+  updateGraphNodeLabel,
   updateGraphNodePosition,
   updateGraphNodePositions,
   validateGraphNode
@@ -378,5 +379,44 @@ describe('script editor graph state', () => {
       kind: 'file',
       path: 'D:/logs/out.log'
     })
+  })
+})
+
+describe('updateGraphNodeLabel', () => {
+  it('updates the label of the specified node', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'input-manual', { x: 0, y: 0 }, 'n1', {}, '串口输入')
+    const updated = updateGraphNodeLabel(graph, 'n1', '我的数据源')
+    expect(updated.nodes[0].label).toBe('我的数据源')
+  })
+
+  it('preserves all other nodes and connections unchanged', () => {
+    let graph = createEmptyGraphState()
+    graph = addGraphNode(graph, 'input-manual', { x: 0, y: 0 }, 'n1', {}, '串口输入')
+    graph = addGraphNode(graph, 'output-log', { x: 240, y: 0 }, 'n2', {}, '日志')
+    graph = connectGraphNodes(graph, { source: 'n1', sourceOutput: 'out', target: 'n2', targetInput: 'in' })
+    const originalSecond = graph.nodes[1]
+    const originalConnections = graph.connections
+
+    const updated = updateGraphNodeLabel(graph, 'n1', '改名')
+    expect(updated.nodes[1]).toEqual(originalSecond)
+    expect(updated.connections).toEqual(originalConnections)
+  })
+
+  it('trims surrounding whitespace from the label', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'input-manual', { x: 0, y: 0 }, 'n1', {}, '串口输入')
+    const updated = updateGraphNodeLabel(graph, 'n1', '  我的数据源  ')
+    expect(updated.nodes[0].label).toBe('我的数据源')
+  })
+
+  it('keeps the previous label when the trimmed value is empty', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'input-manual', { x: 0, y: 0 }, 'n1', {}, '串口输入')
+    const updated = updateGraphNodeLabel(graph, 'n1', '   ')
+    expect(updated.nodes[0].label).toBe('串口输入')
+  })
+
+  it('returns the same state reference when the node id does not match', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'input-manual', { x: 0, y: 0 }, 'n1', {}, '串口输入')
+    const updated = updateGraphNodeLabel(graph, 'missing', '改名')
+    expect(updated).toBe(graph)
   })
 })
