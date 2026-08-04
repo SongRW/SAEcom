@@ -55,6 +55,7 @@ import { CanvasToolBar } from '@/features/script-editor/components/CanvasToolBar
 import { GraphCanvas } from '@/features/script-editor/components/GraphCanvas'
 import type { GraphCanvasHandle } from '@/features/script-editor/components/GraphCanvas'
 import { NodeConfigPanel } from '@/features/script-editor/components/NodeConfigPanel'
+import { NodeSearchBox } from '@/features/script-editor/components/NodeSearchBox'
 import { NodePalette } from '@/features/script-editor/components/NodePalette'
 import { ScriptCodePanel } from '@/features/script-editor/components/ScriptCodePanel'
 import { ScriptEditorDrawer } from '@/features/script-editor/components/ScriptEditorDrawer'
@@ -135,6 +136,8 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   const [refreshingPorts, setRefreshingPorts] = useState(false)
   const [saveAsOpen, setSaveAsOpen] = useState(false)
   const [createNameOpen, setCreateNameOpen] = useState(false)
+  /** Ctrl/Cmd+F 触发的节点搜索框开关（瞬态，不进入历史/持久化）。 */
+  const [searchOpen, setSearchOpen] = useState(false)
   const [confirmOverwrite, setConfirmOverwrite] = useState<{ name: string; source: OverwriteSource } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [renameTarget, setRenameTarget] = useState<string | null>(null)
@@ -178,6 +181,8 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
 
   // 撤销/重做快捷键：Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做
   // 焦点在 input/textarea（如节点配置输入框）时不拦截，避免影响文本编辑
+  // 同一处理里还承载 Ctrl/Cmd+F：打开节点搜索框（仅画布有焦点时触发，
+  // 焦点在 INPUT/TEXTAREA 时不劫持原生查找）。
   useEffect(() => {
     if (!open) return
     const onKeyDown = (event: KeyboardEvent) => {
@@ -185,8 +190,16 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
       if (!mod) return
       const target = event.target as HTMLElement | null
       const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      const inEditable = tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable
       const key = event.key.toLowerCase()
+      // Ctrl/Cmd+F：打开节点搜索。在可编辑元素中不劫持，保留浏览器/原生查找。
+      if (key === 'f') {
+        if (inEditable) return
+        event.preventDefault()
+        setSearchOpen(true)
+        return
+      }
+      if (inEditable) return
       if (key === 'z' && !event.shiftKey) {
         event.preventDefault()
         undo()
@@ -921,6 +934,17 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
                   }}
                   onSelectNodes={setSelectedNodeIds}
                 />
+                {searchOpen ? (
+                  <NodeSearchBox
+                    graph={graph}
+                    onSelect={(nodeId) => {
+                      setSelectedNodeIds([nodeId])
+                      graphCanvasRef.current?.focusNode(nodeId)
+                      setSearchOpen(false)
+                    }}
+                    onClose={() => setSearchOpen(false)}
+                  />
+                ) : null}
                 <ScriptEditorDrawer
                   open={uiState.configOpen}
                   placement="right"
