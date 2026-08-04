@@ -257,6 +257,30 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       if (selected.has(id)) view.element.setAttribute('data-app-selected', 'true')
       else view.element.removeAttribute('data-app-selected')
     }
+
+    // 连线高亮：为与选中节点相连的连线 SVG 设置 data-app-selected-endpoint / -direction。
+    // 属性设在 [data-testid="connection"]（SVG）上而非 ConnectionView.element(holder div)，
+    // 这样 CSS 选择器 [data-testid="connection"][data-app-selected-endpoint] 才能命中。
+    // 零 React 重渲染：纯 DOM 属性操作，镜像上方 nodeViews 的 data-app-selected 模式。
+    // 高亮是瞬态视觉，不写回 GraphEditorState（遵守 CONV-GRAPH-CANONICAL-STATE）。
+    const connById = new Map(instance.editor.getConnections().map((conn) => [conn.id, conn]))
+    for (const [connId, connView] of instance.area.connectionViews) {
+      const conn = connById.get(connId)
+      if (!conn) continue
+      const svg = connView.element.querySelector('[data-testid="connection"]') as SVGElement | null
+      if (!svg) continue
+      const highlight = computeConnectionHighlight(
+        { source: conn.source, target: conn.target },
+        selected
+      )
+      if (highlight.endpoint) {
+        svg.setAttribute('data-app-selected-endpoint', 'true')
+        svg.setAttribute('data-app-selected-direction', highlight.direction as string)
+      } else {
+        svg.removeAttribute('data-app-selected-endpoint')
+        svg.removeAttribute('data-app-selected-direction')
+      }
+    }
   }, [selectedNodeIds, graph])
 
   useEffect(() => {
@@ -274,6 +298,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     }
 
     const instance = createReteEditor(container, {
+      getArrangeOrderIndex: (id) => {
+        const index = graphRef.current.nodes.findIndex((node) => node.id === id)
+        if (index < 0) throw new Error(`未找到自动排版节点：${id}`)
+        return index
+      },
+      getSelectedNodeIds: () => new Set(selectedNodeIdsRef.current),
       onGraphChange: (change) => {
         if (syncingRef.current) return
         if (change.type === 'connection-created') {
@@ -742,6 +772,35 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     </main>
   )
 })
+
+export type ConnectionHighlightDirection = 'out' | 'in' | 'both' | null
+export interface ConnectionHighlight {
+  endpoint: boolean
+  direction: ConnectionHighlightDirection
+}
+
+/**
+ * 计算单条连线相对于当前选中节点集的高亮状态（纯函数，便于单测）。
+ *
+ * 语义：
+ * - 出边（source 选中）→ direction='out'，动画 source→target（绿色，数据流出）。
+ * - 入边（target 选中）→ direction='in'，动画 target→source（橙色，数据流入）。
+ * - 两端同时选中 → direction='both'，确定性使用出边方向（不叠加两种动画）。
+ * - 两端都未选中 → endpoint=false（不高亮）。
+ *
+ * 注意：连线 path 始终从 source（start）画到 target（end），方向仅控制动画流动方向。
+ */
+export function computeConnectionHighlight(
+  conn: { source: string; target: string },
+  selectedNodeIds: Set<string>
+): ConnectionHighlight {
+  const sourceSelected = selectedNodeIds.has(conn.source)
+  const targetSelected = selectedNodeIds.has(conn.target)
+  if (sourceSelected && targetSelected) return { endpoint: true, direction: 'both' }
+  if (sourceSelected) return { endpoint: true, direction: 'out' }
+  if (targetSelected) return { endpoint: true, direction: 'in' }
+  return { endpoint: false, direction: null }
+}
 
 function getNodeIdFromEventTarget(instance: ReteEditorInstance | null, target: EventTarget | null): string | null {
   if (!(target instanceof HTMLElement)) return null

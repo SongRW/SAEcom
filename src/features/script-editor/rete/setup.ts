@@ -4,6 +4,7 @@ import type { ComponentType, ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AreaExtensions, AreaPlugin, Drag, Zoom } from 'rete-area-plugin'
 import { AutoArrangePlugin, Presets as ArrangePresets } from 'rete-auto-arrange-plugin'
+import type { Preset } from 'rete-auto-arrange-plugin'
 import { ClassicFlow, ConnectionPlugin } from 'rete-connection-plugin'
 import type { SocketData } from 'rete-connection-plugin'
 import { DockPlugin, DockPresets } from 'rete-dock-plugin'
@@ -90,6 +91,29 @@ const RefControl = ReactPresets.classic.RefControl as ComponentType<RefControlPr
 
 export interface CreateReteEditorOptions {
   onGraphChange?: (change: ReteGraphChange) => void
+  getArrangeOrderIndex?: (id: string) => number
+  /**
+   * 返回当前 app 层选中的节点 id 集合（真实选择源；不用 Rete 内置 selector）。
+   * 供渲染层在连线 DOM 上设置高亮属性（见 GraphCanvas 选择→DOM effect）。
+   */
+  getSelectedNodeIds?: () => Set<string>
+}
+
+export function createOrderedArrangePreset(getArrangeOrderIndex: (id: string) => number): Preset {
+  const classic = ArrangePresets.classic.setup()
+
+  return (id) => {
+    const layout = classic(id)
+    if (!layout) return null
+
+    return {
+      ...layout,
+      options: () => ({
+        ...layout.options?.(id),
+        'elk.position': `(0, ${getArrangeOrderIndex(id)})`
+      })
+    }
+  }
 }
 
 export function getRetePackageNames(): string[] {
@@ -424,7 +448,7 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
       }
     }
   })
-  arrange.addPreset(ArrangePresets.classic.setup())
+  arrange.addPreset(createOrderedArrangePreset((id) => options.getArrangeOrderIndex?.(id) ?? 0))
   dock.addPreset(DockPresets.classic.setup({ area }))
 
   // boundViewport 关闭：缩小时若把视口并进包围盒，节点会被压成几乎看不见，
