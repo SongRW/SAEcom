@@ -134,8 +134,14 @@ export function createDefaultNodeData(nodeKey: string, panels: SerialPanelSummar
 }
 
 export function migrateNodeData(nodeKey: string, data: Record<string, unknown> = {}): Record<string, unknown> {
+  // note 是用户为节点附加的通用备注字段（非节点类型参数），需在所有迁移分支中保留。
+  // 重建 data 对象的分支（transform-object / protocol-bitfield）只挑选已知键，
+  // 这里提取 note 以便显式带上，避免用户备注在保存/重开后丢失。
+  const note = typeof data.note === 'string' ? data.note : undefined
+  const noteField = note !== undefined ? { note } : {}
+
   if (nodeKey === 'transform-object') {
-    return { keys: Array.isArray(data.keys) ? data.keys : [] }
+    return { keys: Array.isArray(data.keys) ? data.keys : [], ...noteField }
   }
   if (nodeKey === 'protocol-bitfield') {
     // fields 数组守门：非法结构回退中性默认
@@ -148,7 +154,7 @@ export function migrateNodeData(nodeKey: string, data: Record<string, unknown> =
           }))
           .filter((entry) => entry.id)
       : [{ id: 'f1', name: 'field', bits: 8 }]
-    return { mode: String(data.mode ?? '打包'), fields }
+    return { mode: String(data.mode ?? '打包'), fields, ...noteField }
   }
 
   if (isSerialNode(nodeKey)) {
