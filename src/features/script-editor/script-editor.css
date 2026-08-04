@@ -506,6 +506,63 @@
   fill: none !important;
 }
 
+/* ====== 选中节点连线高亮与方向动画 ======
+   属性由 GraphCanvas 选择→DOM effect 设置在连线 SVG
+   ([data-testid="connection"]) 上：data-app-selected-endpoint / -direction。
+   - out  : source 选中 → 绿色 + source→target 前向流动（数据流出）
+   - in   : target 选中 → 橙色 + target→source 后向流动（数据流入）
+   - both : 两端选中 → 确定性使用 out 方向（不叠加两种动画）
+   path 始终从 source(start) 画到 target(end)；stroke-dashoffset 负向递减 =
+   source→target 方向流动。零 React 重渲染开销（纯属性 + CSS）。
+   遵守 CONV-GRAPH-CANONICAL-STATE：高亮是瞬态视觉，不持久化。 */
+
+/* 当画布中存在任一高亮连线时（即有节点被选中），未高亮连线降低不透明度，
+   让高亮连线更突出。用 :has() 检测高亮存在，避免依赖连线 DOM 顺序。 */
+.script-editor-canvas__surface:has([data-testid="connection"][data-app-selected-endpoint="true"])
+  [data-testid="connection"]:not([data-app-selected-endpoint]) path {
+  opacity: 0.35 !important;
+}
+
+/* 高亮连线：恢复完全不透明、加粗描边、虚线轨道（供流动动画使用） */
+.script-editor-canvas__surface [data-testid="connection"][data-app-selected-endpoint="true"] path {
+  opacity: 1 !important;
+  stroke-width: 3.5px !important;
+  stroke-dasharray: 8 6 !important;
+}
+
+/* 出边动画：source → target 方向流动（绿色 = success，数据流出） */
+.script-editor-canvas__surface [data-testid="connection"][data-app-selected-direction="out"] path {
+  stroke: var(--success) !important;
+  animation: connection-flow-forward 0.7s linear infinite;
+}
+
+/* 入边动画：target → source 方向流动（橙色 = primary，数据流入） */
+.script-editor-canvas__surface [data-testid="connection"][data-app-selected-direction="in"] path {
+  stroke: var(--primary) !important;
+  animation: connection-flow-backward 0.7s linear infinite;
+}
+
+/* 两端同时选中：确定性使用出边方向（绿色前向流动），不叠加两种动画 */
+.script-editor-canvas__surface [data-testid="connection"][data-app-selected-direction="both"] path {
+  stroke: var(--success) !important;
+  animation: connection-flow-forward 0.7s linear infinite;
+}
+
+@keyframes connection-flow-forward {
+  to { stroke-dashoffset: -14; }
+}
+@keyframes connection-flow-backward {
+  to { stroke-dashoffset: 14; }
+}
+
+/* prefers-reduced-motion：关闭流动动画，保留静态高亮（颜色/加粗/对比） */
+@media (prefers-reduced-motion: reduce) {
+  .script-editor-canvas__surface [data-testid="connection"][data-app-selected-direction] path {
+    animation: none !important;
+    stroke-dasharray: none !important;
+  }
+}
+
 .script-editor-canvas__surface [data-testid$="socket"] {
   display: inline-flex !important;
   width: 14px;
