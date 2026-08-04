@@ -1037,6 +1037,32 @@
   white-space: nowrap;
 }
 
+.script-editor-inspector__title-wrap {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.script-editor-inspector__title-input {
+  width: 100%;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--foreground);
+  height: auto;
+}
+
+.script-editor-inspector__title-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--background);
+}
+
 .script-editor-inspector__section {
   display: flex;
   min-width: 0;
@@ -1063,6 +1089,32 @@
   color: var(--muted-foreground);
   font-size: 12px;
   padding: 6px 8px;
+}
+
+.script-editor-inspector__note-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.script-editor-inspector__note-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--foreground);
+  background: var(--background);
+  resize: vertical;
+  min-height: 40px;
+}
+
+.script-editor-inspector__note-input:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 .script-editor-serial-status {

@@ -46,6 +46,8 @@ import {
   duplicateGraphNode,
   exportGraphState,
   importGraphState,
+  updateGraphNodeData,
+  updateGraphNodeLabel,
   validateGraphState
 } from '@/features/script-editor/rete/graphState'
 import type { GraphEditorState } from '@/features/script-editor/rete/graphState'
@@ -934,6 +936,15 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
                     refreshingPorts={refreshingPorts}
                     serialPanelOptions={serialPanelOptions}
                     serialPortOptions={serialPortOptions}
+                    onLabelChange={(nodeId, label) => {
+                      // label 是顶层字段，画布节点标题从 data.label 渲染且无实时数据同步路径，
+                      // bump graphRevision 强制 Rete 结构同步以即时刷新画布标题。
+                      setGraphRevision((revision) => revision + 1)
+                      setGraphTransient(updateGraphNodeLabel(graph, nodeId, label))
+                    }}
+                    onNoteChange={(nodeId, note) => {
+                      setGraphTransient(updateGraphNodeData(graph, nodeId, 'note', note))
+                    }}
                     onDeleted={() => {
                       setSelectedNodeIds([])
                       setUiState(onNodeDeleted)

@@ -36,6 +36,8 @@ interface NodeConfigPanelProps {
   serialPanelOptions: SelectOption[]
   serialPortOptions: SelectOption[]
   onGraphChange: (graph: GraphEditorState) => void
+  onLabelChange: (nodeId: string, label: string) => void
+  onNoteChange: (nodeId: string, note: string) => void
   onDeleted: () => void
   onRefreshPanels: () => void | Promise<void>
   onRefreshPorts: () => void | Promise<void>
@@ -50,6 +52,8 @@ export function NodeConfigPanel({
   serialPanelOptions,
   serialPortOptions,
   onGraphChange,
+  onLabelChange,
+  onNoteChange,
   onDeleted,
   onRefreshPanels,
   onRefreshPorts
@@ -73,11 +77,18 @@ export function NodeConfigPanel({
     return <div className="script-editor-inspector__empty">选择节点后配置参数与连线</div>
   }
 
+  const note = typeof selectedNode.data.note === 'string' ? selectedNode.data.note : ''
+
   return (
     <div className="script-editor-inspector__content">
       <div className="script-editor-inspector__header">
-        <div>
-          <div className="script-editor-inspector__title">{selectedNode.label}</div>
+        <div className="script-editor-inspector__title-wrap">
+          <Input
+            className="script-editor-inspector__title-input"
+            value={selectedNode.label}
+            onChange={(e) => onLabelChange(selectedNode.id, e.target.value)}
+            aria-label="节点名称"
+          />
           <div className="script-editor-inspector__key">{selectedNode.key}</div>
         </div>
         <Button
@@ -97,6 +108,17 @@ export function NodeConfigPanel({
         <span>Y {Math.round(selectedNode.position.y)}</span>
       </div>
       <SerialStatusBadge node={selectedNode} serialPortOptions={serialPortOptions} />
+      <div className="script-editor-inspector__note-field">
+        <Label>备注</Label>
+        <textarea
+          className="script-editor-inspector__note-input"
+          value={note}
+          onChange={(e) => onNoteChange(selectedNode.id, e.target.value)}
+          placeholder="为这个节点添加说明…"
+          aria-label="节点备注"
+          rows={2}
+        />
+      </div>
       <Separator />
       <NodeControls
         node={selectedNode}
