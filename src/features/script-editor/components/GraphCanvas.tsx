@@ -54,6 +54,13 @@ export interface GraphCanvasHandle {
    * 工具栏 +/- 缩放用此值 clamp，与画布滚轮/restrictor 一致。
    */
   getZoomMin: () => number
+  /**
+   * 把视口居中对准指定节点（搜索定位用）。
+   * 计算一个能容纳该节点 + padding 的 zoom（clamp 到 [zoomMin, 1]），
+   * 再用 applyFitTransform 平移 + 缩放相机，与 fitView 共用同一条 transform 路径。
+   * 找不到节点或实例未就绪时静默返回。
+   */
+  focusNode: (nodeId: string) => void
 }
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas({
@@ -187,6 +194,45 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     if (result) applyFitTransform(result)
   }
 
+  /**
+   * 把单个节点居中到视口（搜索定位）。
+   * 用节点真实包围盒算出能容纳它的 zoom（clamp 到 [zoomMin, 1]），
+   * 再平移使节点中心落在视口中心。复用 applyFitTransform 的相机路径，
+   * 与 fitView 一致地设置 applyingZoomRef 避免回调回灌。
+   *
+   * 同步期间不抢占相机：若 Rete 正在同步（如刚 select 触发的重渲染），
+   * 直接做平移可能在 sync 的 area.zoom 中被覆盖；这里要求实例就绪且非同步态。
+   */
+  const runFocusNode = (nodeId: string) => {
+    const instance = reteRef.current
+    const container = canvasRef.current
+    if (!instance || !container) return
+    if (syncingRef.current) {
+      // 同步进行中：延后到下一帧重试，避开 sync effect 内的 area.zoom。
+      window.requestAnimationFrame(() => runFocusNode(nodeId))
+      return
+    }
+    const view = instance.area.nodeViews.get(nodeId)
+    // 无 Rete view 时退回 graph 坐标 + 默认尺寸（节点尚未物化）。
+    const node = graphRef.current.nodes.find((n) => n.id === nodeId)
+    if (!view && !node) return
+    const width = view?.element.offsetWidth ?? 216
+    const height = view?.element.offsetHeight ?? 120
+    const left = view?.position.x ?? node!.position.x
+    const top = view?.position.y ?? node!.position.y
+
+    const padding = 80
+    const containerW = container.clientWidth
+    const containerH = container.clientHeight
+    const zoomX = (containerW - padding * 2) / Math.max(width, 1)
+    const zoomY = (containerH - padding * 2) / Math.max(height, 1)
+    const zoomMin = resolveZoomMin()
+    const zoom = Math.min(Math.max(Math.min(zoomX, zoomY), zoomMin), 1)
+    const cx = left + width / 2
+    const cy = top + height / 2
+    applyFitTransform({ zoom, x: containerW / 2 - cx * zoom, y: containerH / 2 - cy * zoom })
+  }
+
   const runArrangeLayout = async () => {
     const instance = reteRef.current
     if (!instance || graphRef.current.nodes.length === 0) return
@@ -217,8 +263,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   useImperativeHandle(ref, () => ({
     fitView: runFit,
     arrangeLayout: runArrangeLayout,
-    getZoomMin: resolveZoomMin
-  }), [])
+    getZoomMin: resolveZoomMin,
+    focusNode: runFocusNode
+}), [])
 
   useEffect(() => {
     onZoomChangeRef.current = onZoomChange
