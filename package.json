@@ -1,10 +1,10 @@
 {
   "name": "SAEcom",
-  "version": "0.6.01",
-  "description": "基于Electron开发的多面板串口助手/Serial port Assistant based on Electron",
+  "version": "0.6.02",
+  "description": "基于Electron开发的多面板串口助手「串串」/Serial port Assistant (串串) based on Electron",
   "main": "out/main/index.js",
   "engines": {
-    "node": "^20"
+    "node": "^24.16.0"
   },
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -97,7 +97,7 @@
   },
   "build": {
     "appId": "com.example.serialhelper",
-    "productName": "串口助手",
+    "productName": "串串",
     "directories": {
       "buildResources": "build",
       "output": "dist"
@@ -159,8 +159,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "串口助手",
-      "runAfterFinish": true
+      "shortcutName": "串串",
+      "runAfterFinish": true,
+      "include": "build/installer.nsh"
     }
   }
 }

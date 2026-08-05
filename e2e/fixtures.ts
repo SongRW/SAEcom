@@ -79,35 +79,23 @@ export async function clickReady(
 }
 
 /**
- * 等 Dialog 关闭（content 和 overlay 都不再 open）。
- * Radix Dialog 的 content data-state 从 open→closed 后，overlay 仍有 ~100ms
- * 退出动画，期间 overlay 仍捕获 pointer 事件并遮挡编辑器工具栏按钮。
- * 仅检查 content data-state 会过早返回（overlay 拦截后续点击）。
- * 因此在 content 关闭后再轮询 overlay 的 data-state，确保退出动画完成。
+ * 等 Dialog 关闭：断言 content 与 overlay 都已从 DOM 卸载（而非仅 data-state 变 closed）。
+ *
+ * 早期版本只轮询 data-state !== 'open'，但 Radix Presence 退出动画偶发被
+ * 重渲染打断（animationcancel 取代 animationend），节点会卡在 unmountSuspended：
+ * data-state 已为 closed 却仍挂在 DOM，继续拦截 pointer 事件、让后续工具栏点击
+ * 找不到目标。改用 toHaveCount(0) 严格校验卸载完成，从测试侧守住这个 race。
+ * 建议对已知目标对话框传入 name 具名锁定（避免误判其它并发 dialog）。
  */
 export async function expectDialogClosed(page: Page, name?: string | RegExp) {
   const dialog = name
     ? page.getByRole('dialog', { name })
     : page.getByRole('dialog')
-  // 等 dialog content 不再 open
-  await expect
-    .poll(async () => {
-      const count = await dialog.count()
-      if (count === 0) return true
-      const state = await dialog.first().getAttribute('data-state').catch(() => null)
-      return state !== 'open'
-    }, { timeout: 10000 })
-    .toBe(true)
-  // content 关闭后 overlay 仍有退出动画；等 overlay 也离开或不再 open
+  // content 必须真正卸载
+  await expect(dialog).toHaveCount(0, { timeout: 10000 })
+  // 所有 overlay 也卸载（Radix 退出动画收尾）
   const overlay = page.locator('[data-slot="dialog-overlay"]')
-  await expect
-    .poll(async () => {
-      const count = await overlay.count()
-      if (count === 0) return true
-      const state = await overlay.first().getAttribute('data-state').catch(() => null)
-      return state !== 'open'
-    }, { timeout: 5000 })
-    .toBe(true)
+  await expect(overlay).toHaveCount(0, { timeout: 5000 })
 }
 
 /**
@@ -149,7 +137,8 @@ export async function openNewPanelDialog(page: Page) {
  */
 export async function confirmNewPanelDialog(page: Page, dialog: ReturnType<Page['getByRole']>) {
   await dialog.getByRole('button', { name: '创建' }).evaluate((el: HTMLElement) => el.click())
-  await expectDialogClosed(page)
+  // 具名锁定「新建面板」：严格断言其 content+overlay 已卸载，守住 Radix 退出动画 race。
+  await expectDialogClosed(page, '新建面板')
   await expect(page.locator('[title*="双击重命名"]').first()).toBeVisible({ timeout: 15000 })
 }
 

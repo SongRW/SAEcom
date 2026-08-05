@@ -24,8 +24,9 @@ export function createScriptEditorUiState(): ScriptEditorUiState {
     configOpen: false,
     outputExpanded: false,
     canvasTool: 'pointer',
-    windowMode: 'normal',
-    preMinimizeMode: 'normal',
+    // 打开编辑器默认最大化（用户可点「还原」缩回 normal）
+    windowMode: 'maximized',
+    preMinimizeMode: 'maximized',
     viewMode: 'auto'
   }
 }

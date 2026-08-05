@@ -37,7 +37,7 @@ export function AboutSection() {
       <dl className="text-sm">
         <div className="flex justify-between py-2 border-b border-border/50">
           <dt className="text-muted-foreground">{t('settings.about.appName')}</dt>
-          <dd>SAEcom</dd>
+          <dd>串串</dd>
         </div>
         <div className="flex justify-between py-2 border-b border-border/50">
           <dt className="text-muted-foreground">{t('settings.about.version')}</dt>

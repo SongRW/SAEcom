@@ -72,6 +72,30 @@ describe('script editor graph synchronization', () => {
     })
   })
 
+  it('classifies a concat port-count change as a structural refresh', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'protocol-concat', { x: 0, y: 0 }, 'concat', {
+      ports: 2
+    })
+    const next = updateGraphNodeData(graph, 'concat', 'ports', 4)
+
+    expect(classifyGraphSync(graph, next)).toEqual({
+      kind: 'structure',
+      changedNodeIds: []
+    })
+  })
+
+  it('classifies a string-concat port-count change as a structural refresh', () => {
+    const graph = addGraphNode(createEmptyGraphState(), 'string-concat', { x: 0, y: 0 }, 'sconcat', {
+      ports: 3
+    })
+    const next = updateGraphNodeData(graph, 'sconcat', 'ports', 2)
+
+    expect(classifyGraphSync(graph, next)).toEqual({
+      kind: 'structure',
+      changedNodeIds: []
+    })
+  })
+
   it('classifies a position-only history restore as a local position refresh', () => {
     const graph = addGraphNode(createEmptyGraphState(), 'input-manual', { x: 0, y: 0 }, 'input')
     const next = {

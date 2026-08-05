@@ -35,7 +35,7 @@ const registryWithOutputPanel: Record<string, NodeDef> = {
 
 describe('Rete script editor codegen', () => {
   it('defines the complete node registry', () => {
-    expect(Object.keys(NODE_DEFINITIONS)).toHaveLength(64)
+    expect(Object.keys(NODE_DEFINITIONS)).toHaveLength(66)
     expect(Object.keys(NODE_CATEGORIES)).toEqual([
       'input',
       'transform',
@@ -253,15 +253,15 @@ describe('Rete script editor codegen', () => {
       { id: '3', key: 'string-concat', data: { separator: '|' } },
       { id: '4', key: 'output-log', data: { prefix: 'JOIN' } }
     ], [
-      { source: '1', sourceOutput: 'out', target: '3', targetInput: 'left' },
-      { source: '2', sourceOutput: 'out', target: '3', targetInput: 'right' },
+      { source: '1', sourceOutput: 'out', target: '3', targetInput: 'a' },
+      { source: '2', sourceOutput: 'out', target: '3', targetInput: 'b' },
       { source: '3', sourceOutput: 'out', target: '4', targetInput: 'in' }
     ]))
 
     const firstCallback = between(code, '_listeners.push(listenSerialPackets("panel-a", {"baudRate":115200,"dataBits":8,"stopBits":1,"parity":"none"}, {"bufferMs":50,"append":"CRLF"})(async (_out_1) => {', '  }));')
     const secondCallback = between(code, '_listeners.push(listenTcpPackets("127.0.0.1", 8080)(async (_out_2) => {', '  }));')
 
-    expect(code).not.toContain('var _out_3 = _out_1 + "|" + _out_2')
+    expect(code).not.toContain('var _out_3 = String(_out_1||\'\') + "|" + String(_out_2||\'\')')
     expect(code).not.toContain('console.log("[JOIN] " + _out_3)')
     expect(firstCallback).not.toContain('_out_2')
     expect(secondCallback).not.toContain('_out_1')
@@ -274,14 +274,14 @@ describe('Rete script editor codegen', () => {
       { id: '3', key: 'string-concat', data: { separator: '|' } },
       { id: '4', key: 'output-log', data: { prefix: 'JOIN' } }
     ], [
-      { source: '1', sourceOutput: 'out', target: '3', targetInput: 'left' },
-      { source: '2', sourceOutput: 'out', target: '3', targetInput: 'right' },
+      { source: '1', sourceOutput: 'out', target: '3', targetInput: 'a' },
+      { source: '2', sourceOutput: 'out', target: '3', targetInput: 'b' },
       { source: '3', sourceOutput: 'out', target: '4', targetInput: 'in' }
     ]))
 
     const listenerCallback = between(code, '_listeners.push(listenSerialPackets("panel-a", {"baudRate":115200,"dataBits":8,"stopBits":1,"parity":"none"}, {"bufferMs":50,"append":"CRLF"})(async (_out_1) => {', '  }));')
 
-    expect(code).not.toContain('var _out_3 = _out_1 + "|" + _out_2')
+    expect(code).not.toContain('var _out_3 = String(_out_1||\'\') + "|" + String(_out_2||\'\')')
     expect(code).not.toContain('console.log("[JOIN] " + _out_3)')
     expect(listenerCallback).not.toContain('_out_2')
     expect(code).toContain('var _out_2 = "manual"')
@@ -297,8 +297,8 @@ describe('Rete script editor codegen', () => {
     ], [
       { source: '1', sourceOutput: 'out', target: '2', targetInput: 'in' },
       { source: '1', sourceOutput: 'out', target: '3', targetInput: 'in' },
-      { source: '2', sourceOutput: 'out', target: '4', targetInput: 'left' },
-      { source: '3', sourceOutput: 'out', target: '4', targetInput: 'right' },
+      { source: '2', sourceOutput: 'out', target: '4', targetInput: 'a' },
+      { source: '3', sourceOutput: 'out', target: '4', targetInput: 'b' },
       { source: '4', sourceOutput: 'out', target: '5', targetInput: 'in' }
     ]))
 
@@ -306,9 +306,9 @@ describe('Rete script editor codegen', () => {
 
     expect(listenerCallback).toContain('var _out_2 = _out_1.toUpperCase()')
     expect(listenerCallback).toContain('var _out_3 = _out_1.replaceAll("A", "B")')
-    expect(listenerCallback).toContain('var _out_4 = _out_2 + "|" + _out_3')
+    expect(listenerCallback).toContain('var _out_4 = String(_out_2||\'\') + "|" + String(_out_3||\'\')')
     expect(listenerCallback).toContain('console.log("[JOIN] " + _out_4)')
-    expect(code).not.toContain('var _out_4 = _out_2 + "|" + _out_3\n  if (await checkStop())')
+    expect(code).not.toContain('var _out_4 = String(_out_2||\'\') + "|" + String(_out_3||\'\')\n  if (await checkStop())')
   })
 
   it('keeps manual input as one-shot generated code', () => {

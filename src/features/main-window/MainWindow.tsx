@@ -86,7 +86,7 @@ export default function MainWindow() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen flex-col">
+      <div className="flex h-screen flex-col overflow-hidden">
         <TitleBarChrome status={<ConnectionBadge />} />
         <SidebarProvider style={{ minHeight: 0 }} className="flex-1 min-h-0">
           <Sidebar />

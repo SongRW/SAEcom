@@ -9,6 +9,9 @@ describe('script editor connection path', () => {
     expect(ARRANGE_LAYOUT_OPTIONS['elk.algorithm']).toBe('layered')
     expect(ARRANGE_LAYOUT_OPTIONS['elk.direction']).toBe('RIGHT')
     expect(ARRANGE_LAYOUT_OPTIONS['elk.layered.crossingMinimization.strategy']).toBe('LAYER_SWEEP')
+    expect(ARRANGE_LAYOUT_OPTIONS['elk.layered.crossingMinimization.semiInteractive']).toBe('true')
+    expect(ARRANGE_LAYOUT_OPTIONS['elk.layered.considerModelOrder.strategy']).toBe('NODES_AND_EDGES')
+    expect(ARRANGE_LAYOUT_OPTIONS['elk.separateConnectedComponents']).toBe('false')
     expect(ARRANGE_LAYOUT_OPTIONS['elk.edgeRouting']).toBe('ORTHOGONAL')
   })
 

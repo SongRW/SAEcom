@@ -49,6 +49,10 @@ function ScriptOutputPopout() {
     }
     const offPayload = ipc.scriptOutput.onPopoutPayload(applyPayload)
     const offSync = ipc.scriptOutput.onSync(applyPayload)
+    // listener 已注册后主动拉取当前快照：main 的 did-finish-load 推送早于 React
+    // mount，首包会落在未注册的 listener 上而丢失。这里在注册完成后请求一次，
+    // main 回复走 onPopoutPayload（同一通道），保证初始内容（弹出前的日志）必达。
+    ipc.scriptOutput.requestPayload()
     return () => {
       offPayload()
       offSync()

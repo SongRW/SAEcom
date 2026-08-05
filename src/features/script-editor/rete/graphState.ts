@@ -65,24 +65,83 @@ export function importGraphState(graph: ReteGraphExport | null | undefined): Gra
     ? graph.connections
     : Object.values(graph.connections || {})
 
+  // 旧版 string-concat 端口名迁移：left→a, right→b（旧版固定 2 端口 left/right，
+  // 新版改为动态字母序 a/b）。同时为缺失 data.ports 的 concat 节点推断端口数，
+  // 避免旧脚本打开后连线丢失（端口数不够 → 端口不存在 → 连线被过滤）。
+  const connectionsByTarget = new Map<string, typeof rawConnections>()
+  for (const conn of rawConnections) {
+    const list = connectionsByTarget.get(String(conn.target)) || []
+    list.push(conn)
+    connectionsByTarget.set(String(conn.target), list)
+  }
+
+  // 先确定哪些节点是 concat 类（端口名迁移只对这些节点的连线生效，不影响 compare 的 left/right）。
+  const concatTargetIds = new Set(
+    rawNodes.filter((n) => n.key === 'protocol-concat' || n.key === 'string-concat').map((n) => String(n.id))
+  )
+
   let state = createEmptyGraphState()
   rawNodes.forEach((node) => {
     if (!getNodeDefinition(node.key)) return
+    const data = migrateConcatPorts(node.key, migrateNodeData(node.key, node.data || {}), connectionsByTarget.get(String(node.id)) || [])
     state = addGraphNode(
       state,
       node.key,
       node.position || { x: 0, y: 0 },
       String(node.id),
-      migrateNodeData(node.key, node.data || {}),
+      data,
       node.label
     )
   })
 
   rawConnections.forEach((connection) => {
-    state = connectGraphNodes(state, connection)
+    // 仅对 concat 目标节点的连线做 left/right → a/b 迁移；
+    // compare-* 等节点的 left/right 端口名不变。
+    const migrated: PendingConnection = { ...connection }
+    if (concatTargetIds.has(String(connection.target))) {
+      migrated.targetInput = CONCAT_PORT_NAME_MAP[connection.targetInput] || connection.targetInput
+    }
+    state = connectGraphNodes(state, migrated)
   })
 
   return state
+}
+
+/** 旧版 string-concat 端口名 → 新版字母序映射 */
+const CONCAT_PORT_NAME_MAP: Record<string, string> = { left: 'a', right: 'b' }
+
+/**
+ * 为缺失 data.ports 的拼接节点（protocol-concat / string-concat）推断端口数。
+ * 旧版 protocol-concat 固定 6 端口（a~f）、string-concat 固定 2 端口（left/right→a/b），
+ * 新版改为动态端口。打开旧脚本时若无 ports 字段，从实际连线能到达的最大端口索引推断，
+ * 保证旧连线对应端口存在。已知 ports 的节点不改动。
+ */
+function migrateConcatPorts(
+  nodeKey: string,
+  data: GraphNodeData,
+  connections: { targetInput: string }[]
+): GraphNodeData {
+  if (nodeKey !== 'protocol-concat' && nodeKey !== 'string-concat') return data
+  if (data.ports !== undefined && data.ports !== null) return data
+
+  // 从连线 targetInput 推断端口索引：left/right 先映射成 a/b，再取字母序位置
+  const letterIndex = (key: string): number => {
+    const mapped = CONCAT_PORT_NAME_MAP[key] || key
+    if (mapped.length === 1 && mapped >= 'a' && mapped <= 'z') return mapped.charCodeAt(0) - 96
+    const match = /^in_(\d+)$/.exec(mapped)
+    return match ? Number(match[1]) : 0
+  }
+
+  let maxIndex = 0
+  for (const conn of connections) {
+    const idx = letterIndex(conn.targetInput)
+    if (idx > maxIndex) maxIndex = idx
+  }
+
+  // 无法从连线推断（maxIndex=0）时，旧 protocol-concat 保底 6 端口（a~f），
+  // string-concat 保底 2 端口（a/b，等同旧 left/right）。
+  const fallback = nodeKey === 'protocol-concat' ? 6 : 2
+  return { ...data, ports: Math.max(maxIndex, fallback, 2) }
 }
 
 export function exportGraphState(state: GraphEditorState): ReteGraphExport {

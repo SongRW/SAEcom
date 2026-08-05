@@ -1247,6 +1247,13 @@ ipcMain.on('script-output:request-clear', () => {
   }
 })
 
+// 弹出窗 listener 就绪后主动拉取当前快照，回复复用 popout-payload 通道。
+// 解决 did-finish-load 推送早于 React mount、首包丢失的时序竞态：
+// 渲染端只在 onPopoutPayload/onSync 注册完成后才 requestPayload，此时 listener 必已就绪。
+ipcMain.on('script-output:request-payload', (e) => {
+  e.sender.send('script-output:popout-payload', scriptOutputPopoutPayload)
+})
+
 // 实时切换 popout 窗的 alwaysOnTop（取代 legacy 无实时切换的缺陷）
 ipcMain.on('panel:set-always-on-top', (_e, { id, onTop }) => {
   const win = popoutWindows.get(id)
@@ -2219,7 +2226,7 @@ app.on('window-all-closed', () => {
 
 // 自动检查更新由 renderer 侧按设置(appSettings.autoCheckUpdate)触发，主进程仅响应 app:checkUpdate。
 const UPDATE_URL = 'https://filebox.satone1008.cn/'
-const FILE_PREFIX = '串口助手-'
+const FILE_PREFIX = '串串-'
 const FILE_SUFFIX = '-win-x64.exe'
 
 function versionCompare(v1: string, v2: string): number {

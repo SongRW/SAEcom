@@ -19,13 +19,12 @@ abstract class StringBase extends AbstractNodeComponent {
 export class StringConcatNode extends StringBase {
   readonly key = 'string-concat'
   readonly name = '字符串拼接'
-  readonly description = '拼接两个字符串'
+  readonly description = '拼接多段字符串（动态端口：默认 2，可在节点配置面板增减）'
+  readonly dynamicPorts = true
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
-    return {
-      inputs: [b.dataIn('left', '左值'), b.dataIn('right', '右值')],
-      outputs: [b.dataOut()]
-    }
+    // 骨架：空输入 + 1 输出；实际端口数由 resolveNodePorts 按 data.ports 派生。
+    return { inputs: [], outputs: [b.dataOut()] }
   }
 
   controls(): ControlSpec[] {
@@ -103,6 +102,26 @@ export class StringTemplateNode extends StringBase {
   controls(): ControlSpec[] {
     return [
       b.textControl('template', '模板', '设备{1}: 值{2}, 状态{3}')
+    ]
+  }
+}
+
+/** 字符串填充（padStart/padEnd，可选截断到指定长度） */
+export class StringPadNode extends StringBase {
+  readonly key = 'string-pad'
+  readonly name = '字符串填充'
+  readonly description = '用字符在左侧/右侧填充到指定长度（可截断）'
+
+  ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
+    return { inputs: [b.dataIn()], outputs: [b.dataOut()] }
+  }
+
+  controls(): ControlSpec[] {
+    return [
+      b.numberControl('length', '目标长度', 2),
+      b.textControl('char', '填充字符', '0'),
+      b.selectControl('side', '填充侧', ['左侧', '右侧'], '左侧'),
+      b.selectControl('overflow', '超长处理', ['保留原长', '截断到长度'], '保留原长')
     ]
   }
 }

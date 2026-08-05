@@ -8,6 +8,40 @@ export interface DerivedNodePorts {
   outputs: SocketSpec[]
 }
 
+/**
+ * 拼接节点（protocol-concat / string-concat）的输入端口下限。
+ * 保底 2 个，避免端口被移空变成无输入的死节点。
+ */
+export const MIN_CONCAT_PORTS = 2
+
+/**
+ * 拼接节点的输入端口 key：字母序 a..z，之后降级为 in_27, in_28...
+ * 字母序保证与历史 protocol-concat 的固定 a~f 端口一致，
+ * 超过 26 段（极少见）时数字序兜底，不与字母端口冲突。
+ */
+export function concatPortKey(index: number): string {
+  if (index < 26) return String.fromCharCode(97 + index) // 'a' = 97
+  return `in_${index + 1}`
+}
+
+/**
+ * 从节点 data 读取拼接端口数，保底 MIN_CONCAT_PORTS。
+ * NaN / 缺失 / 小于下限都收敛到下限。
+ */
+export function concatPortCount(data: Record<string, unknown> = {}): number {
+  const raw = Number(data.ports)
+  return Number.isFinite(raw) && raw >= MIN_CONCAT_PORTS ? Math.floor(raw) : MIN_CONCAT_PORTS
+}
+
+/**
+ * 是否为「字母序动态输入端口」节点：protocol-concat（HEX拼接）/ string-concat（字符串拼接）/
+ * script-expr（表达式）。这三类共享同一套动态端口机制：data.ports 驱动 a/b/c... 端口数。
+ * 函数名保留 isConcatNode 以兼容历史调用点；语义已泛化为「字母序动态端口节点」。
+ */
+export function isConcatNode(nodeKey: string | undefined): boolean {
+  return nodeKey === 'protocol-concat' || nodeKey === 'string-concat' || nodeKey === 'script-expr'
+}
+
 export function resolveNodePorts(nodeKey: string, data: Record<string, unknown> = {}): DerivedNodePorts {
   const definition = NODE_DEFINITIONS[nodeKey]
   if (!definition) return { inputs: [], outputs: [] }
@@ -38,6 +72,14 @@ export function resolveNodePorts(nodeKey: string, data: Record<string, unknown> 
         socket: 'dataSocket' as const,
         label: field.name || `${field.bits}bit`
       })))
+    }
+  }
+
+  if (isConcatNode(nodeKey)) {
+    const count = concatPortCount(data)
+    for (let i = 0; i < count; i += 1) {
+      const portKey = concatPortKey(i)
+      inputs.push({ key: portKey, socket: 'dataSocket', label: portKey.toUpperCase() })
     }
   }
 

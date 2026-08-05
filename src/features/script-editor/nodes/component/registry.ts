@@ -44,7 +44,8 @@ import {
   NumericCalcNode,
   NumericCrcNode,
   NumericJoinNode,
-  NumericLengthNode
+  NumericLengthNode,
+  ScriptExprNode
 } from '@/features/script-editor/nodes/component/nodes/numeric'
 import {
   OutputFileNode,
@@ -65,6 +66,7 @@ import {
 import {
   StringConcatNode,
   StringFindNode,
+  StringPadNode,
   StringReplaceNode,
   StringTemplateNode,
   StringTrimNode
@@ -119,12 +121,14 @@ export const NODE_COMPONENTS: AbstractNodeComponent[] = [
   new NumericCalcNode(),
   new NumericCrcNode(),
   new NumericLengthNode(),
+  new ScriptExprNode(),
   // string
   new StringConcatNode(),
   new StringReplaceNode(),
   new StringTrimNode(),
   new StringFindNode(),
   new StringTemplateNode(),
+  new StringPadNode(),
   // compare
   new CompareEqNode(),
   new CompareNeqNode(),

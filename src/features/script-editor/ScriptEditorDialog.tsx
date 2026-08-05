@@ -961,10 +961,10 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
                     serialPanelOptions={serialPanelOptions}
                     serialPortOptions={serialPortOptions}
                     onLabelChange={(nodeId, label) => {
-                      // label 是顶层字段，画布节点标题从 data.label 渲染且无实时数据同步路径，
-                      // bump graphRevision 强制 Rete 结构同步以即时刷新画布标题。
-                      setGraphRevision((revision) => revision + 1)
+                      // label 是顶层字段，画布节点标题从 data.label 渲染。
+                      // 轻量更新画布 DOM 标题，不触发 graphRevision 结构同步（避免重建整个图）。
                       setGraphTransient(updateGraphNodeLabel(graph, nodeId, label))
+                      graphCanvasRef.current?.updateNodeLabelDisplay(nodeId, label.trim() || graph.nodes.find((n) => n.id === nodeId)?.label || label)
                     }}
                     onNoteChange={(nodeId, note) => {
                       setGraphTransient(updateGraphNodeData(graph, nodeId, 'note', note))

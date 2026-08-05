@@ -50,7 +50,7 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
   function handleConfirm() {
     let ok = true
     if (mode === 'serial') {
-      if (!port) return
+      if (!port) { toast.error('请选择串口'); return }
       // name 用 friendlyName（无则回退 path），对齐 legacy createPane 用友好名展示。
       const known = knownPorts.find((p) => p.path === port)
       const name = known?.friendlyName || known?.manufacturer || port
@@ -70,9 +70,9 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
       ok = addPanel({ id, name: id, type: 'tcp' })
     } else if (mode === 'modbus') {
       if (modbusVariant === 'tcp') {
-        if (!modbusHost) return
+        if (!modbusHost) { toast.error('请填写主机'); return }
         const portNum = Number(modbusPort)
-        if (!Number.isFinite(portNum) || portNum < 1 || portNum > 65535) return
+        if (!Number.isFinite(portNum) || portNum < 1 || portNum > 65535) { toast.error('端口需为 1–65535'); return }
         const id = `modbus://tcp/${modbusHost}:${portNum}`
         ok = addPanel({
           id,
@@ -87,7 +87,7 @@ export function NewPanelDialog({ open, onOpenChange }: NewPanelDialogProps) {
         })
       } else {
         // RTU / ASCII
-        if (!modbusSerialPath) return
+        if (!modbusSerialPath) { toast.error('请选择串口'); return }
         const id = `modbus://${modbusVariant}/${modbusSerialPath}`
         ok = addPanel({
           id,

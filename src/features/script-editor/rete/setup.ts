@@ -7,7 +7,6 @@ import { AutoArrangePlugin, Presets as ArrangePresets } from 'rete-auto-arrange-
 import type { Preset } from 'rete-auto-arrange-plugin'
 import { ClassicFlow, ConnectionPlugin } from 'rete-connection-plugin'
 import type { SocketData } from 'rete-connection-plugin'
-import { DockPlugin, DockPresets } from 'rete-dock-plugin'
 import { MinimapPlugin } from 'rete-minimap-plugin'
 import { ReactPlugin, Presets as ReactPresets } from 'rete-react-plugin'
 import type { RenderEmit } from 'rete-react-plugin'
@@ -32,7 +31,7 @@ import type { GraphEditorConnection, GraphEditorNode, GraphEditorState } from '@
 import type { ScriptAreaExtra, ScriptConnection, ScriptNode, ScriptSchemes } from '@/features/script-editor/rete/types'
 import { KeyListControl, KeyListControlView, type KeyEntry } from '@/features/script-editor/rete/KeyListControl'
 import { BitfieldControl, BitfieldControlView, type BitfieldEntry } from '@/features/script-editor/rete/BitfieldControl'
-import { parseBitfieldEntries, parseKeyEntries, resolveNodePorts } from '@/features/script-editor/rete/dynamicPorts'
+import { concatPortCount, isConcatNode, parseBitfieldEntries, parseKeyEntries, resolveNodePorts } from '@/features/script-editor/rete/dynamicPorts'
 
 const socketInstances: Record<SocketKind, ClassicPreset.Socket> = {
   dataSocket: new ClassicPreset.Socket(SOCKETS.dataSocket.label),
@@ -53,7 +52,6 @@ export interface ReteEditorInstance {
   connection: ConnectionPlugin<ScriptSchemes, ScriptAreaExtra>
   render: ReactPlugin<ScriptSchemes, ScriptAreaExtra>
   arrange: AutoArrangePlugin<ScriptSchemes, ScriptAreaExtra>
-  dock: DockPlugin<ScriptSchemes>
   minimap: MinimapPlugin<ScriptSchemes>
   options: CreateReteEditorOptions
   setAreaPanEnabled: (enabled: boolean) => void
@@ -123,7 +121,6 @@ export function getRetePackageNames(): string[] {
     'rete-connection-plugin',
     'rete-react-plugin',
     'rete-auto-arrange-plugin',
-    'rete-dock-plugin',
     'rete-minimap-plugin'
   ]
 }
@@ -204,7 +201,12 @@ export function createClassicNodeFromGraphNode(graphNode: GraphEditorNode): Scri
       node.addControl('fields', new BitfieldControl(fields, () => {}))
     }
     node.width = BITFIELD_NODE_WIDTH
-    node.height = bitfieldNodeHeight(fields.length)
+    node.height = bitfieldNodeHeight(fields.length, mode)
+  }
+
+  if (isConcatNode(graphNode.key)) {
+    const portCount = concatPortCount(graphNode.data as Record<string, unknown> | undefined)
+    syncConcatNodePorts(node, portCount)
   }
 
   return node
@@ -323,9 +325,9 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
           .forEach((connection) => { void instance.editor.removeConnection(connection.id) })
         // 2) 同步端口
         syncBitfieldNodePorts(node, next, mode)
-        // 3) 重算尺寸（宽固定，高随字段数）
+        // 3) 重算尺寸（宽固定，高随字段数 + mode）
         node.width = BITFIELD_NODE_WIDTH
-        node.height = bitfieldNodeHeight(next.length)
+        node.height = bitfieldNodeHeight(next.length, mode)
         // 4) 轻量刷新
         void instance.area.update('node', String(node.id))
         // 5) 通知上层持久化
@@ -349,7 +351,13 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
       node.addControl('fields', new BitfieldControl(initialFields, handleFieldsChange))
       syncBitfieldNodePorts(node, initialFields, initialMode)
       node.width = BITFIELD_NODE_WIDTH
-      node.height = bitfieldNodeHeight(initialFields.length)
+      node.height = bitfieldNodeHeight(initialFields.length, initialMode)
+    }
+
+    if (isConcatNode(node.key)) {
+      // 拼接节点无画布内控件（增减按钮在 NodeConfigPanel）；端口数由 data.ports 驱动。
+      const portCount = concatPortCount(graphNode.data as Record<string, unknown> | undefined)
+      syncConcatNodePorts(node, portCount)
     }
 
     nodeMap.set(node.id, node)
@@ -362,6 +370,13 @@ export async function syncReteEditorFromGraph(instance: ReteEditorInstance, grap
     const target = nodeMap.get(connection.target)
     if (!source || !target) continue
     await instance.editor.addConnection(createClassicConnectionFromGraphConnection(connection, source, target))
+  }
+
+  // 加固：import 完成后统一校准动态节点高度，防止任何路径漏算导致 ELK/排版读到过期高度。
+  for (const node of instance.editor.getNodes()) {
+    if (recalcDynamicNodeHeight(node)) {
+      await instance.area.update('node', String(node.id))
+    }
   }
 }
 
@@ -396,7 +411,6 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
   const connection = new ConnectionPlugin<ScriptSchemes, ScriptAreaExtra>()
   const render = new ReactPlugin<ScriptSchemes, ScriptAreaExtra>({ createRoot })
   const arrange = new AutoArrangePlugin<ScriptSchemes, ScriptAreaExtra>()
-  const dock = new DockPlugin<ScriptSchemes>()
 
   connection.addPreset(() => new ClassicFlow<ScriptSchemes, [ScriptAreaExtra]>({
     canMakeConnection: (from: SocketData, to: SocketData) => canMakeReteConnection(editor, from, to),
@@ -449,7 +463,6 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
     }
   })
   arrange.addPreset(createOrderedArrangePreset((id) => options.getArrangeOrderIndex?.(id) ?? 0))
-  dock.addPreset(DockPresets.classic.setup({ area }))
 
   // boundViewport 关闭：缩小时若把视口并进包围盒，节点会被压成几乎看不见，
   // 导航框铺满缩略图 → 用户看到「整块发灰且像失能」。飞出图外改由 pan restrictor 管。
@@ -464,7 +477,6 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
   area.use(connection)
   area.use(render)
   area.use(arrange)
-  area.use(dock)
   area.use(minimap)
 
   const selector = AreaExtensions.selector()
@@ -518,7 +530,6 @@ export function createReteEditor(container: HTMLElement, options: CreateReteEdit
     connection,
     render,
     arrange,
-    dock,
     minimap,
     options,
     setAreaPanEnabled: (enabled: boolean) => { areaPanAllowed = enabled },
@@ -615,13 +626,16 @@ function calculateNodeHeight(definition: NodeDef): number {
   return Math.max(86, 58 + ports * 28 + controlRows * 24 + serialSummary)
 }
 
-// 支持 KeyListControl（键列表控件）的节点 key 集合。
-// transform-object：每个键是一个动态输入端口，组装对象；
-// transform-namefields：输入单个数组，按位置把元素映射为带名对象。
-// 二者都复用 KeyListControl 编辑标签，但 namefields 不产生端口（见 syncKeyListNodePorts）。
-const KEY_LIST_NODE_KEYS = new Set(['transform-object', 'transform-namefields'])
-function isKeyListNode(key: string | undefined): boolean {
-  return !!key && KEY_LIST_NODE_KEYS.has(key)
+// ── 动态端口节点：半统一注册表 ──────────────────────────────────────
+// 三类动态端口节点（对象/位域/拼接）共享「按 data 重算高度」的需求，
+// 收敛到一个注册表，避免每加一类就复制 is*Node / *NodeHeight 四件套。
+// 端口同步（syncXxxPorts）差异较大，保持各自独立函数。
+// 未来做 DynamicPortSpec 描述符抽象时，这里是最先收口的入口。
+interface DynamicNodeSpec {
+  /** 属于该类的节点 key 集合 */
+  keys: Set<string>
+  /** 按节点 data 计算应有的节点高度 */
+  height: (data: Record<string, unknown>) => number
 }
 
 function keyListNodeHeight(keyCount: number): number {
@@ -629,8 +643,127 @@ function keyListNodeHeight(keyCount: number): number {
   return Math.max(86, 58 + ports * 28 + 24)
 }
 
+function concatNodeHeight(portCount: number): number {
+  const ports = Math.max(portCount, 1)
+  return Math.max(86, 58 + ports * 28)
+}
+
 /**
- * 同步支持 KeyListControl 节点的输入端口，使其与 keys 列表一致。
+ * 位域节点（protocol-bitfield）的估算高度。
+ *
+ * 关键点：位域字段同时贡献两处独立高度，旧公式只算一次导致排版溢出：
+ *   1. 端口区 —— 解包模式 N 个 field_* 输出端口；打包模式 N 个 field_* 输入端口。
+ *      端口行高 22px + 行间 gap 5px，端口区高度由 max(输入数, 输出数) 决定。
+ *   2. BitfieldControl 控件 —— 每行字段（名称 + 位宽 input）约 26px + 4px gap，
+ *      外加 footer（总位宽 + 添加按钮）约 24px，以及控件容器 margin/border/padding 约 20px。
+ *
+ * 公式按真实 DOM 结构拆开计高，并取 ceil + 少量安全余量（4px），确保不再偏小。
+ * 非排版路径（import 后、首次排版前）以这个估算作兜底；真正排版时由
+ * syncDynamicNodeSizeFromDom 用 DOM 真实高度覆盖。
+ */
+function bitfieldNodeHeight(fieldCount: number, mode: string): number {
+  const fields = Math.max(fieldCount, 1)
+  // 端口区：解包含静态 hex 输入 + N 个 field 输出；打包只有 N 个 field 输入。
+  // 统一按 N 个端口估算（max(输入, 输出) 在两种模式下都 ≈ N）。
+  const portRows = fields
+  const portsHeight = portRows * 22 + Math.max(0, portRows - 1) * 5 // 端口行 + gap
+  // 控件区：每字段一行 + footer + 容器开销
+  const controlRowsHeight = fields * 26 + Math.max(0, fields - 1) * 4 // 字段行 + gap
+  const footerHeight = 24
+  const controlChrome = 20 // margin-top 8 + border-top + padding-top 8 ≈ 20
+  // 基础区：padding 17 + title 27 + ports 上方无额外 margin（已含在 padding）
+  const base = 58
+  const total = base + portsHeight + controlChrome + controlRowsHeight + footerHeight + 4 // +4 安全余量
+  void mode // 当前两种模式端口数对称，保留入参以便未来不对称时按 mode 分支
+  return Math.max(86, Math.ceil(total))
+}
+
+const DYNAMIC_NODE_SPECS: DynamicNodeSpec[] = [
+  // 对象（transform-object）/ 字段命名（transform-namefields）：高度随键数变化
+  {
+    keys: new Set(['transform-object', 'transform-namefields']),
+    height: (d) => keyListNodeHeight(parseKeyEntries(d).length)
+  },
+  // 位域（protocol-bitfield）：高度随字段数 + mode 变化
+  {
+    keys: new Set(['protocol-bitfield']),
+    height: (d) => bitfieldNodeHeight(parseBitfieldEntries(d).length, String(d.mode ?? '打包'))
+  },
+  // HEX拼接（protocol-concat）/ 字符串拼接（string-concat）/ 表达式（script-expr）：高度随端口数变化
+  {
+    keys: new Set(['protocol-concat', 'string-concat', 'script-expr']),
+    height: (d) => concatNodeHeight(concatPortCount(d))
+  }
+]
+
+function isKeyListNode(key: string | undefined): boolean {
+  return !!key && DYNAMIC_NODE_SPECS[0].keys.has(key)
+}
+
+function isBitfieldNode(key: string | undefined): boolean {
+  return !!key && DYNAMIC_NODE_SPECS[1].keys.has(key)
+}
+
+/** 是否为任意动态端口节点（用于排版前统一校准高度）。 */
+export function isDynamicNode(key: string | undefined): boolean {
+  return !!key && DYNAMIC_NODE_SPECS.some((spec) => spec.keys.has(key))
+}
+
+/**
+ * 按节点当前 data 重新校准动态节点的 node.height。
+ * 返回 true 表示高度有变化（调用方应 area.update 刷新视图）；false 表示无需刷新。
+ * 用于：
+ *   - 一键排版前（runArrangeLayout）：保证 ELK 读到正确高度，避免字段溢出
+ *   - syncReteEditorFromGraph 末尾：防止 import 后任何路径漏算
+ */
+export function recalcDynamicNodeHeight(node: ScriptNode): boolean {
+  const spec = DYNAMIC_NODE_SPECS.find((s) => s.keys.has(node.key || ''))
+  if (!spec) return false
+  const next = spec.height((node.data || {}) as Record<string, unknown>)
+  if (node.height === next) return false
+  node.height = next
+  return true
+}
+
+/**
+ * 排版前用 DOM 真实高度回写动态节点的 node.height。
+ *
+ * 估算公式（recalcDynamicNodeHeight）难免与真实 DOM 有几像素出入；ELK 用偏小的
+ * node.height 算布局后，rete-area-plugin 的 resize 会在节点根 div 上写固定
+ * el.style.height，覆盖 React 组件设的 minHeight，导致内容溢出容器框（位域字段
+ * "挂"在节点下面）。排版前从 DOM 读真实高度回写 node.height，让 ELK 用真实尺寸
+ * 布局，是这类溢出的根治手段。
+ *
+ * 选择器 `*:not(span):not([fragment])` 与 rete-area-plugin 的 resize 完全一致，
+ * 命中 React 渲染的 .script-rete-node 根 div。getBoundingClientRect().height
+ * 是 CSS 像素小数，比 offsetHeight 更贴近 ELK 实际需要的尺寸。
+ *
+ * 返回 true 表示高度有变化（调用方应 area.update 刷新视图）；false 表示无需刷新。
+ * DOM 未就绪（视图未挂载/element 缺失）时回退到 recalcDynamicNodeHeight 公式兜底。
+ */
+export function syncDynamicNodeSizeFromDom(
+  node: ScriptNode,
+  area: { nodeViews: Map<string, { element: HTMLElement }> }
+): boolean {
+  if (!isDynamicNode(node.key)) return false
+  const view = area.nodeViews.get(String(node.id))
+  const root = view?.element?.querySelector('*:not(span):not([fragment])')
+  // duck-type：真 HTML 元素才有 getBoundingClientRect。比 instanceof HTMLElement 更宽松
+  // 但足以排除文本节点/注释节点，且不依赖浏览器全局，便于在 node 环境单测。
+  if (root && typeof (root as { getBoundingClientRect?: unknown }).getBoundingClientRect === 'function') {
+    const measured = Math.ceil((root as HTMLElement).getBoundingClientRect().height)
+    if (measured > 0 && Math.abs(measured - node.height) > 1) {
+      node.height = measured
+      return true
+    }
+    return false
+  }
+  // DOM 尚未就绪（如 import 后未渲染）：回退到公式估算，保证 ELK 至少读到合理值。
+  return recalcDynamicNodeHeight(node)
+}
+
+/**
+ * 同步对象/字段命名节点（transform-object）的输入端口，使其与 keys 列表一致。
  * 仅 transform-object 会产生 key_* 动态输入端口；transform-namefields
  * 的输入是单个数组端口（由节点定义提供），不在此同步。
  * 可安全重复调用：补齐缺失端口、移除多余端口，不触碰控件。
@@ -651,23 +784,8 @@ function syncKeyListNodePorts(node: ScriptNode, keys: KeyEntry[]): void {
   }
 }
 
-// ── 位域节点（protocol-bitfield）动态端口 ──────────────────────────
-// 位域是通用协议模式（CAN/Modbus/自定义协议到处都是）。fields 由用户配置驱动，
-// 默认值中性（单 8 位字段），不预设任何具体协议的位段布局。
-// 打包模式：N 个 field_* 输入 → 1 个 HEX 输出
-// 解包模式：1 个 HEX 输入 → N 个 field_* 输出（多输出节点，下游按 sourceOutput 取值）
-const BITFIELD_NODE_KEYS = new Set(['protocol-bitfield'])
-function isBitfieldNode(key: string | undefined): boolean {
-  return !!key && BITFIELD_NODE_KEYS.has(key)
-}
-
-function bitfieldNodeHeight(fieldCount: number): number {
-  const ports = Math.max(fieldCount, 1)
-  return Math.max(86, 58 + ports * 28 + 24 + 36) // +36 给 footer 总位宽提示
-}
-
 /**
- * 同步位域节点的输入/输出端口，使其与 fields 列表 + mode 一致。
+ * 同步位域节点（protocol-bitfield）的输入/输出端口，使其与 fields 列表 + mode 一致。
  * mode 决定端口方向：
  *   - 打包：fields → 输入端口（field_${id}）；解包模式遗留的 field_* 输出清掉
  *   - 解包：fields → 输出端口（field_${id}）；打包模式遗留的 field_* 输入清掉
@@ -698,6 +816,28 @@ function syncBitfieldNodePorts(node: ScriptNode, fields: BitfieldEntry[], mode: 
   for (const port of desiredOutputs.values()) {
     if (!node.hasOutput(port.key)) {
       node.addOutput(port.key, new ClassicPreset.Output(socketInstances[port.socket], port.label, true))
+    }
+  }
+}
+
+/**
+ * 同步拼接节点（protocol-concat HEX拼接 / string-concat 字符串拼接）的输入端口，
+ * 使其与 data.ports 一致。可安全重复调用：补齐缺失、移除多余，不触碰控件。
+ */
+function syncConcatNodePorts(node: ScriptNode, portCount: number): void {
+  const key = node.key
+  if (!key || !isConcatNode(key)) return
+  const desiredInputs = resolveNodePorts(key, { ports: portCount }).inputs
+  const desired = new Map(desiredInputs.map((port) => [port.key, port]))
+  // 移除 desired 里没有的字母序 / in_ 序端口（保留静态定义的端口，但 concat 骨架无静态输入）
+  Object.keys(node.inputs).forEach((portKey) => {
+    if (!desired.has(portKey)) {
+      node.removeInput(portKey as keyof ScriptNode['inputs'])
+    }
+  })
+  for (const port of desired.values()) {
+    if (!node.hasInput(port.key)) {
+      node.addInput(port.key, new ClassicPreset.Input(socketInstances[port.socket], port.label, false))
     }
   }
 }

@@ -147,6 +147,7 @@ const api: WindowAPI = {
     sync: (lines, scriptName) => ipcRenderer.send('script-output:sync', { lines: lines || [], scriptName: scriptName || '' }),
     requestClose: () => ipcRenderer.send('script-output:request-close'),
     requestClear: () => ipcRenderer.send('script-output:request-clear'),
+    requestPayload: () => ipcRenderer.send('script-output:request-payload'),
     onPopoutPayload: (cb) => {
       const listener = (_e: unknown, payload: { lines: Array<{ text: string; ts: number }>; scriptName: string }) =>
         cb(payload || { lines: [], scriptName: '' })

@@ -21,6 +21,7 @@ import { useChangelogBadgeStore } from '@/shared/store/changelog'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { useGlobalShortcuts } from '@/features/settings/shortcuts'
 import { PaneList } from '@/features/serial-panel/components/PaneList'
+import { NewPanelDialog } from '@/features/serial-panel/components/NewPanelDialog'
 
 /** 底部页面切换项：串口/命令/脚本（关于已独立成单独窗口） */
 const PAGES: { tab: MainTab; icon: PhosphorIcon }[] = [
@@ -39,6 +40,9 @@ export function Sidebar() {
   const activeTab = useAppShell((s) => s.activeTab)
   const setActiveTab = useAppShell((s) => s.setActiveTab)
   const ipc = useIPC()
+  // NewPanelDialog 的 open 状态与触发器同挂此处：Sidebar 不订阅 usePanelsStore，
+  // 故不会因 appendChunk（串口/Modbus/TCP 数据流）高频重渲染而打断 Radix 退出动画。
+  const newPanelDialogOpen = useAppShell((s) => s.newPanelDialogOpen)
   const setNewPanelDialogOpen = useAppShell((s) => s.setNewPanelDialogOpen)
   const hasUnreadChangelog = useChangelogBadgeStore((s) => s.hasUnread())
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -118,6 +122,7 @@ export function Sidebar() {
         </SidebarMenu>
       </SidebarFooter>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <NewPanelDialog open={newPanelDialogOpen} onOpenChange={setNewPanelDialogOpen} />
     </UISidebar>
   )
 }

@@ -15,6 +15,7 @@
     确认/输入弹窗 overlay    z-index 3200   （script-editor.css，!important 提升 Radix 默认值）
     确认/输入弹窗 content    z-index 3201
     Select 下拉（ui/select） z-index 3250   （高于 3201，确保 Dialog 内嵌下拉可见）
+    右键菜单（ContextMenu）  z-index 3250   （同 Select，确保脚本编辑器内右键菜单可见）
   说明：script-editor.css 的全局 !important 把 dialog-content 提到 z-3201，故
     SelectContent（默认 z-50）需提到 3250 才能在 Dialog 内正常浮显；脚本编辑器
     自有 .script-editor-select-content（z-3100）不受影响。
@@ -44,7 +45,7 @@
   --chart-3: oklch(0.6 0.118 184.704);
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
-  --radius: 0.45rem;
+  --radius: 0.625rem;
   --font-size-base: 14px;
   /* 自定义窗口栏高度：TitleBarChrome 与 shadcn Sidebar 共享，
      确保 Sidebar 的 fixed 容器从标题栏下沿开始，避免顶端 38px 盖住标题栏。 */

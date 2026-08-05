@@ -154,4 +154,41 @@ describe('protocol node codegen', () => {
     const lLine = code.split('\n').find((l) => l.includes('var _l ='))
     expect(lLine).toContain('_out_2')
   })
+
+  it('protocol-concat dynamically joins N hex inputs by data.ports', () => {
+    const code = generateCodeFromRete(graph([
+      { id: '1', key: 'protocol-const', data: { mode: 'hex', content: 'AA' } },
+      { id: '2', key: 'protocol-const', data: { mode: 'hex', content: 'BB' } },
+      { id: '3', key: 'protocol-const', data: { mode: 'hex', content: 'CC' } },
+      { id: '4', key: 'protocol-concat', data: { ports: 3 } },
+      { id: '5', key: 'output-log', data: { prefix: 'C' } }
+    ], [
+      { source: '1', sourceOutput: 'out', target: '4', targetInput: 'a' },
+      { source: '2', sourceOutput: 'out', target: '4', targetInput: 'b' },
+      { source: '3', sourceOutput: 'out', target: '4', targetInput: 'c' },
+      { source: '4', sourceOutput: 'out', target: '5', targetInput: 'in' }
+    ]))
+
+    expect(code).toContain('String(_out_1||\'\') + String(_out_2||\'\') + String(_out_3||\'\')')
+    expect(code).toContain('.toUpperCase()')
+  })
+
+  it('protocol-concat defaults to 2 ports when data.ports is absent', () => {
+    const code = generateCodeFromRete(graph([
+      { id: '1', key: 'protocol-const', data: { mode: 'hex', content: 'AA' } },
+      { id: '2', key: 'protocol-const', data: { mode: 'hex', content: 'BB' } },
+      { id: '3', key: 'protocol-concat', data: {} },
+      { id: '4', key: 'output-log', data: { prefix: 'C' } }
+    ], [
+      { source: '1', sourceOutput: 'out', target: '3', targetInput: 'a' },
+      { source: '2', sourceOutput: 'out', target: '3', targetInput: 'b' },
+      { source: '3', sourceOutput: 'out', target: '4', targetInput: 'in' }
+    ]))
+
+    // 2 端口 → 只有 a + b 两段拼接（concat 节点自身输出变量是 _out_3）
+    const concatLine = code.split('\n').find((l) => l.includes('var _out_3 ='))
+    expect(concatLine).toContain('String(_out_1||\'\') + String(_out_2||\'\')')
+    // 不应有第三段输入（_out_4 等上游变量被引用）
+    expect(concatLine).not.toContain('||\'\') + String(_out_4')
+  })
 })

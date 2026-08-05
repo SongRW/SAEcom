@@ -411,6 +411,12 @@ export interface ScriptOutputAPI {
   requestClose: () => void
   /** 弹出窗请求清空：main 转给 host，host clearOutput 后再 sync([]) */
   requestClear: () => void
+  /**
+   * 弹出窗：listener 就绪后主动拉取当前快照。
+   * main 回复走 onPopoutPayload（复用首包通道）。解决 did-finish-load 推送
+   * 早于 React mount、首包丢失的时序竞态。
+   */
+  requestPayload: () => void
   /** 弹出窗：首包 + 二次聚焦刷新 */
   onPopoutPayload: (cb: (payload: ScriptOutputPayload) => void) => () => void
   /** 弹出窗：host 推送的实时同步 */

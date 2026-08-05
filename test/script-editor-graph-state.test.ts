@@ -419,4 +419,59 @@ describe('updateGraphNodeLabel', () => {
     const updated = updateGraphNodeLabel(graph, 'missing', '改名')
     expect(updated).toBe(graph)
   })
+
+  it('migrates legacy string-concat left/right ports to a/b and infers port count', () => {
+    // 旧版 string-concat：固定 left/right 端口，data 无 ports 字段
+    const imported = importGraphState({
+      nodes: [
+        { id: '1', key: 'input-manual', label: 'A', position: { x: 0, y: 0 }, data: { content: 'A' } },
+        { id: '2', key: 'input-manual', label: 'B', position: { x: 0, y: 60 }, data: { content: 'B' } },
+        { id: '3', key: 'string-concat', label: '拼接', position: { x: 200, y: 0 }, data: { separator: '|' } }
+      ],
+      connections: [
+        { id: 'c1', source: '1', sourceOutput: 'out', target: '3', targetInput: 'left' },
+        { id: 'c2', source: '2', sourceOutput: 'out', target: '3', targetInput: 'right' }
+      ]
+    })
+
+    // string-concat 应被推断出 ports:2，端口名变成 a/b（left→a, right→b）
+    const concatNode = imported.nodes.find((n) => n.key === 'string-concat')!
+    expect(concatNode.data.ports).toBe(2)
+    expect(Object.keys(concatNode.inputs).sort()).toEqual(['a', 'b'])
+
+    // 连线应保留：targetInput 从 left/right 迁移到 a/b
+    expect(imported.connections).toHaveLength(2)
+    const targets = imported.connections.map((c) => c.targetInput).sort()
+    expect(targets).toEqual(['a', 'b'])
+  })
+
+  it('keeps legacy protocol-concat 6 ports when no ports field and no connections', () => {
+    const imported = importGraphState({
+      nodes: [
+        { id: '1', key: 'protocol-concat', label: '拼帧', position: { x: 0, y: 0 }, data: {} }
+      ],
+      connections: []
+    })
+
+    const concatNode = imported.nodes.find((n) => n.key === 'protocol-concat')!
+    // 无连线无法推断 → 保底 6 端口（旧版 protocol-concat 固定 a~f）
+    expect(concatNode.data.ports).toBe(6)
+    expect(Object.keys(concatNode.inputs).sort()).toEqual(['a', 'b', 'c', 'd', 'e', 'f'])
+  })
+
+  it('does NOT migrate left/right for compare nodes (only concat targets)', () => {
+    const imported = importGraphState({
+      nodes: [
+        { id: '1', key: 'input-manual', label: 'A', position: { x: 0, y: 0 }, data: { content: 'A' } },
+        { id: '2', key: 'compare-eq', label: '等于', position: { x: 200, y: 0 }, data: { operand: 'A' } }
+      ],
+      connections: [
+        { id: 'c1', source: '1', sourceOutput: 'out', target: '2', targetInput: 'left' }
+      ]
+    })
+
+    // compare-eq 的 left 端口不应被迁移
+    expect(imported.connections).toHaveLength(1)
+    expect(imported.connections[0]!.targetInput).toBe('left')
+  })
 })

@@ -28,6 +28,12 @@ test.describe('TCP 面板收发', () => {
     // 3) 创建
     await confirmNewPanelDialog(page, dialog)
 
+    // 建面板后立即固化「发送」按钮 locator：断言未连接态下可见且 disabled，
+    // 连接后再复用同一 locator 断言转 enabled。避免新建/连接两阶段分别取 locator
+    // 时撞上 NewPanelDialog 退出动画的收尾窗口。
+    const sendBtn = page.getByRole('button', { name: '发送', exact: true })
+    await expect(sendBtn).toBeVisible({ timeout: 10000 })
+    await expect(sendBtn).toBeDisabled()
 
     // 4) 侧栏面板行出现 → 点击连接开关
     // 4px hit-box + draggable 父行：DOM click 比 Playwright 指针序列更稳
@@ -39,7 +45,6 @@ test.describe('TCP 面板收发', () => {
     await expect(sendInput).toBeVisible({ timeout: 10000 })
     await sendInput.fill(payload)
     // 连接后按钮从 disabled 变为可点
-    const sendBtn = page.getByRole('button', { name: '发送', exact: true })
     await expect(sendBtn).toBeEnabled()
     await sendBtn.click()
 

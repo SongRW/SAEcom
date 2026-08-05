@@ -2,11 +2,14 @@
 export const ARRANGE_LAYOUT_OPTIONS: Record<string, string> = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
+  'elk.separateConnectedComponents': 'false',
   'elk.edgeRouting': 'ORTHOGONAL',
   'elk.spacing.nodeNode': '80',
   'elk.layered.spacing.nodeNodeBetweenLayers': '100',
   'elk.layered.spacing.edgeNodeBetweenLayers': '48',
   'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+  'elk.layered.crossingMinimization.semiInteractive': 'true',
+  'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
   'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
   'elk.layered.thoroughness': '10'
 }

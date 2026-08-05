@@ -24,6 +24,8 @@ import {
   validateGraphNode
 } from '@/features/script-editor/rete/graphState'
 import { getNodeDefinition } from '@/features/script-editor/nodes/definitions'
+import { NODE_CATEGORIES } from '@/features/script-editor/nodes/categories'
+import { concatPortCount, isConcatNode, MIN_CONCAT_PORTS } from '@/features/script-editor/rete/dynamicPorts'
 import { usePanelsStore } from '@/features/serial-panel/store'
 import { displayName } from '@/features/serial-panel/paneViewModel'
 
@@ -60,6 +62,10 @@ export function NodeConfigPanel({
 }: NodeConfigPanelProps) {
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) || null
 
+  // 与组件库（NodePalette）对应：显示组件中文名 + 所属分类，
+  // 让用户能在配置面板与组件库之间建立对应关系。
+  const selectedDefinition = selectedNode ? getNodeDefinition(selectedNode.key) : null
+
   function updateControl(nodeId: string, key: string, value: string) {
     onGraphChange(updateGraphNodeData(graph, nodeId, key, value))
   }
@@ -89,7 +95,14 @@ export function NodeConfigPanel({
             onChange={(e) => onLabelChange(selectedNode.id, e.target.value)}
             aria-label="节点名称"
           />
-          <div className="script-editor-inspector__key">{selectedNode.key}</div>
+          <div className="script-editor-inspector__key" title={`组件标识：${selectedNode.key}`}>
+            {selectedDefinition?.name ?? selectedNode.key}
+            {selectedDefinition ? (
+              <span className="script-editor-inspector__key-cat">
+                {' · '}{NODE_CATEGORIES[selectedDefinition.category]?.name ?? selectedDefinition.category}
+              </span>
+            ) : null}
+          </div>
         </div>
         <Button
           variant="link"
@@ -344,14 +357,23 @@ function NodeConnections({
   onGraphChange: (graph: GraphEditorState) => void
 }) {
   const node = graph.nodes.find((item) => item.id === nodeId)
-  if (!node || Object.keys(node.inputs).length === 0) {
+  if (!node) {
     return <div className="script-editor-inspector__empty">此节点无输入连线</div>
   }
+  // 拼接节点（protocol-concat / string-concat）：即使端口数刚好为 0（异常态）也允许增减，
+  // 故不与「无输入端口」早返回合并。
+  const inputEntries = Object.values(node.inputs)
+  const concat = isConcatNode(node.key)
+  if (inputEntries.length === 0 && !concat) {
+    return <div className="script-editor-inspector__empty">此节点无输入连线</div>
+  }
+
+  const concatPorts = concat ? concatPortCount(node.data) : 0
 
   return (
     <section className="script-editor-inspector__section">
       <div className="script-editor-inspector__section-title">输入连线</div>
-      {Object.values(node.inputs).map((input) => {
+      {inputEntries.map((input) => {
         const current = graph.connections.find((connection) => (
           connection.target === node.id && connection.targetInput === input.key
         ))
@@ -384,6 +406,25 @@ function NodeConnections({
           </div>
         )
       })}
+      {concat ? (
+        <div className="script-editor-field__port-actions">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={concatPorts <= MIN_CONCAT_PORTS}
+            onClick={() => onGraphChange(updateGraphNodeData(graph, node.id, 'ports', concatPorts - 1))}
+          >
+            − 移除末尾输入
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onGraphChange(updateGraphNodeData(graph, node.id, 'ports', concatPorts + 1))}
+          >
+            + 添加输入
+          </Button>
+        </div>
+      ) : null}
     </section>
   )
 }

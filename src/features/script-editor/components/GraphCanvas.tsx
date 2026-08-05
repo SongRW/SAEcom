@@ -15,7 +15,7 @@ import {
   updateGraphNodePositions
 } from '@/features/script-editor/rete/graphState'
 import { ARRANGE_LAYOUT_OPTIONS } from '@/features/script-editor/rete/connectionPath'
-import { createReteEditor, syncReteEditorFromGraph, syncReteNodeDataFromGraph, syncReteNodePositionsFromGraph } from '@/features/script-editor/rete/setup'
+import { createReteEditor, syncDynamicNodeSizeFromDom, syncReteEditorFromGraph, syncReteNodeDataFromGraph, syncReteNodePositionsFromGraph } from '@/features/script-editor/rete/setup'
 import type { ReteEditorInstance } from '@/features/script-editor/rete/setup'
 import { classifyGraphSync } from '@/features/script-editor/rete/graphSync'
 import {
@@ -61,6 +61,11 @@ export interface GraphCanvasHandle {
    * 找不到节点或实例未就绪时静默返回。
    */
   focusNode: (nodeId: string) => void
+  /**
+   * 轻量更新画布上某个节点的标题 DOM，不触发结构同步。
+   * 用于 label 编辑后即时刷新画布显示，避免重建整个图。
+   */
+  updateNodeLabelDisplay: (nodeId: string, label: string) => void
 }
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas({
@@ -240,6 +245,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
     arrangingRef.current = true
     try {
+      // 排版前校准动态端口节点的 node.height（对象/位域/拼接），保证 ELK 的
+      // nodeToLayoutChild 读到真实高度。优先用 DOM 真实高度回写（根治位域字段溢出
+      // 节点框的问题）；DOM 未就绪时回退到估算公式。
+      for (const node of instance.editor.getNodes()) {
+        if (syncDynamicNodeSizeFromDom(node, instance.area)) {
+          await instance.area.update('node', String(node.id))
+        }
+      }
+
       await instance.arrange.layout({
         options: ARRANGE_LAYOUT_OPTIONS
       })
@@ -260,11 +274,22 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     runFit()
   }
 
+  const runUpdateNodeLabelDisplay = (nodeId: string, label: string) => {
+    const instance = reteRef.current
+    if (!instance) return
+    const view = instance.area.nodeViews.get(nodeId)
+    if (!view) return
+    // 直接更新画布节点标题 DOM，不触发结构同步
+    const nameEl = view.element.querySelector('.script-rete-node__name')
+    if (nameEl) nameEl.textContent = label
+  }
+
   useImperativeHandle(ref, () => ({
     fitView: runFit,
     arrangeLayout: runArrangeLayout,
     getZoomMin: resolveZoomMin,
-    focusNode: runFocusNode
+    focusNode: runFocusNode,
+    updateNodeLabelDisplay: runUpdateNodeLabelDisplay
 }), [])
 
   useEffect(() => {
@@ -299,17 +324,44 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   useEffect(() => {
     const instance = reteRef.current
     if (!instance) return
+    // 无选中时快速跳过全量遍历（首次加载和大多数操作场景）
+    if (selectedNodeIds.length === 0) {
+      for (const [, view] of instance.area.nodeViews) {
+        if (view.element.hasAttribute('data-app-selected')) {
+          view.element.removeAttribute('data-app-selected')
+        }
+      }
+      return
+    }
     const selected = new Set(selectedNodeIds)
     for (const [id, view] of instance.area.nodeViews) {
       if (selected.has(id)) view.element.setAttribute('data-app-selected', 'true')
       else view.element.removeAttribute('data-app-selected')
     }
+  }, [selectedNodeIds, graph])
 
-    // 连线高亮：为与选中节点相连的连线 SVG 设置 data-app-selected-endpoint / -direction。
-    // 属性设在 [data-testid="connection"]（SVG）上而非 ConnectionView.element(holder div)，
-    // 这样 CSS 选择器 [data-testid="connection"][data-app-selected-endpoint] 才能命中。
-    // 零 React 重渲染：纯 DOM 属性操作，镜像上方 nodeViews 的 data-app-selected 模式。
-    // 高亮是瞬态视觉，不写回 GraphEditorState（遵守 CONV-GRAPH-CANONICAL-STATE）。
+  // 连线高亮：独立 effect，只在 selectedNodeIds 变化时触发，不跟随每次 graph 变化。
+  // 高亮是瞬态视觉，不写回 GraphEditorState（遵守 CONV-GRAPH-CANONICAL-STATE）。
+  useEffect(() => {
+    const instance = reteRef.current
+    if (!instance) return
+    const selected = new Set(selectedNodeIds)
+    const surface = canvasRef.current?.querySelector('.script-editor-canvas__surface')
+
+    // 没有选中节点时，只需清除之前的高亮，跳过全量遍历
+    if (selected.size === 0) {
+      if (surface) surface.classList.remove('has-connection-highlight')
+      for (const [, connView] of instance.area.connectionViews) {
+        const svg = connView.element.querySelector('[data-testid="connection"]') as SVGElement | null
+        if (svg?.hasAttribute('data-app-selected-endpoint')) {
+          svg.removeAttribute('data-app-selected-endpoint')
+          svg.removeAttribute('data-app-selected-direction')
+        }
+      }
+      return
+    }
+
+    if (surface) surface.classList.add('has-connection-highlight')
     const connById = new Map(instance.editor.getConnections().map((conn) => [conn.id, conn]))
     for (const [connId, connView] of instance.area.connectionViews) {
       const conn = connById.get(connId)
@@ -328,7 +380,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         svg.removeAttribute('data-app-selected-direction')
       }
     }
-  }, [selectedNodeIds, graph])
+  }, [selectedNodeIds])
 
   useEffect(() => {
     const container = canvasRef.current

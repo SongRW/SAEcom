@@ -17,6 +17,10 @@ test.describe('脚本编辑器画布', () => {
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await editor.waitFor()
 
+    // 默认最大化打开（dialog 带 is-maximized 类；工具栏显示「还原」而非「最大化」）
+    await expect(editor).toHaveClass(/is-maximized/)
+    await expect(editor.locator('[title="还原"]')).toBeVisible()
+
     // 2) 打开组件库（Rail 的「组件」按钮）
     await clickReady(page, editor.getByRole('button', { name: '组件' }))
 
@@ -93,6 +97,21 @@ test.describe('脚本编辑器画布', () => {
     await expect(dock).toHaveAttribute('data-expanded', 'true')
     await expect(editor.locator('[data-testid="script-output-body"]')).toBeVisible()
     await expect(editor.locator('[data-testid="script-output-body"]')).toContainText('运行脚本后显示输出')
+
+    // 展开后：输出 dock 作为 flex 行挤压画布高度，而非浮层遮挡画布底部（问题1/2）。
+    // 断言画布底部不与输出 dock 顶部重叠，且画布高度明显小于收起态。
+    const expandedLayout = await editor.evaluate((root) => {
+      const canvas = root.querySelector('.script-editor-canvas') as HTMLElement | null
+      const d = root.querySelector('[data-testid="script-output-dock"]') as HTMLElement | null
+      const cR = canvas?.getBoundingClientRect()
+      const dR = d?.getBoundingClientRect()
+      return {
+        canvasHeight: canvas?.clientHeight ?? 0,
+        overlap: cR && dR ? cR.bottom > dR.top + 1 : true // +1 容差；false = 无遮挡
+      }
+    })
+    expect(expandedLayout.overlap).toBe(false)
+    expect(expandedLayout.canvasHeight).toBeLessThan(heights.shell - 80)
 
     // 顶部 grip 上拖 → 高度增大（可拖拽调高）
     const before = await dock.boundingBox()

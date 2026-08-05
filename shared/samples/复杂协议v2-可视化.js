@@ -23,7 +23,7 @@
         "y": 60
       },
       "data": {
-        "content": "帧=magic(AA55)+序列号(1B)+位域(2B)+定长(DEADBEEF)+ascii(长前缀+体)+utf8(长前缀+体)+CRC16+CRC8。循环5次，偶数成功，奇数失败。",
+        "content": "帧=magic(AA55)+序列号(1B)+位域(2B)+定长(DEADBEEF)+ascii(长前缀+体)+utf8(长前缀+体)+CRC16。循环5次，偶数成功，奇数失败。",
         "mode": "text"
       }
     },
@@ -249,7 +249,9 @@
         "x": 760,
         "y": 760
       },
-      "data": {}
+      "data": {
+        "ports": 3
+      }
     },
     {
       "id": "20",
@@ -259,7 +261,9 @@
         "x": 1000,
         "y": 880
       },
-      "data": {}
+      "data": {
+        "ports": 2
+      }
     },
     {
       "id": "21",
@@ -269,7 +273,9 @@
         "x": 1240,
         "y": 940
       },
-      "data": {}
+      "data": {
+        "ports": 3
+      }
     },
     {
       "id": "22",
@@ -282,19 +288,6 @@
       "data": {
         "algorithm": "CRC16",
         "endian": "小端",
-        "append": "是"
-      }
-    },
-    {
-      "id": "57",
-      "key": "protocol-crc",
-      "label": "封包CRC8",
-      "position": {
-        "x": 1480,
-        "y": 1000
-      },
-      "data": {
-        "algorithm": "CRC8",
         "append": "是"
       }
     },
@@ -413,10 +406,26 @@
       "data": {
         "mode": "解包",
         "fields": [
-          { "id": "f1", "name": "6bit位", "bits": 6 },
-          { "id": "f2", "name": "2bit位", "bits": 2 },
-          { "id": "f3", "name": "1bit位", "bits": 1 },
-          { "id": "f4", "name": "7bit位", "bits": 7 }
+          {
+            "id": "f1",
+            "name": "6bit位",
+            "bits": 6
+          },
+          {
+            "id": "f2",
+            "name": "2bit位",
+            "bits": 2
+          },
+          {
+            "id": "f3",
+            "name": "1bit位",
+            "bits": 1
+          },
+          {
+            "id": "f4",
+            "name": "7bit位",
+            "bits": 7
+          }
         ]
       }
     },
@@ -871,29 +880,22 @@
       "targetInput": "body"
     },
     {
-      "id": "封包CRC16->封包CRC8.body",
+      "id": "封包CRC16->日志发送.in",
       "source": "22",
-      "sourceOutput": "out",
-      "target": "57",
-      "targetInput": "body"
-    },
-    {
-      "id": "封包CRC8->日志发送.in",
-      "source": "57",
       "sourceOutput": "out",
       "target": "23",
       "targetInput": "in"
     },
     {
-      "id": "封包CRC8->发送TCP.in",
-      "source": "57",
+      "id": "封包CRC16->发送TCP.in",
+      "source": "22",
       "sourceOutput": "out",
       "target": "24",
       "targetInput": "in"
     },
     {
-      "id": "封包CRC8->间隔500ms.in",
-      "source": "57",
+      "id": "封包CRC16->间隔500ms.in",
+      "source": "22",
       "sourceOutput": "out",
       "target": "25",
       "targetInput": "in"
@@ -1142,3 +1144,4 @@ VS_FLOW_END */
 // Generated code:
 // 打开后由脚本页根据流程图重新生成代码
 // 演示：循环5次组帧发送，序列号自增，奇偶判断（偶数成功/奇数失败），echo 回弹拆帧
+

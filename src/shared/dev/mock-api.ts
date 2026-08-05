@@ -105,6 +105,7 @@ import type { WindowAPI } from '@shared/types'
       sync: noop,
       requestClose: noop,
       requestClear: noop,
+      requestPayload: noop,
       onPopoutPayload: () => emptyUnsubscribe,
       onSync: () => emptyUnsubscribe,
       onClearRequest: () => emptyUnsubscribe,

@@ -1,5 +1,6 @@
 import type { ReteGraphNode } from '@shared/types'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
+import { concatPortCount, concatPortKey } from '@/features/script-editor/rete/dynamicPorts'
 import { data, delimiter, getInputVar, getInputVars, jsString, outVar, valueAsNumber, valueAsString } from '@/features/script-editor/codegen/emit/shared'
 
 const numericOps: Record<string, string> = {
@@ -71,8 +72,14 @@ function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
     case 'numeric-length':
       return config.type === '字节数' ? `Buffer.byteLength(${input})` : `${input}.length`
 
-    case 'string-concat':
-      return `${getInputVar(ctx, node, 'left', inputs[0] || '""')} + ${jsString(valueAsString(config.separator))} + ${getInputVar(ctx, node, 'right', inputs[1] || '""')}`
+    case 'string-concat': {
+      const count = concatPortCount(data(node))
+      const sep = jsString(valueAsString(config.separator))
+      // 无连线时 fallback 到 _last_recv（与旧版 left/right 行为一致：拼"上一次收到的数据"）
+      const parts = Array.from({ length: count }, (_, i) =>
+        `String(${getInputVar(ctx, node, concatPortKey(i))}||'')`)
+      return parts.join(` + ${sep} + `)
+    }
     case 'string-replace':
       return config.all === '否'
         ? `${input}.replace(${jsString(valueAsString(config.search))}, ${jsString(valueAsString(config.replace))})`
@@ -89,6 +96,23 @@ function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
     case 'string-template': {
       const template = valueAsString(config.template, '设备{1}: 值{2}, 状态{3}').replace(/\{(\d+)\}/g, (_, n) => `\${${inputs[Number(n) - 1] || '""'}}`)
       return `\`${template.replace(/`/g, '\\`')}\``
+    }
+    case 'string-pad': {
+      const len = valueAsNumber(config.length, 2)
+      const side = valueAsString(config.side, '左侧')
+      const overflow = valueAsString(config.overflow, '保留原长')
+      const padExpr = side === '右侧'
+        ? `_s.padEnd(${len}, _c)`
+        : `_s.padStart(${len}, _c)`
+      const returnExpr = overflow === '截断到长度'
+        ? (side === '右侧' ? `_s.slice(0, ${len})` : `_s.slice(-${len})`)
+        : '_s'
+      return `(() => {
+  var _s = String(${input}||'');
+  var _c = String(${jsString(valueAsString(config.char, '0'))}||' ').charAt(0) || ' ';
+  _s = ${padExpr};
+  return ${returnExpr};
+})()`
     }
     case 'transform-object': {
       const rawKeys = config.keys
@@ -116,6 +140,17 @@ function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
         })
         .filter((p): p is string => p !== null)
       return pairs.length > 0 ? `{ ${pairs.join(', ')} }` : `{}`
+    }
+    case 'script-expr': {
+      // 字母序输入端口 a, b, c... 绑定为同名局部变量；表达式直接引用。
+      // 例：6 输入 + 表达式 (new Date(Date.UTC(a, b-1, c, d, e, f) + 8*3600*1000)).getDate()
+      const count = concatPortCount(data(node))
+      const binds = Array.from({ length: count }, (_, i) => {
+        const key = concatPortKey(i)
+        return `var ${key} = ${getInputVar(ctx, node, key, 'null')};`
+      })
+      const expr = valueAsString(config.expr, '(a + b)')
+      return `(() => { ${binds.join(' ')} return (${expr}); })()`
     }
     default:
       return input

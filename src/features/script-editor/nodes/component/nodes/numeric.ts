@@ -119,3 +119,31 @@ export class NumericLengthNode extends NumericBase {
     return []
   }
 }
+
+/**
+ * 通用 JS 表达式节点：动态多输入（a, b, c...）+ 一段表达式代码。
+ * 表达式里可直接用 a/b/c 引用各输入，可用 Math/Date 等全局。
+ * 例：时间换算 `(new Date(Date.UTC(a, b-1, c, d, e, f) + 8*3600*1000)).getDate()`。
+ * 动态端口机制复用拼接节点（isConcatNode / concatPortCount）。
+ */
+export class ScriptExprNode extends NumericBase {
+  readonly key = 'script-expr'
+  readonly name = '表达式'
+  readonly description = '用一段 JS 表达式处理多输入（可调 Date/Math 等库）'
+  readonly dynamicPorts = true
+
+  ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
+    // 骨架：空输入 + 1 输出；实际端口数由 resolveNodePorts 按 data.ports 派生。
+    return { inputs: [], outputs: [b.dataOut()] }
+  }
+
+  controls(): ControlSpec[] {
+    return [
+      b.textControl('expr', '表达式', '(a + b)', false)
+    ]
+  }
+
+  sandboxApis(): string[] {
+    return []
+  }
+}

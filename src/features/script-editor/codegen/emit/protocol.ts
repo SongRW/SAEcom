@@ -1,5 +1,6 @@
 import type { ReteGraphNode } from '@shared/types'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
+import { concatPortCount, concatPortKey } from '@/features/script-editor/rete/dynamicPorts'
 import { data, getInputVar, jsString, outVar, valueAsNumber, valueAsString } from '@/features/script-editor/codegen/emit/shared'
 
 /**
@@ -127,15 +128,10 @@ function expressionFor(ctx: EmitContext, node: ReteGraphNode): string {
     }
 
     case 'protocol-concat': {
-      const parts = [
-        getInputVar(ctx, node, 'a', '""'),
-        getInputVar(ctx, node, 'b', '""'),
-        getInputVar(ctx, node, 'c', '""'),
-        getInputVar(ctx, node, 'd', '""'),
-        getInputVar(ctx, node, 'e', '""'),
-        getInputVar(ctx, node, 'f', '""')
-      ]
-      return `(${parts.map((p) => `String(${p}||'')`).join(' + ')}).toUpperCase().replace(/\\s/g,'')`
+      const count = concatPortCount(data(node))
+      const parts = Array.from({ length: count }, (_, i) =>
+        `String(${getInputVar(ctx, node, concatPortKey(i), '""')}||'')`)
+      return `(${parts.join(' + ')}).toUpperCase().replace(/\\s/g,'')`
     }
 
     case 'protocol-len-prefix': {

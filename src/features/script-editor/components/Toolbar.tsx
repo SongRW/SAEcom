@@ -93,11 +93,11 @@ export function Toolbar({
           重命名
         </Button>
         <Button size="sm" variant="outline" title="导入" onClick={onImport}>
-          <UploadSimple data-icon="inline-start" />
+          <DownloadSimple data-icon="inline-start" />
           导入
         </Button>
         <Button size="sm" variant="outline" title="导出" onClick={onExport} disabled={!activeScriptName}>
-          <DownloadSimple data-icon="inline-start" />
+          <UploadSimple data-icon="inline-start" />
           导出
         </Button>
         <Button size="sm" variant="outline" title="删除" onClick={onDelete} disabled={!activeScriptName}>

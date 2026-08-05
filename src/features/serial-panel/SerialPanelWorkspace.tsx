@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { FloatingPane } from '@/features/serial-panel/components/FloatingPane'
-import { NewPanelDialog } from '@/features/serial-panel/components/NewPanelDialog'
 import { usePanelsStore } from '@/features/serial-panel/store'
 import { useSerialDataBus } from '@/features/serial-panel/dataBus'
 import { useModbusDataBus } from '@/features/modbus-panel/useModbusDataBus'
-import { useAppShell } from '@/shared/store/appShell'
 import { useIPC } from '@/shared/ipc'
 import { useOscilloscopeStore } from '@/features/oscilloscope/store'
 import { OscilloscopeFloatingWindow } from '@/features/oscilloscope/OscilloscopeFloatingWindow'
@@ -33,8 +31,6 @@ export function SerialPanelWorkspace() {
   const visiblePanels = usePanelsStore(
     useShallow((s) => Object.values(s.panels).filter((p) => !p.hidden).sort((a, b) => a.z - b.z))
   )
-  const newDialogOpen = useAppShell((s) => s.newPanelDialogOpen)
-  const setNewDialogOpen = useAppShell((s) => s.setNewPanelDialogOpen)
   const containerRef = useRef<HTMLDivElement>(null)
   // 示波器窗格：订阅 panes 键列表（用 useShallow 避免每次 store 变更重渲染）
   const scopePaneIds = useOscilloscopeStore(
@@ -123,7 +119,6 @@ export function SerialPanelWorkspace() {
             containerRef={containerRef}
           />
         ))}
-      <NewPanelDialog open={newDialogOpen} onOpenChange={setNewDialogOpen} />
     </div>
   )
 }

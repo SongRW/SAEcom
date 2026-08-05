@@ -61,24 +61,16 @@ export class ProtocolBitfieldNode extends ProtocolBase {
   }
 }
 
-/** 多路 HEX 顺序拼接 */
+/** 多路 HEX 顺序拼接（动态端口：默认 2，可在节点配置面板增减） */
 export class ProtocolConcatNode extends ProtocolBase {
   readonly key = 'protocol-concat'
   readonly name = 'HEX拼接'
-  readonly description = '按顺序拼接最多 6 段 HEX'
+  readonly description = '按顺序拼接多段 HEX'
+  readonly dynamicPorts = true
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
-    return {
-      inputs: [
-        b.dataIn('a', 'A'),
-        b.dataIn('b', 'B'),
-        b.dataIn('c', 'C'),
-        b.dataIn('d', 'D'),
-        b.dataIn('e', 'E'),
-        b.dataIn('f', 'F')
-      ],
-      outputs: [b.dataOut()]
-    }
+    // 骨架：空输入 + 1 输出；实际端口数由 resolveNodePorts 按 data.ports 派生。
+    return { inputs: [], outputs: [b.dataOut()] }
   }
 
   controls(): ControlSpec[] {
