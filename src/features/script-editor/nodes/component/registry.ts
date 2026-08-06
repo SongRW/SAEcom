@@ -1,6 +1,7 @@
 import type { McpToolDescriptor, NodeDef } from '@shared/types'
 import type { AbstractNodeComponent } from '@/features/script-editor/nodes/component/AbstractNodeComponent'
 import { unknownSandboxApis } from '@/features/script-editor/nodes/component/sandboxCatalog'
+import { nodeRegistry } from '@/features/script-editor/nodes/component/dynamicRegistry'
 
 import {
   CompareBoundaryNode,
@@ -181,28 +182,35 @@ export const NODE_DEFINITIONS: Record<string, NodeDef> = Object.fromEntries(
   NODE_COMPONENTS.map((component) => [component.key, component.toNodeDef()])
 )
 
+// 装配动态注册表：灌入内置节点（一次性）。后续组经 nodeRegistry.registerUser 注入用户/插件组件。
+nodeRegistry.registerBuiltIn(NODE_COMPONENTS)
+
+/**
+ * 动态查询（内置 + 用户/插件合并）。委托 nodeRegistry 单例。
+ * 用户组件经 toNodeDef() 投影后，调色板/画布/codegen 自动含之。
+ */
 export function getNodeComponent(key: string): AbstractNodeComponent | undefined {
-  return NODE_COMPONENT_MAP[key]
+  return nodeRegistry.get(key)
 }
 
 export function getNodeDefinition(key: string): NodeDef | undefined {
-  return NODE_DEFINITIONS[key]
+  return nodeRegistry.definitions()[key]
 }
 
-/** 全部节点的 MCP Tool 描述（AI 可发现） */
+/** 全部节点的 MCP Tool 描述（AI 可发现；用户组件经 toMcpTool() 同路径产出） */
 export function listNodeMcpTools(): McpToolDescriptor[] {
-  return NODE_COMPONENTS.map((component) => component.toMcpTool())
+  return nodeRegistry.mcpTools()
 }
 
 export function getNodeMcpTool(key: string): McpToolDescriptor | undefined {
-  return NODE_COMPONENT_MAP[key]?.toMcpTool()
+  return nodeRegistry.get(key)?.toMcpTool()
 }
 
 /** 汇总图中节点 key 列表所需 sandbox API；返回未知 API 名 */
 export function collectUnknownSandboxApisForKeys(keys: string[]): string[] {
   const apis = new Set<string>()
   for (const key of keys) {
-    const component = NODE_COMPONENT_MAP[key]
+    const component = nodeRegistry.get(key)
     if (!component) continue
     for (const api of component.sandboxApis()) apis.add(api)
   }
@@ -210,5 +218,18 @@ export function collectUnknownSandboxApisForKeys(keys: string[]): string[] {
 }
 
 export function isContinuousRootKey(key: string): boolean {
-  return NODE_COMPONENT_MAP[key]?.isContinuousRoot === true
+  return nodeRegistry.isContinuousRoot(key)
 }
+
+/** 全量节点定义（内置 + 用户/插件）。调色板/添加节点用此，而非冻结的 NODE_DEFINITIONS。 */
+export function listAllNodeDefinitions(): NodeDef[] {
+  return Object.values(nodeRegistry.definitions())
+}
+
+/** 全量节点组件（内置 + 用户/插件）。 */
+export function listAllNodeComponents(): AbstractNodeComponent[] {
+  return nodeRegistry.all()
+}
+
+/** 暴露单例供用户组件面板/插件装配时 reloadUser 用。 */
+export { nodeRegistry } from '@/features/script-editor/nodes/component/dynamicRegistry'

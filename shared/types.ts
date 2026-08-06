@@ -178,6 +178,7 @@ export type NodeCategory =
   | 'output'
   | 'modbus'
   | 'protocol'
+  | 'custom'
 
 export interface SocketSpec {
   key: string
@@ -378,6 +379,11 @@ export interface ScriptEditorAPI {
   /** 弹出窗挂载时监听主进程回灌的图快照（did-finish-load 触发） */
   onPopoutPayload: (cb: (payload: ScriptEditorGraphPayload) => void) => () => void
   /**
+   * 弹出窗挂载后主动拉取一次图快照（兜底：did-finish-load 推送可能早于
+   * React effect 订阅，首包丢失导致弹窗空画布——与 script-output 的 requestPayload 同机制）。
+   */
+  requestPayload: () => void
+  /**
    * 主窗监听 dock 信号（携带弹窗带回的图快照 + 活动脚本名），据此恢复内嵌弹层图。
    */
   onDock: (cb: (payload: ScriptEditorGraphPayload) => void) => () => void
@@ -473,6 +479,45 @@ export interface ScriptsAPI {
   onLog: (cb: (p: ScriptLogPayload) => void) => () => void
 }
 
+/**
+ * .sccom（SAEcom Component）单文件封装格式——用于自定义组件的导入导出（用户自写组件分发给他人）。
+ * 与 userData/script-components/*.json 的描述符同构，外加格式头。
+ */
+export interface CustomComponentExportPayload {
+  format: 'saecom-component'
+  formatVersion: 1
+  kind: 'js' | 'composite'
+  /** UserComponentDescriptor | CompositeComponentDescriptor（JSON 序列化）。 */
+  descriptor: Record<string, unknown>
+  exportedAt: string
+  exportedFrom: string
+}
+
+/** 单个组件导入结果。 */
+export type CustomComponentImportResult =
+  | { ok: true; name: string }
+  | { ok: false; canceled?: boolean; error?: string; name?: string }
+
+/** 多选导入的汇总结果。 */
+export interface CustomComponentImportSummary {
+  imported: CustomComponentImportResult[]
+  /** 非法（校验失败/版本不支持）的文件：文件名 + 错误。 */
+  rejected: Array<{ name: string; error: string }>
+}
+
+export interface CustomComponentsAPI {
+  list: () => Promise<string[]>
+  read: (name: string) => Promise<string>
+  write: (name: string, content: string) => Promise<{ ok: boolean; error?: string }>
+  delete: (name: string) => Promise<{ ok: boolean; error?: string }>
+  /** newKey 可选：重命名时同步改写描述符内 key，保证 key 与文件名一致（防保存回滚）。 */
+  rename: (oldName: string, newName: string, newKey?: string) => Promise<{ ok: boolean; error?: string }>
+  /** 导出单个组件为 .sccom（showSaveDialog）。 */
+  exportComponent: (name: string) => Promise<{ ok: boolean; canceled?: boolean; error?: string; filePath?: string }>
+  /** 导入一个或多个 .sccom（showOpenDialog 多选）。逐个校验+重名兜底。 */
+  importComponents: () => Promise<{ ok: boolean; canceled?: boolean; summary?: CustomComponentImportSummary }>
+}
+
 export interface ShellAPI {
   openExternal: (url: string) => void
 }
@@ -527,6 +572,7 @@ export interface WindowAPI {
   file: FileAPI
   logger: LoggerAPI
   scripts: ScriptsAPI
+  customComponents: CustomComponentsAPI
   shell: ShellAPI
   app: AppControlAPI
   changelog: ChangelogAPI
