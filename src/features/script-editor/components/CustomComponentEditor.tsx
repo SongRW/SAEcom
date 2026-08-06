@@ -40,7 +40,7 @@ import {
   loadAndRegisterCustomComponents
 } from '@/features/script-editor/nodes/component/loadCustomComponents'
 import {
-  SANDBOX_API_CATALOG
+  getAllSandboxApis
 } from '@/features/script-editor/nodes/component/sandboxCatalog'
 import {
   SANDBOX_API_DOCS
@@ -738,7 +738,9 @@ export function CustomComponentEditor({
                 value={sandboxApisText}
               />
               <span className="custom-component-editor__hint">
-                可选 API：{SANDBOX_API_CATALOG.slice(0, 8).join(', ')}……（共 {SANDBOX_API_CATALOG.length} 个）
+                {/* getAllSandboxApis 含插件运行时扩展 API；SANDBOX_API_CATALOG 仅内置。
+                    用全量计数，让用户看到插件贡献的新 API 也声明可用。 */}
+                可选 API：{getAllSandboxApis().slice(0, 8).join(', ')}……（共 {getAllSandboxApis().length} 个）
               </span>
               <Button
                 variant="outline"

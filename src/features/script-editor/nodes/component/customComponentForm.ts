@@ -1,6 +1,6 @@
 import type { ControlSpec, NodeCategory } from '@shared/types'
 import {
-  SANDBOX_API_CATALOG
+  unknownSandboxApis
 } from '@/features/script-editor/nodes/component/sandboxCatalog'
 import type { Diagnostic } from '@/features/script-editor/nodes/component/validate'
 import type { UserComponentDescriptor } from '@/features/script-editor/nodes/component/userComponent'
@@ -62,8 +62,8 @@ export function cloneDescriptor(d: UserComponentDescriptor): UserComponentDescri
 
 /** sandboxApis 校验：返回首个未知 API 的错误文案（无错误返回 undefined）。 */
 export function sandboxApisError(apis: string[]): string | undefined {
-  const set = new Set<string>(SANDBOX_API_CATALOG)
-  const unknown = apis.filter((a) => !set.has(a))
+  // unknownSandboxApis 内部查内置表 + 扩展表（插件运行时注册的 API），无需手动建 Set。
+  const unknown = unknownSandboxApis(apis)
   if (unknown.length === 0) return undefined
   return `未知 sandbox API: ${unknown.join(', ')}`
 }

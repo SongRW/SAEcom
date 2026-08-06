@@ -10,5 +10,12 @@ export {
   collectUnknownSandboxApisForKeys,
   isContinuousRootKey
 } from '@/features/script-editor/nodes/component/registry'
-export { SANDBOX_API_CATALOG, isKnownSandboxApi, unknownSandboxApis } from '@/features/script-editor/nodes/component/sandboxCatalog'
+export {
+  SANDBOX_API_CATALOG,
+  getAllSandboxApis,
+  isKnownSandboxApi,
+  unknownSandboxApis,
+  registerSandboxApi,
+  unregisterSandboxApisByProvider
+} from '@/features/script-editor/nodes/component/sandboxCatalog'
 export { buildMcpToolDescriptor, controlsToJsonSchemaProperties } from '@/features/script-editor/nodes/component/mcp'

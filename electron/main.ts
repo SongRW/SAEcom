@@ -15,6 +15,7 @@ import { ModbusService } from './services/modbus.service'
 import { WindowService } from './services/window.service'
 import { ScriptService } from './services/script.service'
 import { ScriptsRepository } from './repositories/scripts.repository'
+import { RuntimeContext } from './core/runtime-context'
 import { registerConfigRouter } from './routers/config.router'
 import { registerAppRouter } from './routers/app.router'
 import { registerSerialRouter } from './routers/serial.router'
@@ -66,6 +67,11 @@ setModbusBroadcaster((channel, payload) => {
 // 已迁移域：config / app / serial / tcp / modbus / window / script。
 // 串口/TCP 收到数据时经 dataBroadcaster 通知脚本监听器（ScriptService.notifyScriptWatchers）——
 // 组4 后脚本沙箱数据通路由 ScriptService 自管。
+//
+// 所有 service / repository 装配后登记进 RuntimeContext（DI 容器），由 ctx 统一持有。
+// 构造顺序即依赖拓扑序（Config/App/Serial/Tcp/Modbus/Window 先于 Script）；跨服务回调注入
+// （dataBroadcaster）带有业务语义，保持在此显式编排，不内化进 ctx。
+const ctx = new RuntimeContext()
 const appService = new AppService()
 const configService = new ConfigService(app.getPath('userData'))
 const serialService = new SerialService()
@@ -81,6 +87,16 @@ const windowService = new WindowService({
 const scriptsRepository = new ScriptsRepository()
 const customComponentsRepository = new CustomComponentsRepository()
 const scriptService = new ScriptService(serialService, tcpService, modbusService)
+// 登记到 DI 容器（之后消费者从 ctx 取，不再走散落的全局变量）。
+ctx.registerService('app', appService)
+ctx.registerService('config', configService)
+ctx.registerService('serial', serialService)
+ctx.registerService('tcp', tcpService)
+ctx.registerService('modbus', modbusService)
+ctx.registerService('window', windowService)
+ctx.registerService('script', scriptService)
+ctx.registerRepository('scripts', scriptsRepository)
+ctx.registerRepository('customComponents', customComponentsRepository)
 // 脚本监听器广播：串口/TCP 数据到达 → ScriptService.notifyScriptWatchers
 // （原 main.ts 顶层 notifyScriptWatchers 桥接，组4 后状态归 ScriptService 私有持有）。
 serialService.setDataBroadcaster((portId, buf) => scriptService.notifyScriptWatchers(portId, buf))
@@ -194,15 +210,16 @@ app.whenReady().then(() => {
   scriptsRepository.seedBundledSampleScripts()
   customComponentsRepository.ensureDir()
   // 三层架构：注册已迁移域的 router（组1-7：config/app/serial/tcp/modbus/window/script/customComponents）。
+  // 从 RuntimeContext（DI 容器）取依赖——ctx 是 service/repository 的唯一访问入口。
   appService.setUpdateChecker((isManual) => checkForUpdates(isManual))
-  registerConfigRouter(configService)
-  registerAppRouter(appService)
-  registerSerialRouter(serialService)
-  registerTcpRouter(tcpService)
-  registerModbusRouter(modbusService)
-  registerWindowRouter(windowService)
-  registerScriptRouter(scriptService, scriptsRepository)
-  registerCustomComponentsRouter(customComponentsRepository)
+  registerConfigRouter(ctx.service('config'))
+  registerAppRouter(ctx.service('app'))
+  registerSerialRouter(ctx.service('serial'))
+  registerTcpRouter(ctx.service('tcp'))
+  registerModbusRouter(ctx.service('modbus'))
+  registerWindowRouter(ctx.service('window'))
+  registerScriptRouter(ctx.service('script'), ctx.repository('scripts'))
+  registerCustomComponentsRouter(ctx.repository('customComponents'))
   windowService.createMainWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) windowService.createMainWindow() })
 })
