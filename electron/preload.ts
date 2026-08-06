@@ -130,6 +130,8 @@ const api: WindowAPI = {
   scriptEditor: {
     popout: (graphStr: string, activeScriptName: string) => ipcRenderer.invoke('script-editor:popout', { graphStr, activeScriptName }),
     requestDock: (graphStr: string, activeScriptName: string) => ipcRenderer.send('script-editor:request-dock', { graphStr, activeScriptName }),
+    // 弹窗侧首包兜底：did-finish-load 推送可能早于 React mount，弹窗挂载后主动拉取
+    requestPayload: () => ipcRenderer.send('script-editor:request-payload'),
     onPopoutPayload: (cb) => {
       const listener = (_e: unknown, payload: { graphStr: string; activeScriptName: string }) => cb(payload)
       ipcRenderer.on('script-editor:popout-payload', listener)
@@ -214,6 +216,15 @@ const api: WindowAPI = {
       ipcRenderer.on('scripts:log', listener)
       return () => ipcRenderer.removeListener('scripts:log', listener)
     }
+  },
+  customComponents: {
+    list: () => ipcRenderer.invoke('customComponents:list'),
+    read: (name) => ipcRenderer.invoke('customComponents:read', name),
+    write: (name, content) => ipcRenderer.invoke('customComponents:write', { name, content }),
+    delete: (name) => ipcRenderer.invoke('customComponents:delete', name),
+    rename: (oldName, newName, newKey) => ipcRenderer.invoke('customComponents:rename', { oldName, newName, newKey }),
+    exportComponent: (name) => ipcRenderer.invoke('customComponents:export', name),
+    importComponents: () => ipcRenderer.invoke('customComponents:import')
   },
   app: {
     getVersion: () => ipcRenderer.invoke('app:version'),
