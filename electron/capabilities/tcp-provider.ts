@@ -42,7 +42,7 @@ export class TcpCapabilityProvider implements CapabilityProvider {
     }
 
     const serverId = `tcpServer:${port}`
-    const result = await this.host.ensureTcpServer(port, serverId)
+    const result = await this.host.ensureTcpServer(port, serverId, rc.runId)
     if (!result.ok) throw new Error('服务器启动失败: ' + result.error)
 
     const immediateData = this.tcpService.shiftTcpServerData(serverId)
@@ -220,7 +220,7 @@ export class TcpCapabilityProvider implements CapabilityProvider {
         }
 
         const serverId = `tcpServer:${port}`
-        const result = await this.host.ensureTcpServer(port, serverId)
+        const result = await this.host.ensureTcpServer(port, serverId, runId)
         if (!result.ok) throw new Error('服务器启动失败: ' + result.error)
 
         await new Promise<void>((resolve, reject) => {

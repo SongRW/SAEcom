@@ -582,7 +582,8 @@ describe('Rete script editor codegen', () => {
   it('reuses in-flight TCP server startup for same-port continuous listeners', () => {
     // 组4 重构后沙箱独立 TCP 服务器启动表迁移至 services/script.service.ts（ensureTcpServer 方法）。
     const scriptService = fs.readFileSync(path.resolve(__dirname, '../electron/services/script.service.ts'), 'utf-8')
-    const ensureBody = between(scriptService, 'ensureTcpServer(port: number, serverId = `tcpServer:${port}`): Promise<any> {', '\n\n  // ── 执行 / 停止 ──')
+    // ensureTcpServer 签名含 runId?（run 结束清理用）；提取到下一个方法（removeSandboxTcpServers）前。
+    const ensureBody = between(scriptService, 'ensureTcpServer(port: number, serverId = `tcpServer:${port}`, runId?: string): Promise<any> {', 'removeSandboxTcpServers(runId: string)')
 
     // 组2 重构后沙箱独立持有 TCP 服务器启动表（sandboxTcpServerStarts），与 TcpService 分离。
     expect(scriptService).toContain('private readonly sandboxTcpServerStarts = new Map<string, Promise<any>>()')

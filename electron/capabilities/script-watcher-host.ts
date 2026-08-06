@@ -33,6 +33,10 @@ export interface ScriptWatcherHost {
 
   /** 沙箱独立 TCP 服务器表（broadcastTcpServer 检查 clients 用）。 */
   getSandboxTcpServer(serverId: string): { clients: Set<any> } | undefined
-  /** 启动/复用沙箱 TCP 服务器。 */
-  ensureTcpServer(port: number, serverId?: string): Promise<any>
+  /**
+   * 启动/复用沙箱 TCP 服务器。
+   * @param runId 创建者 runId——用于 run 结束时清理本 run 创建的服务器（避免端口泄漏）。
+   *   若同 serverId 已存在（其他 run 创建），复用之且**不改变归属**（先创建者拥有生命周期）。
+   */
+  ensureTcpServer(port: number, serverId?: string, runId?: string): Promise<any>
 }

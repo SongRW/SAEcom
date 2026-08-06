@@ -48,7 +48,9 @@ export class ScriptService implements ScriptWatcherHost {
 
   // 沙箱独立持有的 TCP 服务器状态（与 TcpService.startServer 的服务器表分离——
   // 沙箱 listenTcpServerPackets 自管生命周期；数据 buffer/watcher 共享 TcpService 池）。
-  private readonly sandboxTcpServers = new Map<string, { server: net.Server; port: number; clients: Set<any> }>()
+  // entry.runId 记录创建者，run 结束时 removeSandboxTcpServers(runId) 清掉本 run 的服务器，
+  // 避免脚本结束后端口/服务器泄漏（此前无清理逻辑，服务器会存活到进程退出）。
+  private readonly sandboxTcpServers = new Map<string, { server: net.Server; port: number; clients: Set<any>; runId?: string }>()
   private readonly sandboxTcpServerStarts = new Map<string, Promise<any>>()
 
   private readonly registry: CapabilityRegistry
@@ -141,7 +143,7 @@ export class ScriptService implements ScriptWatcherHost {
     return this.sandboxTcpServers.get(serverId)
   }
 
-  ensureTcpServer(port: number, serverId = `tcpServer:${port}`): Promise<any> {
+  ensureTcpServer(port: number, serverId = `tcpServer:${port}`, runId?: string): Promise<any> {
     if (this.sandboxTcpServers.has(serverId)) return Promise.resolve({ ok: true, id: serverId, port, already: true })
     const pending = this.sandboxTcpServerStarts.get(serverId)
     if (pending) return pending
@@ -170,7 +172,8 @@ export class ScriptService implements ScriptWatcherHost {
       })
 
       server.listen(port, '0.0.0.0', () => {
-        this.sandboxTcpServers.set(serverId, { server, port, clients })
+        // 记录创建者 runId，供 removeSandboxTcpServers(runId) 精准清理本 run 的服务器。
+        this.sandboxTcpServers.set(serverId, { server, port, clients, runId })
         resolve({ ok: true, id: serverId, port })
       }).on('error', (err) => {
         resolve({ ok: false, error: err?.message || '启动失败' })
@@ -180,6 +183,41 @@ export class ScriptService implements ScriptWatcherHost {
     })
     this.sandboxTcpServerStarts.set(serverId, startPromise)
     return startPromise
+  }
+
+  /**
+   * 清理本 run 创建的沙箱 TCP 服务器（run 结束 finally 调用）。
+   * 仅清 runId 匹配的——其他 run 创建的服务器不动（避免误清并发 run 的服务器）。
+   * 每个服务器：destroy 所有 client socket → close server → 从 map 删。
+   */
+  removeSandboxTcpServers(runId: string): void {
+    for (const [serverId, entry] of this.sandboxTcpServers) {
+      if (entry.runId !== runId) continue
+      for (const sock of entry.clients) {
+        try { sock.destroy() } catch { /* ignore */ }
+      }
+      entry.clients.clear()
+      try { entry.server.close() } catch { /* ignore: 可能已在关闭 */ }
+      this.sandboxTcpServers.delete(serverId)
+      // 同步清 TcpService 侧该 serverId 的数据 buffer + watcher（避免残留）
+      this.tcpService.removeTcpServerState(serverId)
+    }
+  }
+
+  /**
+   * 清理所有沙箱 TCP 服务器（window-all-closed / abortAllRunning 调用）。
+   * 窗口全关 = 结束会话，所有沙箱服务器都该释放端口。
+   */
+  destroyAllSandboxTcpServers(): void {
+    for (const [, entry] of this.sandboxTcpServers) {
+      for (const sock of entry.clients) {
+        try { sock.destroy() } catch { /* ignore */ }
+      }
+      entry.clients.clear()
+      try { entry.server.close() } catch { /* ignore */ }
+    }
+    this.sandboxTcpServers.clear()
+    this.sandboxTcpServerStarts.clear()
   }
 
   // ── 执行 / 停止 ──
@@ -244,6 +282,8 @@ export class ScriptService implements ScriptWatcherHost {
         this.removeScriptWatcher(runId)
         this.tcpService.removeTcpServerWatchers(runId)
         this.removeScriptTcpClients(runId)
+        // 清理本 run 创建的沙箱 TCP 服务器（避免端口/服务器泄漏——此前无此清理）。
+        this.removeSandboxTcpServers(runId)
       }
     })()
     return { ok: true, runId }
@@ -274,6 +314,8 @@ export class ScriptService implements ScriptWatcherHost {
       } catch { }
     })
     this.runningScripts.clear()
+    // 窗口全关 = 结束会话，所有沙箱 TCP 服务器一并释放端口（此前遗漏，导致泄漏到进程退出）。
+    this.destroyAllSandboxTcpServers()
   }
 
   /** 当前是否有运行中脚本（供 lifecycle 判断）。 */

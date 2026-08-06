@@ -263,6 +263,16 @@ export class TcpService {
     }
   }
 
+  /**
+   * 清理指定 serverId 的全部 TCP 服务器状态（数据 buffer + watchers）。
+   * 沙箱 TCP 服务器（ScriptService.ensureTcpServer）销毁时调用，避免 serverId 残留数据。
+   * 与 startServer 的服务器（destroyAllServers 管）无关——此处只清共享池里的 buffer/watcher。
+   */
+  removeTcpServerState(serverId: string): void {
+    this.tcpServerDataBuffer.delete(serverId)
+    this.tcpServerWatchers.delete(serverId)
+  }
+
   /** 沙箱 ensureTcpServer 收到数据时通知 watchers（与 startServer 共享池）。 */
   notifyTcpServerWatchers(serverId: string, data: string): void {
     const watchers = this.tcpServerWatchers.get(serverId)
