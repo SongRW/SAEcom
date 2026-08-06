@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import '@/shared/i18n'
 import '@/styles/globals.css'
+// 冷启动主题（防 FOUC）：原为 panel.html 内联脚本，生产 CSP 拦截不执行 → 改为同源模块
+import '@/shared/dev/applyBootTheme'
 import { useIPC } from '@/shared/ipc'
 import { useSettingsStore } from '@/shared/store/settings'
 import { formatBytes, nowTs, renderChunks, DEFAULT_SERIAL_OPTIONS } from '@/features/serial-panel/paneViewModel'

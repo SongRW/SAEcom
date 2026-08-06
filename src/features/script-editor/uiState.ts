@@ -1,4 +1,4 @@
-export type ScriptEditorSidePanel = 'components' | 'scripts'
+export type ScriptEditorSidePanel = 'components' | 'scripts' | 'custom'
 export type CanvasTool = 'pointer' | 'select' | 'pan'
 export type ScriptEditorWindowMode = 'normal' | 'maximized' | 'minimized'
 /**

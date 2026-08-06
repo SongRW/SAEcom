@@ -141,9 +141,10 @@ describe('script editor graph state', () => {
   it('keeps every node category available for the vertical component tree', () => {
     const groups = groupNodesForPalette()
 
-    expect(groups).toHaveLength(11)
+    // custom 分类在无用户组件时为空（合法：动态注册表）
+    expect(groups).toHaveLength(12)
     expect(groups[0]?.key).toBe('input')
-    expect(groups.every((group) => group.nodes.length > 0)).toBe(true)
+    expect(groups.filter((group) => group.key !== 'custom').every((group) => group.nodes.length > 0)).toBe(true)
     expect(groups.find((group) => group.key === 'string')?.nodes.map((node) => node.key)).toContain('string-concat')
   })
 

@@ -4,6 +4,8 @@ import { ArrowSquareIn, Trash as Trash2 } from '@phosphor-icons/react'
 import '@/shared/i18n'
 import '@/styles/globals.css'
 import '@/features/script-editor/script-editor.css'
+// 冷启动主题（防 FOUC）：原为 script-output.html 内联脚本，生产 CSP 拦截不执行 → 改为同源模块
+import '@/shared/dev/applyBootTheme'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { TitleBarChrome } from '@/features/titlebar/TitleBarChrome'

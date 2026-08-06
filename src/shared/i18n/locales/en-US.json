@@ -135,6 +135,17 @@
       "scriptEditor": "Script editor",
       "openScriptEditor": "Open script editor"
     },
+    "scriptHub": {
+      "subtitle": "Visual script editor: orchestrate serial/panel interactions with flowcharts; supports custom JS components",
+      "scriptsCount": "Scripts",
+      "componentsCount": "Node components (built-in + custom)",
+      "scriptsList": "Scripts",
+      "componentsLibrary": "Components",
+      "noScripts": "No scripts yet — open the editor to create one",
+      "noCustomComponents": "No custom components yet — open the editor to create one",
+      "createComponent": "Create custom component",
+      "hint": "Connect a panel to run scripts in the editor; click a list item or the main button to open the editor"
+    },
     "panelOverview": {
       "empty": "No panels yet — click \"New panel\" in the sidebar to create one",
       "count": "{{count}} panels · click to focus"

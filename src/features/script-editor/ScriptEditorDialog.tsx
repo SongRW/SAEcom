@@ -24,7 +24,8 @@ import {
   setCanvasTool,
   setViewMode,
   toggleScriptOutput,
-  toggleSidePanel
+  toggleSidePanel,
+  type ScriptEditorSidePanel as ScriptEditorSidePanelState
 } from '@/features/script-editor/uiState'
 import { useGraphHistory } from '@/features/script-editor/useGraphHistory'
 import {
@@ -57,6 +58,19 @@ import type { GraphCanvasHandle } from '@/features/script-editor/components/Grap
 import { NodeConfigPanel } from '@/features/script-editor/components/NodeConfigPanel'
 import { NodeSearchBox } from '@/features/script-editor/components/NodeSearchBox'
 import { NodePalette } from '@/features/script-editor/components/NodePalette'
+import {
+  CustomComponentEditor
+} from '@/features/script-editor/components/CustomComponentEditor'
+import {
+  CustomComponentPanel,
+  type CustomComponentListItem,
+  fetchCustomComponentList,
+  importCustomComponentsAndRefresh,
+  stripJsonExtension
+} from '@/features/script-editor/components/CustomComponentPanel'
+import {
+  createEmptyDescriptor
+} from '@/features/script-editor/nodes/component/customComponentForm'
 import { ScriptCodePanel } from '@/features/script-editor/components/ScriptCodePanel'
 import { ScriptEditorDrawer } from '@/features/script-editor/components/ScriptEditorDrawer'
 import { ScriptEditorRail } from '@/features/script-editor/components/ScriptEditorRail'
@@ -64,6 +78,10 @@ import { ScriptEditorSidePanel } from '@/features/script-editor/components/Scrip
 import { ScriptList } from '@/features/script-editor/components/ScriptList'
 import { ScriptOutputPanel } from '@/features/script-editor/components/ScriptOutputPanel'
 import { Toolbar } from '@/features/script-editor/components/Toolbar'
+import {
+  loadAndRegisterCustomComponents
+} from '@/features/script-editor/nodes/component/loadCustomComponents'
+import type { UserComponentDescriptor } from '@/features/script-editor/nodes/component/userComponent'
 import { PromptDialog } from '@/components/ui/prompt-dialog'
 import { toast } from 'sonner'
 import {
@@ -83,13 +101,33 @@ interface ScriptEditorDialogProps {
   isPopout?: boolean
   /** 主窗：dock 回时由外层 BottomNav 传入的待恢复图快照（挂载时消费一次） */
   initialGraphPayload?: { graphStr: string; activeScriptName: string } | null
+  /** 主页脚本功能区点击列表项时传入；编辑器加载后消费，避免下次打开复用。 */
+  initialScriptName?: string | null
+  /** 主页组件库入口请求首次打开的侧栏；初始化后消费。 */
+  initialSidePanel?: ScriptEditorSidePanelState | null
   /** 主窗：图快照被消费后清除外层待恢复态，避免下次打开误灌回旧图 */
   onConsumedPayload?: () => void
+  /** 主窗：主页脚本列表的打开请求被消费后清除。 */
+  onConsumedInitialScript?: () => void
+  /** 主窗：主页组件库侧栏请求被消费后清除。 */
+  onConsumedInitialSidePanel?: () => void
   onClose: () => void
 }
 
-export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload, onConsumedPayload, onClose }: ScriptEditorDialogProps) {
-  const groups = useMemo(() => groupNodesForPalette(), [])
+export function ScriptEditorDialog({
+  open,
+  isPopout = false,
+  initialGraphPayload,
+  initialScriptName,
+  initialSidePanel,
+  onConsumedPayload,
+  onConsumedInitialScript,
+  onConsumedInitialSidePanel,
+  onClose
+}: ScriptEditorDialogProps) {
+  /** 自定义组件加载/变更计数：每次 refreshCustomComponents 自增，触发 palette useMemo 重算。 */
+  const [paletteVersion, setPaletteVersion] = useState(0)
+  const groups = useMemo(() => groupNodesForPalette(), [paletteVersion])
   const activeScriptName = useScriptEditorStore((state) => state.activeScriptName)
   const runningScriptId = useScriptEditorStore((state) => state.runningScriptId)
   // 跟踪当前 runId 供 onLog 回调过滤；持续监听脚本运行期间 store 值会变化，闭包会过期。
@@ -112,11 +150,10 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   /** 输出是否已弹出独立窗：host 侧收起 dock 面板，日志仍 sync 过去。 */
   const [outputPoppedOut, setOutputPoppedOut] = useState(false)
   const graphCanvasRef = useRef<GraphCanvasHandle | null>(null)
+  // create 模式的空描述符：引用固定，避免父层重渲染产生新对象触发子表单重置（P0 回归）。
+  const emptyDescriptorRef = useRef<UserComponentDescriptor>(createEmptyDescriptor())
   // 跟踪上一次 open，用于检测 false→true 的「重开」边沿。
   const wasOpenRef = useRef(false)
-  // 标记当前 open→false 是由「弹出为独立窗」触发的（去程），
-  // reset-on-reopen effect 应跳过它：dock 回来时要靠 state 恢复图。
-  const poppingOutRef = useRef(false)
   const {
     graph,
     setGraphCommit,
@@ -141,6 +178,15 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   const [confirmOverwrite, setConfirmOverwrite] = useState<{ name: string; source: OverwriteSource } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [renameTarget, setRenameTarget] = useState<string | null>(null)
+  // 自定义组件面板：列表数据 + 编辑器对话框
+  const [customItems, setCustomItems] = useState<CustomComponentListItem[]>([])
+  const [customLoading, setCustomLoading] = useState(false)
+  const [customError, setCustomError] = useState<string | null>(null)
+  const [customActiveFileName, setCustomActiveFileName] = useState<string | null>(null)
+  const [customEditorOpen, setCustomEditorOpen] = useState(false)
+  const [customEditTarget, setCustomEditTarget] = useState<{ fileName: string; descriptor: UserComponentDescriptor } | null>(null)
+  const [customRenameTarget, setCustomRenameTarget] = useState<CustomComponentListItem | null>(null)
+  const [customDeleteTarget, setCustomDeleteTarget] = useState<CustomComponentListItem | null>(null)
   // 本地 echo 模拟服务：null=未启动；启动后存 { id, port }，便于停止
   const [simulator, setSimulator] = useState<{ id: string; port: number } | null>(null)
   const serialPanelOptions = useMemo(() => buildSerialPanelOptions(serialPanels), [serialPanels])
@@ -160,11 +206,12 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 关闭后重开：完全清空编辑态，避免残留上次脚本/画布（用户确认要「完全清空」）。
-  // - 仅在 false→true 边沿、且不是 popout 去程（poppingOutRef）、且无 dock 回灌的图快照时触发。
-  //   popout 去程的 open→false 不应清空：dock 回来要靠保留的 state（或 initialGraphPayload）恢复。
+  // - 仅在 false→true 边沿、且无 dock 回灌的图快照时触发。
   // - dock 回程有 initialGraphPayload，由下方的图快照恢复 effect 灌回，这里跳过避免冲突。
+  // - 注：popout 去程不再抑制 reset——dock 回程靠 initialGraphPayload 恢复图；
+  //   若抑制，popout 后普通重开会残留上次会话（回归：poppingOutRef 泄漏）。
   useEffect(() => {
-    if (open && !wasOpenRef.current && !poppingOutRef.current && !initialGraphPayload) {
+    if (open && !wasOpenRef.current && !initialGraphPayload) {
       replaceGraph(createEmptyGraphState())
       setLegacyCode('')
       setActiveScriptName(null)
@@ -172,10 +219,10 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
       setZoom(1)
       setUiState(createScriptEditorUiState())
       setScriptError(null)
+      // 搜索框是瞬态 UI，重开不残留（回归：上次 Ctrl+F 打开的搜索框跨会话残留）
+      setSearchOpen(false)
     }
     wasOpenRef.current = open
-    // 进入打开态后重置 popout 标记，为下一次「真正的关闭」做准备。
-    if (open) poppingOutRef.current = false
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialGraphPayload])
 
@@ -215,6 +262,12 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   useEffect(() => {
     if (!open) return
     void refreshScripts()
+  }, [open])
+
+  // 编辑器打开时加载自定义组件并注册到 registry（让调色板含自定义节点）
+  useEffect(() => {
+    if (!open) return
+    void refreshCustomComponents()
   }, [open])
 
   useEffect(() => {
@@ -320,6 +373,23 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     }
   }
 
+  /** 拉取自定义组件列表（仅列表展示），并重新注册到 registry（使调色板反映最新）。 */
+  async function refreshCustomComponents() {
+    setCustomLoading(true)
+    setCustomError(null)
+    try {
+      // 先 reloadUser 到 registry（调色板/画布/codegen 即时生效），再拉列表
+      await loadAndRegisterCustomComponents()
+      setPaletteVersion((v) => v + 1)
+      const items = await fetchCustomComponentList()
+      setCustomItems(items)
+    } catch (error) {
+      setCustomError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setCustomLoading(false)
+    }
+  }
+
   async function refreshSerialPanels() {
     setRefreshingPanels(true)
     try {
@@ -379,6 +449,28 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     // GraphCanvas 会检测到签名未同步，延后到 Rete 同步完成后执行。
     window.requestAnimationFrame(() => graphCanvasRef.current?.fitView())
   }
+
+  // 主页 ScriptHub 点击脚本列表项：重开初始化完成后复用已有 selectScript 流程。
+  // dock 回传图快照优先，二者不可同时覆盖同一份编辑器状态。
+  useEffect(() => {
+    if (!open || !initialScriptName || initialGraphPayload) return
+    void selectScript(initialScriptName)
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        setScriptError(message)
+        toast.error(`打开脚本失败：${message}`)
+      })
+      .finally(() => onConsumedInitialScript?.())
+  // selectScript 依赖本组件的状态 setter，当前请求只应在 open/name/payload 边沿消费一次。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialGraphPayload, initialScriptName])
+
+  // 主页 ScriptHub 点击组件库：复用现有侧栏状态机，打开后立即消费一次性请求。
+  useEffect(() => {
+    if (!open || !initialSidePanel || initialGraphPayload) return
+    setUiState((current) => openSidePanel(current, initialSidePanel))
+    onConsumedInitialSidePanel?.()
+  }, [initialGraphPayload, initialSidePanel, onConsumedInitialSidePanel, open])
 
   async function createScript() {
     // 新建：弹出命名对话框，默认值沿用 Script_N 自增逻辑
@@ -515,6 +607,102 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     // 用户取消保存对话框 → 静默
   }
 
+  // ===== 自定义组件操作 =====
+
+  /** 打开编辑器 - 新建模式。 */
+  function createCustomComponent() {
+    setCustomEditTarget(null)
+    setCustomEditorOpen(true)
+  }
+
+  /** 打开编辑器 - 编辑模式（读取文件并解析为 descriptor）。 */
+  async function editCustomComponent(item: CustomComponentListItem) {
+    if (item.parseError) {
+      toast.error(`无法编辑：${item.parseError}`)
+      return
+    }
+    try {
+      const raw = await getIPC().customComponents.read(item.fileName)
+      const descriptor = JSON.parse(raw) as UserComponentDescriptor
+      setCustomActiveFileName(item.fileName)
+      setCustomEditTarget({ fileName: item.fileName, descriptor })
+      setCustomEditorOpen(true)
+    } catch (error) {
+      toast.error(`打开组件失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /** 导入组件（IPC 多选 + 校验 + 重名兜底由主进程完成），完成后刷新。 */
+  async function importCustomComponents() {
+    await importCustomComponentsAndRefresh()
+    await refreshCustomComponents()
+  }
+
+  /** 导出单个组件。 */
+  async function exportCustomComponent(item: CustomComponentListItem) {
+    const res = await getIPC().customComponents.exportComponent(item.fileName)
+    if (res.ok) {
+      toast.success(`已导出：${res.filePath}`)
+    } else if (!res.canceled) {
+      toast.error(`导出失败：${res.error || '未知错误'}`)
+    }
+  }
+
+  /** 删除单个组件（确认对话框后执行）。 */
+  async function execDeleteCustomComponent() {
+    const target = customDeleteTarget
+    setCustomDeleteTarget(null)
+    if (!target) return
+    try {
+      const res = await getIPC().customComponents.delete(target.fileName)
+      if (!res.ok) {
+        toast.error(`删除失败：${res.error || '未知错误'}`)
+        return
+      }
+      if (target.fileName === customActiveFileName) {
+        setCustomActiveFileName(null)
+      }
+      await refreshCustomComponents()
+      toast.success(`已删除：${target.fileName}`)
+    } catch (error) {
+      toast.error(`删除失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /** 重命名单个组件（确认对话框后执行）。基于 descriptor.key 派生新文件名。 */
+  async function execRenameCustomComponent(newKey: string) {
+    const target = customRenameTarget
+    setCustomRenameTarget(null)
+    if (!target) return
+    const trimmed = newKey.trim()
+    // 校验新 key 格式
+    if (!/^custom-[a-z0-9-]+$/.test(trimmed)) {
+      toast.warning("新 key 必须形如 'custom-xxx'（小写字母/数字/连字符）")
+      return
+    }
+    const newFileName = `${trimmed}.json`
+    if (newFileName === target.fileName) return
+    if (customItems.some((it) => it.fileName === newFileName)) {
+      toast.warning(`目标文件 ${newFileName} 已存在`)
+      return
+    }
+    try {
+      // newKey 一并改写描述符内 key：仅改文件名会让下次保存按旧 key 回滚重命名
+      const res = await getIPC().customComponents.rename(target.fileName, newFileName, trimmed)
+      if (!res.ok) {
+        toast.error(`重命名失败：${res.error || '未知错误'}`)
+        return
+      }
+      if (target.fileName === customActiveFileName) {
+        setCustomActiveFileName(newFileName)
+      }
+      await refreshCustomComponents()
+      toast.success(`已重命名为：${newFileName}`)
+    } catch (error) {
+      toast.error(`重命名失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
   /** 覆盖确认通过后：根据来源决定建空脚本（新建命名）或写入当前内容（保存/另存为）。 */
   async function execOverwrite() {
     const pending = confirmOverwrite
@@ -562,10 +750,15 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     }
 
     const panelId = currentPanelId(serialPanels)
+    const graphExport = exportGraphState(graph)
+    const generatedCode = graph.nodes.length > 0 ? generateCodeFromRete(graphExport) : legacyCode || generateCodeFromRete(graphExport)
+
     // 面板可选：不依赖面板的脚本（纯 TCP、显式 sendToSerial/sendToPanel、sleep/log/计算等）
-    // 无需先建面板即可运行。仅当脚本里用到隐式 send()/waitOnePacket()/listenCurrentPackets()
-    //（默认作用在当前面板）时，才会在运行期给出清晰错误，而非在此一刀切拦截。
-    if (!panelId) {
+    // 无需先建面板即可运行。仅当脚本里确实用到隐式 send()/waitOnePacket()/listenCurrentPackets()
+    //（默认作用在当前面板）时，才提示——这些调用在无面板时会运行期失败。
+    // 显式 sendToSerial(port)/sendToPanel(panelId)/sendTCP/listenSerialPackets/listenTcpPackets 等
+    // 自带目标，不依赖当前面板，因此不提示（避免对纯串口/TCP 脚本误报）。
+    if (!panelId && usesImplicitPanelCalls(generatedCode)) {
       toast.info('未选择面板', {
         description: '隐式 send/wait 将失败；如需收发请用「发送到串口/面板」节点显式指定目标。'
       })
@@ -575,8 +768,6 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     appendOutputLine('[开始运行...]')
     setUiState(onScriptRunStarted)
 
-    const graphExport = exportGraphState(graph)
-    const generatedCode = graph.nodes.length > 0 ? generateCodeFromRete(graphExport) : legacyCode || generateCodeFromRete(graphExport)
     const run = await getIPC().scripts.run(generatedCode, panelId ? { id: panelId } : {})
     setRunningScriptId(run.runId)
   }
@@ -637,6 +828,9 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
     if (isPopout) {
       const ipc = getIPC()
       if (!ipc.scriptEditor?.onPopoutPayload) return
+      // 订阅主进程回灌的图快照；订阅后主动拉取一次首包——did-finish-load 推送
+      // 可能早于本 effect 订阅（时序竞态），主动拉取保证弹窗不丢图（与 script-output 同机制）。
+      ipc.scriptEditor.requestPayload?.()
       return ipc.scriptEditor.onPopoutPayload((payload) => {
         applyGraphPayload(payload)
       })
@@ -666,9 +860,6 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
   }
 
   function handlePopout() {
-    // 标记去程：随后 onClose() 把 open 置 false，但这是切到独立窗而非真正关闭，
-    // reset-on-reopen effect 须跳过，dock 回来才能靠保留的 state 恢复图。
-    poppingOutRef.current = true
     try {
       // 把当前图快照 + 活动脚本名一并带去弹窗（双向传图-去程），避免弹窗/dock 回后图丢失
       const graphStr = JSON.stringify(exportGraphState(graph))
@@ -817,6 +1008,48 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
         await execRename(newName)
       }}
     />
+
+    {/* 自定义组件：重命名（基于 key 派生新文件名） */}
+    <PromptDialog
+      open={customRenameTarget !== null}
+      onOpenChange={(open) => { if (!open) setCustomRenameTarget(null) }}
+      title="重命名自定义组件"
+      description="输入新的 key（将作为文件名 custom-xxx.json）"
+      defaultValue={customRenameTarget ? stripJsonExtension(customRenameTarget.fileName).replace(/^custom-/, '') : ''}
+      onConfirm={async (v) => {
+        // 用户输入的是「去 custom- 前缀的短名」；这里补回前缀，便于命名。
+        const short = v.trim().replace(/^custom-/, '')
+        const fullKey = short ? `custom-${short}` : ''
+        await execRenameCustomComponent(fullKey)
+      }}
+    />
+
+    {/* 自定义组件：删除确认。
+        画布正在使用该组件时给出警告：删除后已放置节点在 codegen 中会被静默跳过，
+        生成的脚本将缺少这段逻辑（回归：删除组件无提示）。 */}
+    <AlertDialog
+      open={customDeleteTarget !== null}
+      onOpenChange={(open) => { if (!open) setCustomDeleteTarget(null) }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除自定义组件</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定删除组件「{customDeleteTarget?.fileName}」吗？此操作不可撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {customDeleteTarget?.key && graph.nodes.some((n) => n.key === customDeleteTarget.key) ? (
+          <div className="custom-component-editor__error" role="alert">
+            警告：当前画布有节点正在使用该组件（key: {customDeleteTarget.key}）。
+            删除后这些节点生成的代码将为空，请确认这是预期行为。
+          </div>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { void execDeleteCustomComponent() }}>删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   )
 
@@ -891,8 +1124,35 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
               />
             </ScriptEditorSidePanel>
           ) : null}
+          {uiState.sidePanel === 'custom' ? (
+            <ScriptEditorSidePanel title="自定义组件" subtitle="创建、导入和管理自定义 JS 组件" onClose={() => setUiState(closeSidePanel)}>
+              <CustomComponentPanel
+                activeFileName={customActiveFileName}
+                error={customError}
+                items={customItems}
+                loading={customLoading}
+                onCreate={createCustomComponent}
+                onDelete={(item) => setCustomDeleteTarget(item)}
+                onExport={(item) => { void exportCustomComponent(item) }}
+                onImport={() => { void importCustomComponents() }}
+                onRename={(item) => setCustomRenameTarget(item)}
+                onSelect={(item) => { void editCustomComponent(item) }}
+              />
+            </ScriptEditorSidePanel>
+          ) : null}
           <div className="script-editor-canvas-shell">
-            {showCodeView ? (
+            {/* 自定义组件编辑器：画布壳内嵌视图（替代 Dialog）。打开时占满画布壳，
+                返回画布/保存后关闭（onOpenChange(false)）。与 ScriptCodePanel 同模式。 */}
+            {customEditorOpen ? (
+              <CustomComponentEditor
+                editFileName={customEditTarget?.fileName ?? null}
+                existingFileNames={customItems.map((it) => it.fileName)}
+                initialDescriptor={customEditTarget?.descriptor ?? emptyDescriptorRef.current}
+                open={customEditorOpen}
+                onMutated={refreshCustomComponents}
+                onOpenChange={setCustomEditorOpen}
+              />
+            ) : showCodeView ? (
               <ScriptCodePanel
                 code={legacyCode}
                 scriptName={activeScriptName}
@@ -923,6 +1183,7 @@ export function ScriptEditorDialog({ open, isPopout = false, initialGraphPayload
                     setSelectedNodeIds([])
                     setUiState(onSelectedNodeDeleted)
                   }}
+                  onDeleteNodes={setGraphCommit}
                   onDropNode={addNode}
                   onDuplicateNode={duplicateNode}
                   onGraphChange={setGraphTransient}
@@ -1025,4 +1286,21 @@ function readSerialPanelSummaries(): SerialPanelSummary[] {
 
 function currentPanelId(panels: SerialPanelSummary[]): string | null {
   return panels.find((panel) => panel.active)?.id || null
+}
+
+/**
+ * 检测生成代码是否用到「依赖当前面板」的隐式调用。
+ * 这些调用在无面板时会运行期失败：
+ * - `send(` —— output-serial/output-panel 节点未指定目标时回退到当前面板
+ * - `waitOnePacket(` —— control-wait 节点（无显式面板变体）
+ * - `listenCurrentPackets(` —— input-panel 节点选「当前面板」时
+ * 显式调用（sendToSerial/sendToPanel/sendTCP/waitPanelPacket/listenSerialPackets/listenTcpPackets 等）
+ * 自带目标，不依赖当前面板，不在此列。
+ *
+ * 用单词边界 `\b` + `(` 匹配调用形式，避免误命中变量名/注释。
+ */
+function usesImplicitPanelCalls(generatedCode: string): boolean {
+  return /\bsend\(/.test(generatedCode)
+    || /\bwaitOnePacket\(/.test(generatedCode)
+    || /\blistenCurrentPackets\(/.test(generatedCode)
 }

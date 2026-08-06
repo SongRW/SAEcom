@@ -22,7 +22,7 @@ describe('script editor view model', () => {
   it('groups node definitions for the palette in category order', () => {
     const groups = groupNodesForPalette()
 
-    expect(groups).toHaveLength(11)
+    expect(groups).toHaveLength(12)
     expect(groups[0].key).toBe('input')
     expect(groups.find((group) => group.key === 'compare')?.nodes).toHaveLength(10)
     expect(groups.find((group) => group.key === 'logical')?.nodes.map((node) => node.key)).toEqual([

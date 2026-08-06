@@ -294,23 +294,19 @@
   background: color-mix(in oklab, var(--primary) 6%, transparent);
 }
 
+/* Monaco 容器（B 层：ScriptCodePanel 从 textarea 升级为 CodeEditor） */
 .script-editor-code__editor {
   flex: 1 1 0;
   min-height: 0;
   width: 100%;
-  margin: 0;
-  padding: 12px 14px;
-  border: 0;
-  resize: none;
-  outline: none;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 12.5px;
-  line-height: 1.55;
-  tab-size: 2;
-  white-space: pre;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Monaco host 继承高度，避免首帧 5×5px 塌陷（与自定义组件编辑器同一处理） */
+.script-editor-code__editor .script-editor-code-editor {
+  height: 100%;
 }
 
 .script-editor-canvas__surface .script-rete-node,
@@ -767,92 +763,6 @@
   overflow: auto;
 }
 
-.script-editor-palette-dock {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  bottom: 12px;
-  z-index: 3;
-  display: block;
-  width: 36px;
-  min-height: 0;
-  pointer-events: none;
-  color: var(--card-foreground);
-}
-
-.script-editor-palette-dock.is-expanded {
-  z-index: 4;
-  width: clamp(220px, calc(100% - 160px), 320px);
-}
-
-.script-editor-palette-dock__handle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  pointer-events: auto;
-}
-
-.script-editor-palette-dock.is-expanded .script-editor-palette-dock__handle {
-  display: none;
-}
-
-.script-editor-palette-dock__panel {
-  display: flex;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-8px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.script-editor-palette-dock.is-expanded .script-editor-palette-dock__panel {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.script-editor-palette-dock__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid var(--border);
-  padding: 10px 12px;
-}
-
-.script-editor-palette-dock__actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.script-editor-palette-dock__actions button,
-.script-editor-palette-dock__actions [role="button"] {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  padding: 0;
-}
-
-.script-editor-palette-dock__body {
-  display: flex;
-  padding: 0;
-  min-height: 0;
-  flex: 1;
-  overflow: auto;
-}
-
 .script-editor-palette,
 .script-editor-list {
   display: flex;
@@ -867,6 +777,69 @@
   min-height: 0;
   flex: 1;
   overflow: hidden;
+}
+
+/* 调色板搜索框 */
+.script-editor-palette__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.script-editor-palette__search-icon {
+  position: absolute;
+  left: 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.script-editor-palette__search-input {
+  padding-left: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+.script-editor-palette__search-clear {
+  position: absolute;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.script-editor-palette__search-clear:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.script-editor-palette__search-clear svg {
+  width: 12px;
+  height: 12px;
+}
+.script-editor-palette__empty {
+  padding: 16px 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-align: center;
+}
+.script-editor-palette__empty-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+/* 命中片段高亮 */
+.script-editor-node-template__name mark {
+  background: var(--accent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .script-editor-palette__tree {
@@ -1012,6 +985,623 @@
 
 .script-editor-list__error {
   color: var(--destructive);
+}
+
+/* 自定义组件面板：操作按钮 + 列表项两行（名称 + key） */
+.script-editor-custom-panel__actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.script-editor-custom-panel__actions button {
+  flex: 1;
+  justify-content: center;
+}
+
+.script-editor-custom-panel__actions button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.script-editor-custom-panel__item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch !important;
+  gap: 2px;
+  white-space: normal;
+}
+
+.script-editor-custom-panel__item-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.script-editor-custom-panel__item-key {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 组合组件徽标（C 层） */
+.script-editor-custom-panel__item-kind {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+/* 组合模式端口绑定行（drawer 内，每个子图节点一组输入/输出下拉） */
+.custom-component-editor__binding-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+}
+
+.custom-component-editor__binding-node {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.custom-component-editor__binding-select {
+  width: 100%;
+  height: 28px;
+  font-size: 12px;
+}
+
+.custom-component-editor__section-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── 自定义组件编辑器：画布壳内嵌视图（替代 Dialog）。
+   结构：上下文条(ctxbar) + 主体(body: Monaco 主区 + 可收起配置 drawer) + 底部试编译面板。
+   与 ScriptCodePanel 同模式：占满 .script-editor-canvas-shell。 */
+.custom-component-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--background);
+}
+
+/* 上下文条 */
+.custom-component-editor__ctxbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+
+.custom-component-editor__ctxbar button {
+  height: 30px;
+}
+
+.custom-component-editor__ctx-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-component-editor__ctx-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted-foreground) 12%, transparent);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-component-editor__ctx-unsaved {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.custom-component-editor__ctx-spacer {
+  flex: 1;
+}
+
+/* 主体：Monaco 主区(flex:1) + 配置 drawer(384px 可收起) */
+.custom-component-editor__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.custom-component-editor__code {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+}
+
+/* Monaco 容器 flex:1 填充 code 列剩余空间 */
+.custom-component-editor__code > :nth-child(2) {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.custom-component-editor__code .script-editor-code-editor {
+  height: 100%;
+}
+
+.custom-component-editor__code-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+/* 实现方式切换（emit 源码 | 组合连线） */
+.custom-component-editor__seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+.custom-component-editor__seg button {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.custom-component-editor__seg button:hover {
+  color: var(--foreground);
+}
+
+.custom-component-editor__seg button.is-active {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
+}
+
+/* 组合连线：组件库侧栏 + GraphCanvas 并排（复用画布逻辑，无自定义添加 UI） */
+.custom-component-editor__compose {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  background: var(--background);
+}
+
+
+/* ── 组合子画布编辑器（C 层 v2：拖拽连线）── */
+/* 连线层：绝对定位覆盖，指针穿透 */
+/* 拖拽捕获层：拖线期间盖住整个画布接收 pointer 事件 */
+/* 端口（stub 与节点端口共用）：hover 放大提示可拖 */
+/* 边界 stub：对外端口（与配置 drawer 联动） */
+/* 节点区 */
+.custom-component-editor__drawer-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.custom-component-editor__drawer-toggle:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+/* 配置 drawer：384px，收起时宽度 0（内容被 overflow hidden 裁掉） */
+.custom-component-editor__drawer {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  width: 384px;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+  overflow: hidden;
+  transition: width 0.18s ease, border-left-width 0.18s ease;
+}
+
+.custom-component-editor__drawer.is-closed {
+  width: 0;
+  border-left-width: 0;
+}
+
+.custom-component-editor__drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.custom-component-editor__drawer-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-component-editor__drawer-sub {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-component-editor__drawer-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.custom-component-editor__drawer-close:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.custom-component-editor__drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 底部试编译面板（替代 Dialog） */
+.custom-component-editor__preview {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.custom-component-editor__preview-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.custom-component-editor__preview-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.custom-component-editor__preview-ok {
+  color: var(--success);
+  font-size: 11px;
+}
+
+.custom-component-editor__preview-body {
+  flex-shrink: 0;
+}
+
+/* 沙箱 API 文档面板（单一来源：sandboxApiDocs.ts） */
+.custom-component-editor__api-docs-toggle {
+  align-self: flex-start;
+}
+
+.custom-component-editor__api-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.custom-component-editor__api-docs-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.custom-component-editor__api-docs-cnt {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.custom-component-editor__api-docs-search {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  font: inherit;
+  font-size: 12px;
+  color: var(--foreground);
+}
+
+.custom-component-editor__api-doc {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  overflow: hidden;
+}
+
+.custom-component-editor__api-doc summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  list-style: none;
+}
+
+.custom-component-editor__api-doc summary::-webkit-details-marker {
+  display: none;
+}
+
+.custom-component-editor__api-doc summary::before {
+  content: '▸';
+  color: var(--muted-foreground);
+  font-size: 10px;
+  transition: transform 0.12s ease;
+}
+
+.custom-component-editor__api-doc[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.custom-component-editor__api-doc summary code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.custom-component-editor__api-doc summary span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-component-editor__api-doc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.custom-component-editor__api-doc-sig,
+.custom-component-editor__api-doc-example {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--muted);
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  margin: 0;
+}
+
+.custom-component-editor__api-doc-params {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.custom-component-editor__api-doc-params div {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.custom-component-editor__api-doc-params dt {
+  font-family: ui-monospace, monospace;
+  color: var(--primary);
+  flex: 0 0 74px;
+}
+
+.custom-component-editor__api-doc-params dd {
+  color: var(--muted-foreground);
+  flex: 1;
+  margin: 0;
+}
+
+.custom-component-editor__api-doc-returns {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.custom-component-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.custom-component-editor__hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.custom-component-editor__error {
+  font-size: 11px;
+  color: var(--destructive);
+}
+
+.custom-component-editor__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.custom-component-editor__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.custom-component-editor__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.custom-component-editor__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.custom-component-editor__control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.custom-component-editor__row-key {
+  flex: 0 0 90px;
+}
+
+.custom-component-editor__row-select {
+  flex: 0 0 130px;
+}
+
+.custom-component-editor__row-label,
+.custom-component-editor__row-default,
+.custom-component-editor__row-options {
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-component-editor__code {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0; /* grid item 收缩，让 Monaco flex 填充 */
+}
+
+/* Monaco 容器 flex:1 填充 code 列剩余空间 */
+.custom-component-editor__code > :nth-child(2) {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* @monaco-editor/react 的 host 是 SECTION 内直接子 DIV；必须继承高度，
+   否则 Dialog 内首次布局会把 Monaco 计算成 5×5px。 */
+.custom-component-editor__code .script-editor-code-editor {
+  height: 100%;
+}
+
+.custom-component-editor__code-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.custom-component-editor__errors {
+  margin: 0;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 120px;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 11px;
+}
+
+.custom-component-editor__errors li {
+  display: flex;
+  gap: 6px;
+  color: var(--destructive);
+}
+
+.custom-component-editor__errors li[data-severity="warning"] {
+  color: var(--muted-foreground);
+}
+
+.custom-component-editor__error-field {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  /* 窄屏：drawer 收起为 0（宽度动画保留），避免与 Monaco 主区争抢宽度 */
+  .custom-component-editor__drawer {
+    width: 0;
+    border-left-width: 0;
+  }
 }
 
 .script-editor-inspector__content {
@@ -1167,48 +1757,6 @@
   font-size: 12px;
 }
 
-.script-editor-config-summary {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: color-mix(in oklab, var(--muted) 32%, transparent);
-  padding: 8px;
-}
-
-.script-editor-config-summary__target {
-  color: var(--foreground);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.script-editor-config-summary dl {
-  display: grid;
-  gap: 6px;
-  grid-template-columns: 1fr 1fr;
-  margin: 0;
-}
-
-.script-editor-config-summary dl > div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.script-editor-config-summary dt {
-  color: var(--muted-foreground);
-  font-size: 11px;
-}
-
-.script-editor-config-summary dd {
-  margin: 0;
-  color: var(--foreground);
-  font-size: 12px;
-}
-
 .script-editor-graph-node__meta,
 .script-editor-inspector__key,
 .script-editor-inspector__empty,
@@ -1329,16 +1877,6 @@
 
 .script-editor-field__error {
   color: var(--destructive);
-}
-
-.script-editor-link-button {
-  border: 0;
-  background: transparent;
-  color: var(--primary);
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  padding: 0;
 }
 
 .script-editor-context-menu {
@@ -1664,16 +2202,6 @@
     top: 56px;
   }
 
-  .script-editor-palette-dock {
-    top: 10px;
-    left: 10px;
-    bottom: 10px;
-  }
-
-  .script-editor-palette-dock.is-expanded {
-    width: clamp(220px, calc(100% - 150px), 312px);
-  }
-
   .script-editor-output-dock {
     right: 8px;
     bottom: 8px;
@@ -1694,54 +2222,6 @@
 
 .script-editor-canvas__surface [data-app-selected="true"] {
   outline: none;
-}
-
-.script-editor-library {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: color-mix(in oklab, var(--background) 55%, transparent);
-}
-
-.script-editor-library__panel {
-  display: flex;
-  width: min(640px, 100%);
-  max-height: min(560px, 100%);
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--card-foreground);
-  box-shadow: var(--script-editor-shadow);
-}
-
-.script-editor-library__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
-}
-
-.script-editor-library__body {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 8px 12px 12px;
-}
-
-.script-editor-library__body .script-editor-palette {
-  min-height: 0;
-  flex: 1;
 }
 
 .script-editor-sidepanel {

@@ -34,6 +34,8 @@ interface GraphCanvasProps {
   minimapVisible: boolean
   onGraphChange: (graph: GraphEditorState) => void
   onDropNode: (key: string, position: { x: number; y: number } | ((graph: GraphEditorState) => { x: number; y: number })) => void
+  /** 删除节点走独立通道（dialog 绑 commit 而非 transient——删除是离散操作，应立即可撤销）。 */
+  onDeleteNodes: (graph: GraphEditorState) => void
   onDeleteSelectedNodes: () => void
   onDuplicateNode: (id: string) => void
   onOpenNodes: () => void
@@ -76,6 +78,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   minimapVisible,
   onGraphChange,
   onDropNode,
+  onDeleteNodes,
   onDeleteSelectedNodes,
   onDuplicateNode,
   onOpenNodes,
@@ -690,7 +693,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const deleteNodes = (ids: string[]) => {
     let next = graphRef.current
     for (const id of ids) next = removeGraphNode(next, id)
-    onGraphChange(next)
+    onDeleteNodes(next)
     onDeleteSelectedNodes()
   }
 
@@ -701,10 +704,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       tabIndex={0}
       onKeyDown={(event) => {
         if ((event.key !== 'Delete' && event.key !== 'Backspace') || selectedNodeIds.length === 0) return
+        // 焦点在节点内联输入框（INPUT/TEXTAREA/contentEditable）时不拦截：
+        // Backspace 是删字符，不应误删整个节点（回归：编辑参数时按退格删节点）。
+        const target = event.target as HTMLElement | null
+        const tag = target?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
         event.preventDefault()
         let next = graphRef.current
         for (const id of selectedNodeIds) next = removeGraphNode(next, id)
-        onGraphChange(next)
+        onDeleteNodes(next)
         onDeleteSelectedNodes()
       }}
       onDragStart={(event) => {

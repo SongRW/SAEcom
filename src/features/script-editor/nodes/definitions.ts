@@ -12,5 +12,8 @@ export {
   listNodeMcpTools,
   getNodeMcpTool,
   collectUnknownSandboxApisForKeys,
-  isContinuousRootKey
+  isContinuousRootKey,
+  listAllNodeDefinitions,
+  listAllNodeComponents,
+  nodeRegistry
 } from '@/features/script-editor/nodes/component/registry'

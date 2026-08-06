@@ -1,4 +1,4 @@
-import { SquaresFour as Blocks, FileText, SidebarSimple as PanelBottom, TerminalWindow as TerminalSquare } from '@phosphor-icons/react'
+import { SquaresFour as Blocks, FileText, PuzzlePiece, SidebarSimple as PanelBottom, TerminalWindow as TerminalSquare } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -37,6 +37,13 @@ export function ScriptEditorRail({
           icon={FileText}
           label="脚本"
           onClick={() => onSelectPanel('scripts')}
+        />
+        <RailButton
+          active={sidePanel === 'custom'}
+          description="自定义：创建、导入和管理自定义组件"
+          icon={PuzzlePiece}
+          label="自定义"
+          onClick={() => onSelectPanel('custom')}
         />
         <RailButton
           active={outputExpanded}

@@ -17,5 +17,6 @@ export const NODE_CATEGORIES: Record<NodeCategory, CategoryMeta> = {
   control: { key: 'control', name: '控制类', color: '#a855f7' },
   output: { key: 'output', name: '输出类', color: '#10b981' },
   modbus: { key: 'modbus', name: 'Modbus', color: '#d97706' },
-  protocol: { key: 'protocol', name: '协议类', color: '#7c3aed' }
+  protocol: { key: 'protocol', name: '协议类', color: '#7c3aed' },
+  custom: { key: 'custom', name: '自定义', color: '#ec4899' }
 }

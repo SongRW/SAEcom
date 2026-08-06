@@ -47,7 +47,8 @@ describe('Rete script editor codegen', () => {
       'control',
       'output',
       'modbus',
-      'protocol'
+      'protocol',
+      'custom'
     ])
   })
 
@@ -482,89 +483,113 @@ describe('Rete script editor codegen', () => {
   })
 
   it('provides a sandbox helper for serial-port output codegen', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
+    // 组2 重构后 serial 相关实现迁移至 serial.service.ts；
+    // 组4 重构后 sendToSerial / ensureSerialOpen 调用迁移至 capabilities/core-provider.ts。
+    const serial = fs.readFileSync(path.resolve(__dirname, '../electron/services/serial.service.ts'), 'utf-8')
+    const coreProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/core-provider.ts'), 'utf-8')
 
-    expect(main).toContain('sendToSerial:')
-    expect(main).toContain('function normalizeSerialOpenOptions(options: any = {}): any')
-    expect(main).toContain('async function ensureSerialOpen(portPath: string, options: any = {}): Promise<any>')
-    expect(main).toContain('await ensureSerialOpen(portPath, options)')
+    expect(coreProvider).toContain('sendToSerial:')
+    expect(serial).toContain('normalizeSerialOpenOptions(options: any = {}): any')
+    expect(serial).toContain('async ensureSerialOpen(portPath: string, options: any = {}): Promise<any>')
+    expect(coreProvider).toContain('await this.serialService.ensureSerialOpen(portPath, options)')
   })
 
   it('provides sandbox helpers for continuous receive codegen', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
+    // 组4 重构后 listen*/waitTcpServerPacket 实现迁移至 capabilities/serial-provider.ts +
+    // capabilities/tcp-provider.ts（沙箱经 host(ScriptWatcherHost) 与 tcpService 调用）。
+    const serialProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/serial-provider.ts'), 'utf-8')
+    const tcpProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/tcp-provider.ts'), 'utf-8')
 
-    expect(main).toContain('listenCurrentPackets:')
-    expect(main).toContain('listenPanelPackets:')
-    expect(main).toContain('listenSerialPackets:')
-    expect(main).toContain('await ensureSerialOpen(portPath, options)')
-    expect(main).toContain('listenTcpPackets:')
-    expect(main).toContain('listenTcpServerPackets:')
-    expect(main).toContain('waitTcpServerPacket')
+    expect(serialProvider).toContain('listenCurrentPackets:')
+    expect(serialProvider).toContain('listenPanelPackets:')
+    expect(serialProvider).toContain('listenSerialPackets:')
+    expect(serialProvider).toContain('await this.serialService.ensureSerialOpen(portPath, options)')
+    expect(tcpProvider).toContain('listenTcpPackets:')
+    expect(tcpProvider).toContain('listenTcpServerPackets:')
+    expect(tcpProvider).toContain('waitTcpServerPacket')
   })
 
   it('queues TCP server packets and keeps startup errors out of continuous payloads', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
+    // 组2 重构后 TCP server 数据队列迁移至 tcp.service.ts；
+    // 组4 重构后沙箱 ensureTcpServer/启动错误处理迁移至 capabilities/tcp-provider.ts。
+    const tcp = fs.readFileSync(path.resolve(__dirname, '../electron/services/tcp.service.ts'), 'utf-8')
+    const tcpProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/tcp-provider.ts'), 'utf-8')
 
-    expect(main).toContain('const tcpServerDataBuffer = new Map<string, string[]>()')
-    expect(main).toContain('const TCP_SERVER_DATA_QUEUE_LIMIT = 256')
-    expect(main).toContain('function pushTcpServerData(serverId: string, data: string): void')
-    expect(main).toContain('function shiftTcpServerData(serverId: string): string | undefined')
-    expect(main).toContain('while (queue.length > TCP_SERVER_DATA_QUEUE_LIMIT) queue.shift()')
-    expect(main).toContain('tcpServerDataBuffer.delete(id)')
-    expect(occurrences(main, 'tcpServerDataBuffer.set(')).toBe(1)
-    expect(main).toContain("if (!result.ok) throw new Error('服务器启动失败: ' + result.error)")
-    expect(main).toContain("err?.message?.startsWith('服务器启动失败: ')")
+    expect(tcp).toContain('private readonly tcpServerDataBuffer = new Map<string, string[]>()')
+    expect(tcp).toContain('const TCP_SERVER_DATA_QUEUE_LIMIT = 256')
+    expect(tcp).toContain('pushTcpServerData(serverId: string, data: string): void')
+    expect(tcp).toContain('shiftTcpServerData(serverId: string): string | undefined')
+    expect(tcp).toContain('while (queue.length > TCP_SERVER_DATA_QUEUE_LIMIT) queue.shift()')
+    expect(tcp).toContain('this.tcpServerDataBuffer.delete(id)')
+    expect(occurrences(tcp, 'this.tcpServerDataBuffer.set(serverId, queue)')).toBe(1)
+    expect(tcpProvider).toContain("if (!result.ok) throw new Error('服务器启动失败: ' + result.error)")
+    expect(tcpProvider).toContain("err?.message?.startsWith('服务器启动失败: ')")
   })
 
   it('uses unique watcher ids for concurrent script listeners on the same target', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
+    // 组4 重构后监听器/watcher id 计数器迁移：listenerIndex 改为共享可变计数对象
+    // （rc.listenerIndex.n，所有 provider 共享）；addScriptWatcher/removeScriptWatcherExact/
+    // removeScriptWatcher 迁移至 services/script.service.ts。
+    const serialProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/serial-provider.ts'), 'utf-8')
+    const scriptService = fs.readFileSync(path.resolve(__dirname, '../electron/services/script.service.ts'), 'utf-8')
 
-    expect(main).toContain('let listenerIndex = 0')
-    expect(main).toContain('const watcherId = `${runId}:${++listenerIndex}`')
-    expect(main).toContain('addScriptWatcher(targetId, watcherId, onDataHandler)')
-    expect(main).toContain('removeScriptWatcherExact(watcherId)')
-    expect(main).toContain('removeScriptWatcher(runId)')
-    expect(main).toContain('id.startsWith(`${runIdOrWatcherId}:`)')
+    expect(scriptService).toContain('const listenerIndex = { n: 0 }')
+    expect(serialProvider).toContain('const watcherId = `${runId}:${++listenerIndex.n}`')
+    expect(serialProvider).toContain('this.host.addScriptWatcher(targetId, watcherId, onDataHandler)')
+    expect(serialProvider).toContain('this.host.removeScriptWatcherExact(watcherId)')
+    expect(scriptService).toContain('removeScriptWatcher(runIdOrWatcherId: string): void')
+    expect(scriptService).toContain('id.startsWith(`${runIdOrWatcherId}:`)')
   })
 
   it('cleans up one-shot script waits by exact watcher id only', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
-    const waitOnePacketBody = between(main, 'waitOnePacket: (timeout: number = 5000) => new Promise<string>((resolve, reject) => {', '    waitPanelPacket:')
-    const waitPanelPacketBody = between(main, 'waitPanelPacket: (panelId: string, timeout: number = 5000) => new Promise<string>((resolve, reject) => {', '    send: async')
+    // 组4 重构后 waitOnePacket/waitPanelPacket 迁移至 capabilities/serial-provider.ts，
+    // watcher id 计数器改用 rc.listenerIndex.n（共享可变对象），host 调用取代直接函数调用。
+    const serialProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/serial-provider.ts'), 'utf-8')
+    const scriptService = fs.readFileSync(path.resolve(__dirname, '../electron/services/script.service.ts'), 'utf-8')
+    const waitOnePacketBody = between(serialProvider, 'waitOnePacket: (timeout: number = 5000) => new Promise<string>((resolve, reject) => {', '      waitPanelPacket:')
+    const waitPanelPacketBody = between(serialProvider, 'waitPanelPacket: (panelId: string, timeout: number = 5000) => new Promise<string>((resolve, reject) => {', '\n      listenCurrentPackets:')
 
-    expect(main).toContain('function removeScriptWatcherExact(watcherId: string): void')
-    expect(waitOnePacketBody).toContain('const watcherId = `${runId}:wait:${++listenerIndex}`')
-    expect(waitOnePacketBody).toContain('addScriptWatcher(ctx.id, watcherId, onDataHandler)')
-    expect(waitOnePacketBody).toContain('removeScriptWatcherExact(watcherId)')
+    expect(scriptService).toContain('removeScriptWatcherExact(watcherId: string): void')
+    expect(waitOnePacketBody).toContain('const watcherId = `${runId}:wait:${++listenerIndex.n}`')
+    expect(waitOnePacketBody).toContain('this.host.addScriptWatcher(ctx.id, watcherId, onDataHandler)')
+    expect(waitOnePacketBody).toContain('this.host.removeScriptWatcherExact(watcherId)')
     expect(waitOnePacketBody).not.toContain('removeScriptWatcher(runId)')
-    expect(waitPanelPacketBody).toContain('const watcherId = `${runId}:wait:${++listenerIndex}`')
-    expect(waitPanelPacketBody).toContain('addScriptWatcher(targetId, watcherId, onDataHandler)')
-    expect(waitPanelPacketBody).toContain('removeScriptWatcherExact(watcherId)')
+    expect(waitPanelPacketBody).toContain('const watcherId = `${runId}:wait:${++listenerIndex.n}`')
+    expect(waitPanelPacketBody).toContain('this.host.addScriptWatcher(targetId, watcherId, onDataHandler)')
+    expect(waitPanelPacketBody).toContain('this.host.removeScriptWatcherExact(watcherId)')
     expect(waitPanelPacketBody).not.toContain('removeScriptWatcher(runId)')
   })
 
   it('fans out TCP server packets to continuous listeners without consuming the queue', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
-    const listenerBody = between(main, 'listenTcpServerPackets: (port: number) => async (handler: (value: string) => Promise<void> | void) => {', '\n    },\n\n    broadcastTcpServer:')
+    // 组4 重构后 listenTcpServerPackets 迁移至 capabilities/tcp-provider.ts；
+    // ensureTcpServer（沙箱独立 TCP 服务器）迁移至 services/script.service.ts。
+    const tcp = fs.readFileSync(path.resolve(__dirname, '../electron/services/tcp.service.ts'), 'utf-8')
+    const tcpProvider = fs.readFileSync(path.resolve(__dirname, '../electron/capabilities/tcp-provider.ts'), 'utf-8')
+    const scriptService = fs.readFileSync(path.resolve(__dirname, '../electron/services/script.service.ts'), 'utf-8')
+    const listenerBody = between(tcpProvider, 'listenTcpServerPackets: (port: number) => async (handler: (value: string) => Promise<void> | void) => {', '\n      },\n\n      broadcastTcpServer:')
 
-    expect(main).toContain('const tcpServerWatchers = new Map<string, Map<string, (value: string) => Promise<void> | void>>()')
-    expect(main).toContain('function notifyTcpServerWatchers(serverId: string, data: string): void')
-    expect(occurrences(main, 'notifyTcpServerWatchers(serverId, dataText)')).toBe(2)
-    expect(main).toContain('tcpServerWatchers.delete(id)')
-    expect(listenerBody).toContain('const watcherId = `${runId}:tcpServer:${++listenerIndex}`')
-    expect(listenerBody).toContain('addTcpServerWatcher(serverId, watcherId, onDataHandler)')
-    expect(listenerBody).toContain('removeTcpServerWatcher(serverId, watcherId)')
+    expect(tcp).toContain('private readonly tcpServerWatchers = new Map<string, Map<string, (value: string) => Promise<void> | void>>()')
+    expect(tcp).toContain('notifyTcpServerWatchers(serverId: string, data: string): void')
+    // 沙箱 ensureTcpServer（script.service.ts）数据回调 + tcp.service startServer 数据回调 各调用一次 notifyTcpServerWatchers
+    expect(occurrences(scriptService, 'this.tcpService.notifyTcpServerWatchers(serverId, dataText)')).toBe(1)
+    expect(occurrences(tcp, 'this.notifyTcpServerWatchers(serverId, dataText)')).toBe(1)
+    expect(tcp).toContain('this.tcpServerWatchers.delete(id)')
+    expect(listenerBody).toContain('const watcherId = `${runId}:tcpServer:${++listenerIndex.n}`')
+    expect(listenerBody).toContain('this.tcpService.addTcpServerWatcher(serverId, watcherId, onDataHandler)')
+    expect(listenerBody).toContain('this.tcpService.removeTcpServerWatcher(serverId, watcherId)')
     expect(listenerBody).not.toContain('waitTcpServerPacket(')
   })
   it('reuses in-flight TCP server startup for same-port continuous listeners', () => {
-    const main = fs.readFileSync(path.resolve(__dirname, '../electron/main.ts'), 'utf-8')
-    const ensureBody = between(main, 'const ensureTcpServer = (port: number, serverId = `tcpServer:${port}`): Promise<any> => {', '\n\n  const waitTcpServerPacket')
+    // 组4 重构后沙箱独立 TCP 服务器启动表迁移至 services/script.service.ts（ensureTcpServer 方法）。
+    const scriptService = fs.readFileSync(path.resolve(__dirname, '../electron/services/script.service.ts'), 'utf-8')
+    const ensureBody = between(scriptService, 'ensureTcpServer(port: number, serverId = `tcpServer:${port}`): Promise<any> {', '\n\n  // ── 执行 / 停止 ──')
 
-    expect(main).toContain('const tcpServerStarts = new Map<string, Promise<any>>()')
-    expect(ensureBody).toContain('const pending = tcpServerStarts.get(serverId)')
+    // 组2 重构后沙箱独立持有 TCP 服务器启动表（sandboxTcpServerStarts），与 TcpService 分离。
+    expect(scriptService).toContain('private readonly sandboxTcpServerStarts = new Map<string, Promise<any>>()')
+    expect(ensureBody).toContain('const pending = this.sandboxTcpServerStarts.get(serverId)')
     expect(ensureBody).toContain('if (pending) return pending')
-    expect(ensureBody).toContain('tcpServerStarts.set(serverId, startPromise)')
-    expect(ensureBody).toContain('tcpServerStarts.delete(serverId)')
+    expect(ensureBody).toContain('this.sandboxTcpServerStarts.set(serverId, startPromise)')
+    expect(ensureBody).toContain('this.sandboxTcpServerStarts.delete(serverId)')
   })
 
   it('generates compare and logical code by node key', () => {

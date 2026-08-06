@@ -16,19 +16,11 @@
             height: 100%;
         }
     </style>
-    <!-- 冷启动防闪烁：与 script-editor.html 一致，同步读 appSettings 应用主题。 -->
-    <script>
-        (function () {
-            try {
-                var raw = localStorage.getItem('appSettings')
-                var s = raw ? JSON.parse(raw) : {}
-                var el = document.documentElement
-                if (s.dark) { el.classList.add('dark'); el.classList.add('theme-dark') }
-                var fs = Number(s.fontSize)
-                if (fs > 0) el.style.setProperty('--font-size-base', fs + 'px')
-            } catch (e) { /* 容错 */ }
-        })()
-    </script>
+    <!--
+      注意：本文件不含任何内联 <script>。生产 CSP（installCsp, 见 electron/main.ts）
+      script-src 为 'self'，内联脚本会被拦截（此前冷启动主题脚本失效、深色首帧闪白）。
+      冷启动主题逻辑已移至 src/shared/dev/applyBootTheme.ts，由 script-output.tsx 模块级 import。
+    -->
 </head>
 
 <body>

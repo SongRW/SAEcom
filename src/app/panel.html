@@ -17,20 +17,10 @@
         }
     </style>
     <!--
-      冷启动防闪烁（FOUC）：同步读 localStorage['appSettings']，在 React 挂载前提前
-      应用主题类。独立窗共用默认 session，localStorage 与主窗同源共享。与 mainwindow.html
-      一致，避免深色模式首帧浅色绘制（panel.tsx 的 useEffect 补主题发生在首绘之后）。
+      注意：本文件不含任何内联 <script>。生产 CSP（installCsp, 见 electron/main.ts）
+      script-src 为 'self'，内联脚本会被拦截（此前冷启动主题脚本失效、深色首帧闪白）。
+      冷启动主题逻辑已移至 src/shared/dev/applyBootTheme.ts，由 panel.tsx 模块级 import。
     -->
-    <script>
-        (function () {
-            try {
-                var raw = localStorage.getItem('appSettings')
-                var s = raw ? JSON.parse(raw) : {}
-                var el = document.documentElement
-                if (s.dark) { el.classList.add('dark'); el.classList.add('theme-dark') }
-            } catch (e) { /* 容错 */ }
-        })()
-    </script>
 </head>
 
 <body>

@@ -135,6 +135,17 @@
       "scriptEditor": "脚本编辑器",
       "openScriptEditor": "打开脚本编辑器"
     },
+    "scriptHub": {
+      "subtitle": "可视化脚本编辑器：用流程图编排串口/面板交互，支持自定义 JS 组件",
+      "scriptsCount": "脚本数量",
+      "componentsCount": "节点组件（内置 + 自定义）",
+      "scriptsList": "脚本列表",
+      "componentsLibrary": "组件库",
+      "noScripts": "还没有脚本，打开编辑器新建",
+      "noCustomComponents": "还没有自定义组件，打开编辑器创建",
+      "createComponent": "创建自定义组件",
+      "hint": "连接面板后即可在编辑器中运行脚本；点击上方列表或主按钮打开编辑器"
+    },
     "panelOverview": {
       "empty": "暂无面板，在侧栏点击「新建面板」创建",
       "count": "共 {{count}} 个面板 · 点击聚焦"

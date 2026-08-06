@@ -26,7 +26,10 @@ export function emitNodeByKey(ctx: EmitContext, node: ReteGraphNode, indent = ' 
   }
 
   const def = ctx.registry[node.key]
-  if (!def) return ''
+  if (!def) {
+    // 未知节点（如自定义组件被删除后仍留在画布）：不静默跳过，产出一行注释便于排查
+    return `${indent}// [节点 ${node.key} 未注册，已跳过（组件可能已被删除）]\n`
+  }
 
   // 兼容：registry 注入但尚未注册为组件类的节点（测试 / 实验性节点）
   let code = emitStopGuard(indent)

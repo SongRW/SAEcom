@@ -1,5 +1,5 @@
 import type { SocketSpec } from '@shared/types'
-import { NODE_DEFINITIONS } from '@/features/script-editor/nodes/definitions'
+import { NODE_DEFINITIONS, getNodeDefinition } from '@/features/script-editor/nodes/definitions'
 import { BITFIELD_MAX_TOTAL_BITS, clampBits, type BitfieldEntry } from '@/features/script-editor/rete/BitfieldControl'
 import type { KeyEntry } from '@/features/script-editor/rete/KeyListControl'
 
@@ -43,7 +43,8 @@ export function isConcatNode(nodeKey: string | undefined): boolean {
 }
 
 export function resolveNodePorts(nodeKey: string, data: Record<string, unknown> = {}): DerivedNodePorts {
-  const definition = NODE_DEFINITIONS[nodeKey]
+  // 动态查找（含用户/插件组件）；回退到冻结内置表（兼容历史静态导入）。
+  const definition = getNodeDefinition(nodeKey) ?? NODE_DEFINITIONS[nodeKey]
   if (!definition) return { inputs: [], outputs: [] }
 
   const inputs = [...definition.inputs]

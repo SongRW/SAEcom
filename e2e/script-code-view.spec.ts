@@ -35,8 +35,11 @@ test.describe('脚本页纯代码视图', () => {
     await expect(codePanel.getByText('纯代码', { exact: true })).toBeVisible()
     const codeEditor = editor.getByTestId('script-code-editor')
     await expect(codeEditor).toBeVisible()
-    await expect(codeEditor).toHaveValue(/PURE_CODE_VIEW_OK/)
-    await expect(codeEditor).toHaveValue(/DONE=1/)
+    // Monaco 渲染（B 层：textarea → CodeEditor）：内容在 .view-lines
+    const monaco = codeEditor.locator('.monaco-editor .view-lines')
+    await expect(monaco).toBeVisible({ timeout: 15000 })
+    await expect(monaco).toContainText('PURE_CODE_VIEW_OK')
+    await expect(monaco).toContainText('DONE=1')
   })
 
   test('纯代码脚本可切换到画布并切回源码', async ({ page }) => {
@@ -75,6 +78,6 @@ test.describe('脚本页纯代码视图', () => {
     await clickReady(page, editor.getByTestId('show-code-view'))
     await expect(editor.getByTestId('script-code-panel')).toBeVisible({ timeout: 10000 })
     const codeEditor = editor.getByTestId('script-code-editor')
-    await expect(codeEditor).toHaveValue(/VIEW_SWITCH_OK/)
+    await expect(codeEditor.locator('.monaco-editor .view-lines')).toContainText('VIEW_SWITCH_OK')
   })
 })

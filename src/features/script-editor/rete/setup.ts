@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin'
 import { ReactPlugin, Presets as ReactPresets } from 'rete-react-plugin'
 import type { RenderEmit } from 'rete-react-plugin'
 import type { ControlSpec, NodeDef, ReteGraphExport, SocketKind } from '@shared/types'
-import { NODE_CATEGORIES, NODE_DEFINITIONS } from '@/features/script-editor/nodes/definitions'
+import { NODE_CATEGORIES, NODE_DEFINITIONS, getNodeDefinition } from '@/features/script-editor/nodes/definitions'
 import { SOCKETS, canConnectSockets } from '@/features/script-editor/nodes/sockets'
 import { orthogonalConnectionPath } from '@/features/script-editor/rete/connectionPath'
 import {
@@ -168,7 +168,7 @@ export function createClassicNodeFromDefinition(definition: NodeDef): ScriptNode
 }
 
 export function createClassicNodeFromGraphNode(graphNode: GraphEditorNode): ScriptNode {
-  const definition = NODE_DEFINITIONS[graphNode.key]
+  const definition = getNodeDefinition(graphNode.key) ?? NODE_DEFINITIONS[graphNode.key]
   const node = createClassicNodeFromDefinition(definition)
   node.id = graphNode.id
   node.label = graphNode.label
@@ -254,7 +254,7 @@ export async function syncReteNodeDataFromGraph(
     if (!graphNode || !reteNode) continue
 
     reteNode.data = { ...graphNode.data }
-    const definition = NODE_DEFINITIONS[graphNode.key]
+    const definition = getNodeDefinition(graphNode.key) ?? NODE_DEFINITIONS[graphNode.key]
     for (const control of definition.controls) {
       const inputControl = reteNode.controls[control.key]
       if (!(inputControl instanceof ClassicPreset.InputControl)) continue
@@ -861,7 +861,7 @@ function renderSerialSummary(data: ScriptNode): ReactElement | null {
 const ScriptClassicNode: ComponentType<ClassicNodeProps> = ({ data, emit }) => {
   const inputs = sortEntries(data.inputs)
   const outputs = sortEntries(data.outputs)
-  const definition = data.key ? NODE_DEFINITIONS[data.key] : null
+  const definition = data.key ? (getNodeDefinition(data.key) ?? NODE_DEFINITIONS[data.key]) : null
   const controlSpecs = new Map(definition?.controls.map((control) => [control.key, control]) || [])
   const controls = sortEntries(data.controls).filter(([key]) => {
     if (key === 'keys' && isKeyListNode(data.key)) return true

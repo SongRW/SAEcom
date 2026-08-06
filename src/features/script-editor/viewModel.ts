@@ -1,6 +1,6 @@
 import type { NodeCategory, NodeDef, ReteGraphExport, SerialPanelSummary, SerialPortInfo } from '@shared/types'
 import type { GraphEditorState } from '@/features/script-editor/rete/graphState'
-import { NODE_CATEGORIES, NODE_DEFINITIONS } from '@/features/script-editor/nodes/definitions'
+import { NODE_CATEGORIES, listAllNodeDefinitions } from '@/features/script-editor/nodes/definitions'
 
 export interface PaletteGroup {
   key: NodeCategory
@@ -18,10 +18,60 @@ export interface SelectOption {
 export const AUTO_SERIAL_PORT_REFRESH_INTERVAL_MS = 3000
 
 export function groupNodesForPalette(): PaletteGroup[] {
+  // 动态注册表：内置 + 用户/插件组件合并。用户组件归入 custom 分类（已在 NODE_CATEGORIES）。
+  const allDefs = listAllNodeDefinitions()
   return (Object.keys(NODE_CATEGORIES) as NodeCategory[]).map((key) => ({
     ...NODE_CATEGORIES[key],
-    nodes: Object.values(NODE_DEFINITIONS).filter((node) => node.category === key)
+    nodes: allDefs.filter((node) => node.category === key)
   }))
+}
+
+/** 搜索结果分组（扁平化单组，命中内置+自定义+插件混排）。 */
+const SEARCH_GROUP_KEY = 'custom' as NodeCategory
+
+/**
+ * 按查询过滤调色板分组。
+ * - 空 query：原样返回分类折叠结构（零行为变化）。
+ * - 有 query：遍历所有 group 的 nodes，按 name/key/description 子串匹配（大小写不敏感，中文友好），
+ *   返回扁平化「搜索结果」单组（命中数 Badge）。便于画图时从 60+ 内置 + N 个自定义里一眼定位。
+ */
+export function filterPaletteGroups(groups: PaletteGroup[], query: string): PaletteGroup[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return groups
+
+  const matched: NodeDef[] = []
+  for (const group of groups) {
+    for (const node of group.nodes) {
+      const hay = `${node.name} ${node.key} ${node.description || ''}`.toLowerCase()
+      if (hay.includes(q)) matched.push(node)
+    }
+  }
+
+  return [{
+    key: SEARCH_GROUP_KEY,
+    name: `搜索结果`,
+    color: NODE_CATEGORIES[SEARCH_GROUP_KEY].color,
+    nodes: matched
+  }]
+}
+
+/**
+ * 高亮匹配片段：返回 name 中命中查询的子串位置（用于 <mark> 高亮）。
+ * 返回 null 表示无需高亮（query 为空或未命中 name）。
+ */
+export function findMatchRanges(text: string, query: string): Array<[number, number]> | null {
+  const q = query.trim().toLowerCase()
+  if (!q) return null
+  const lower = text.toLowerCase()
+  const ranges: Array<[number, number]> = []
+  let from = 0
+  while (true) {
+    const idx = lower.indexOf(q, from)
+    if (idx === -1) break
+    ranges.push([idx, idx + q.length])
+    from = idx + q.length
+  }
+  return ranges.length > 0 ? ranges : null
 }
 
 export function normalizeScriptName(name: string): string | null {

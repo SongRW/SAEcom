@@ -96,6 +96,7 @@ import type { WindowAPI } from '@shared/types'
     scriptEditor: {
       popout: asyncOk,
       requestDock: noop,
+      requestPayload: noop,
       onPopoutPayload: () => emptyUnsubscribe,
       onDock: () => emptyUnsubscribe,
       isPopout: () => false
@@ -146,6 +147,15 @@ import type { WindowAPI } from '@shared/types'
     },
     shell: {
       openExternal: (url: string) => window.open(url, '_blank')
+    },
+    customComponents: {
+      list: async () => [],
+      read: async () => '',
+      write: async () => ({ ok: true }),
+      delete: async () => ({ ok: true }),
+      rename: async () => ({ ok: true }),
+      exportComponent: async () => ({ ok: false, canceled: true }),
+      importComponents: async () => ({ ok: false, canceled: true })
     },
     app: {
       getVersion: async () => '0.6.0-preview',

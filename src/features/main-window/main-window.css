@@ -1,4 +1,124 @@
 /*
  * React 主窗口布局样式。
- * 布局与视觉均通过 Tailwind 工具类 + shadcn 组件承担，此处当前无自定义规则。
+ * 布局与视觉均通过 Tailwind 工具类 + shadcn 组件承担；
+ * 仅 ScriptHub（脚本功能区主页）这类结构化布局用自定义规则，便于维护。
  */
+
+/* ── ScriptHub：脚本功能区启动台 / 概览页 ── */
+.script-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 20px 24px;
+}
+
+/*
+ * 顶部工具条：统计 chip（脚本数量 / 节点组件）+ 操作按钮（打开脚本编辑器 / 创建自定义组件），
+ * 四个排成一排。chip 不收缩到挤出文字，按钮可收缩；窄屏整体换行。
+ */
+.script-hub__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.script-hub__chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  flex: 0 0 auto;
+}
+
+.script-hub__chip-label {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.script-hub__chip-value {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 工具条里的按钮：高度对齐 chip，外边距用 flex gap 控制 */
+.script-hub__toolbar-btn {
+  flex: 0 0 auto;
+}
+
+/* 双栏列表区（填满剩余高度） */
+.script-hub__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.script-hub__panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.script-hub__panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.script-hub__panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.script-hub__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.script-hub__list-item {
+  justify-content: flex-start;
+  width: 100%;
+  height: 36px;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.script-hub__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .script-hub {
+    padding: 16px;
+  }
+  .script-hub__columns {
+    grid-template-columns: 1fr;
+  }
+}

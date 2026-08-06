@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import '@/shared/i18n'
 import '@/styles/globals.css'
 import '@/features/script-editor/script-editor.css'
+// 冷启动主题（防 FOUC）：原为 script-editor.html 内联脚本，生产 CSP 拦截不执行，
+// 导致深色模式首帧闪白。改为同源模块 import（CSP 'self' 允许）。
+import '@/shared/dev/applyBootTheme'
 import { ScriptEditorDialog } from '@/features/script-editor/ScriptEditorDialog'
 import { useIPC } from '@/shared/ipc'
 import { useSettingsStore } from '@/shared/store/settings'
