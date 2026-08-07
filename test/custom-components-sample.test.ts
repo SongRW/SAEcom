@@ -12,7 +12,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
 import { UserNodeComponent } from '@/features/script-editor/nodes/component/userComponent'
-import { validateUserDescriptor } from '@/features/script-editor/nodes/component/validate'
+import {
+  validateUserDescriptor,
+  validateCompositeDescriptor
+} from '@/features/script-editor/nodes/component/validate'
+import { CompositeNodeComponent } from '@/features/script-editor/nodes/component/compositeComponent'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
 import { normalizeReteGraph } from '@/features/script-editor/codegen/graph'
 import {
@@ -180,5 +184,42 @@ describe('示例自定义组件：AES 加密 custom-aes-crypto', () => {
     const codeD = comp.emit(ctxD, nodeD as any, '  ')
     const decResult = runInSandbox(codeD, cipher)
     expect(decResult._out_d).toBe(plain)
+  })
+})
+
+describe('示例自定义组件：编码转换链 custom-codec-chain（组合组件）', () => {
+  const desc = loadDescriptor('custom-codec-chain.json')
+  const validation = validateCompositeDescriptor(desc)
+
+  it('descriptor 校验通过', () => {
+    expect(validation.ok, validation.errors.map((e) => `[${e.field}] ${e.message}`).join('; ')).toBe(true)
+    expect(validation.descriptor!.key).toBe('custom-codec-chain')
+  })
+
+  it('组合组件可构造（CompositeNodeComponent）', () => {
+    expect(() => new CompositeNodeComponent(validation.descriptor!)).not.toThrow()
+  })
+
+  it('kind 为 composite（列表显示「组合」tag）', () => {
+    // readListItem 判定逻辑：有 subgraph → kind='composite'
+    expect(desc).toHaveProperty('subgraph')
+    expect((desc as Record<string, unknown>).subgraph).toBeDefined()
+  })
+
+  it('子图含 2 个节点 + 1 条连线（双段编码转换链）', () => {
+    const sub = (desc as { subgraph: { nodes: unknown[]; connections: unknown[] } }).subgraph
+    expect(sub.nodes).toHaveLength(2)
+    expect(sub.connections).toHaveLength(1)
+  })
+
+  it('输入/输出绑定都引用子图内存在的节点', () => {
+    const d = desc as {
+      subgraph: { nodes: Array<{ id: string }> }
+      inputBindings: Array<{ nodeId: string; portKey: string }>
+      outputBindings: Array<{ nodeId: string; portKey: string }>
+    }
+    const nodeIds = new Set(d.subgraph.nodes.map((n) => n.id))
+    for (const b of d.inputBindings) expect(nodeIds.has(b.nodeId)).toBe(true)
+    for (const b of d.outputBindings) expect(nodeIds.has(b.nodeId)).toBe(true)
   })
 })

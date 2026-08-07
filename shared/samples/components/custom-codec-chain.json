@@ -1,0 +1,62 @@
+{
+  "key": "custom-codec-chain",
+  "name": "编码转换链",
+  "description": "组合组件示例：两个编码转换节点串联（utf8→latin1→gbk），演示用子图把多节点连线打包复用。输入 hex/文本 → 经两段编码转换 → 输出 gbk 字节。",
+  "category": "transform",
+  "inputs": [
+    { "key": "in", "socket": "dataSocket", "label": "输入" }
+  ],
+  "outputs": [
+    { "key": "out", "socket": "dataSocket", "label": "输出（gbk 字节）" }
+  ],
+  "subgraph": {
+    "nodes": [
+      {
+        "id": "node-utf8-latin1",
+        "key": "transform-encoding",
+        "label": "UTF8→Latin1",
+        "position": { "x": -240, "y": 200 },
+        "data": {
+          "from": "utf8",
+          "to": "latin1",
+          "configRef": { "kind": "local" }
+        },
+        "inputs": {
+          "in": { "key": "in", "label": "输入", "socket": "dataSocket" }
+        },
+        "outputs": {
+          "out": { "key": "out", "label": "输出", "socket": "dataSocket" }
+        }
+      },
+      {
+        "id": "node-latin1-gbk",
+        "key": "transform-encoding",
+        "label": "Latin1→GBK",
+        "position": { "x": 40, "y": 200 },
+        "data": {
+          "from": "latin1",
+          "to": "gbk",
+          "configRef": { "kind": "local" }
+        },
+        "inputs": {
+          "in": { "key": "in", "label": "输入", "socket": "dataSocket" }
+        },
+        "outputs": {
+          "out": { "key": "out", "label": "输出", "socket": "dataSocket" }
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": { "nodeId": "node-utf8-latin1", "portKey": "out" },
+        "to": { "nodeId": "node-latin1-gbk", "portKey": "in" }
+      }
+    ]
+  },
+  "inputBindings": [
+    { "portKey": "in", "nodeId": "node-utf8-latin1", "nodePortKey": "in" }
+  ],
+  "outputBindings": [
+    { "portKey": "out", "nodeId": "node-latin1-gbk", "nodePortKey": "out" }
+  ]
+}
