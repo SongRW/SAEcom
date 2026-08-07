@@ -1009,14 +1009,21 @@
   flex-direction: column;
   align-items: stretch !important;
   gap: 2px;
+  /* 覆盖 .script-editor-list__item 的单行样式（nowrap + ellipsis）：
+     后者是为脚本列表的单行文本设计的，但自定义组件项是纵向多行
+     （name/kind/key），nowrap 会让 name 在窄宽度下整体被 overflow:hidden
+     裁成不可见。这里强制允许换行 + 正常溢出，确保标题可见。 */
   white-space: normal;
+  overflow: visible;
+  height: auto;
 }
 
 .script-editor-custom-panel__item-name {
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 名字允许换行，避免窄宽度下被 overflow:hidden 整体裁成不可见。
+     长名字折行显示比消失更友好。 */
+  white-space: normal;
+  word-break: break-all;
 }
 
 .script-editor-custom-panel__item-key {
