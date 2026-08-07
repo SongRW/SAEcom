@@ -209,6 +209,9 @@ app.whenReady().then(() => {
   scriptsRepository.ensureDir()
   scriptsRepository.seedBundledSampleScripts()
   customComponentsRepository.ensureDir()
+  // 内置示例组件 seeding：shared/samples/components/*.json → userData/script-components/
+  // （此前缺失，导致 custom-time-convert/geo-convert/aes-crypto 等示例组件在 UI 不可见）
+  customComponentsRepository.seedBundledSampleComponents()
   // 三层架构：注册已迁移域的 router（组1-7：config/app/serial/tcp/modbus/window/script/customComponents）。
   // 从 RuntimeContext（DI 容器）取依赖——ctx 是 service/repository 的唯一访问入口。
   appService.setUpdateChecker((isManual) => checkForUpdates(isManual))

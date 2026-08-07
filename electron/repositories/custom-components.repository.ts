@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, dialog } from 'electron'
+import { seedSampleComponents } from '../sampleScripts'
 import type {
   CustomComponentExportPayload, CustomComponentImportResult, CustomComponentImportSummary
 } from '../../shared/types'
@@ -30,6 +31,36 @@ export class CustomComponentsRepository {
 
   ensureDir(): void {
     try { fs.mkdirSync(this.dir, { recursive: true }) } catch { /* ignore */ }
+  }
+
+  /** 内置示例组件源目录：dev/e2e 走仓库 shared/samples/components；打包后走 asar 内同路径。 */
+  resolveSampleComponentsDir(): string | null {
+    const candidates = [
+      path.join(__dirname, '../../shared/samples/components'),
+      path.join(app.getAppPath(), 'shared/samples/components'),
+      path.join(process.resourcesPath || '', 'shared/samples/components')
+    ]
+    for (const dir of candidates) {
+      try {
+        if (dir && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
+      } catch { /* ignore */ }
+    }
+    return null
+  }
+
+  /**
+   * 把内置示例组件（shared/samples/components/*.json）seed 到 userData/script-components/。
+   * 机制与 ScriptsRepository.seedBundledSampleScripts 一致（hash 去重 + 用户修改保护）。
+   * 在 main.ts whenReady 里 ensureDir 之后调用。
+   */
+  seedBundledSampleComponents(): void {
+    const sampleDir = this.resolveSampleComponentsDir()
+    if (!sampleDir) return
+    seedSampleComponents({
+      sampleDir,
+      componentsDir: this.dir,
+      statePath: path.join(app.getPath('userData'), 'sample-components.json')
+    })
   }
 
   /** 安全化组件文件名：剥离路径分隔符 + Windows 非法字符；强制 .json 扩展名。 */
