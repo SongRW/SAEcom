@@ -2,6 +2,7 @@
   "key": "custom-geo-convert",
   "name": "转经纬度",
   "description": "十进制与度分秒互转（纬度 lat / 经度 lon）。纯 Math 实现，无需沙箱 API。dms-to-dec 输入约定 DDDMMSS.ss 紧凑格式（lat 度占 2 位、lon 度占 3 位）。",
+  "dataFlow": "输入 in(data)=十进制或 DDDMMSS.ss 紧凑格式，输出 out(data)=转换结果字串。mode=dec-to-dms 输出度分秒（如 39°54′15″N）；mode=dms-to-dec 输出十进制（如 39.904200）。axis=lat/lon 决定度宽。",
   "category": "transform",
   "inputs": [
     { "key": "in", "socket": "dataSocket", "label": "输入（十进制或 DDDMMSS.ss 紧凑格式）" }

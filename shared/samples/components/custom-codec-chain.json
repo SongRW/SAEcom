@@ -2,6 +2,7 @@
   "key": "custom-codec-chain",
   "name": "编码转换链",
   "description": "组合组件示例：两个编码转换节点串联（utf8→latin1→gbk），演示用子图把多节点连线打包复用。输入 hex/文本 → 经两段编码转换 → 输出 gbk 字节。",
+  "dataFlow": "输入 in(data)=utf8 文本，输出 out(data)=gbk 字节容器。内部子图：utf8→latin1→gbk 两段编码转换。",
   "category": "transform",
   "inputs": [
     { "key": "in", "socket": "dataSocket", "label": "输入" }

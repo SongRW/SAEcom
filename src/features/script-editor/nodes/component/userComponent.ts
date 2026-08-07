@@ -23,6 +23,9 @@ export interface UserComponentDescriptor {
   key: string
   name: string
   description?: string
+  /** 数据流语义说明（面向 AI/MCP）：描述输入代表什么、输出代表什么、核心处理逻辑。
+   *  填了则投影到 MCP description（让 AI 理解怎么连线）；不填则回退到 description。 */
+  dataFlow?: string
   category?: NodeCategory
   inputs: SocketSpec[]
   outputs: SocketSpec[]
@@ -95,7 +98,11 @@ export class UserNodeComponent extends AbstractNodeComponent {
     this.descriptor = descriptor
     this.key = descriptor.key
     this.name = descriptor.name
-    this.description = descriptor.description
+    // MCP description：优先用 dataFlow（面向 AI 的数据流语义），拼上简介。
+    // dataFlow 让 AI 理解输入/输出代表什么、怎么连线；不填则回退纯 description。
+    this.description = descriptor.dataFlow
+      ? `${descriptor.description || descriptor.name}。${descriptor.dataFlow}`
+      : descriptor.description
     this.category = descriptor.category ?? 'custom'
   }
 

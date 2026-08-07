@@ -2,6 +2,7 @@
   "key": "custom-aes-crypto",
   "name": "AES 加密",
   "description": "AES 加密/解密（hex 输入→hex 输出）。依赖沙箱 aesEncrypt/aesDecrypt，PKCS7 padding。",
+  "dataFlow": "输入 in(data)=hex 字串，输出 out(data)=hex 字串。mode=encrypt 明文 hex→密文 hex；mode=decrypt 密文 hex→明文 hex。key/iv 为 16 字节 hex。",
   "category": "transform",
   "inputs": [
     { "key": "in", "socket": "dataSocket", "label": "输入（hex 字符串）" }

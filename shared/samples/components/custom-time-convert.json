@@ -2,6 +2,7 @@
   "key": "custom-time-convert",
   "name": "转时间",
   "description": "时间戳与字符串互转：epoch↔ISO、epoch→自定义格式。纯 Date 实现，无需沙箱 API。",
+  "dataFlow": "输入 in(data)=epoch 毫秒或 ISO 字串，输出 out(data)=转换结果。mode=epoch-to-iso 输出 ISO 字串；mode=iso-to-epoch 输出毫秒；mode=epoch-to-fmt 按 fmt 格式化。",
   "category": "transform",
   "inputs": [
     { "key": "in", "socket": "dataSocket", "label": "输入（epoch 毫秒/时间字符串）" }

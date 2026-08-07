@@ -30,6 +30,8 @@ export interface CompositeComponentDescriptor {
   key: string
   name: string
   description?: string
+  /** 数据流语义说明（面向 AI/MCP），与 UserComponentDescriptor.dataFlow 一致。 */
+  dataFlow?: string
   category?: NodeCategory
   /** 对外暴露的输入端口。 */
   inputs: SocketSpec[]
@@ -64,7 +66,10 @@ export class CompositeNodeComponent extends AbstractNodeComponent {
     this.descriptor = descriptor
     this.key = descriptor.key
     this.name = descriptor.name
-    this.description = descriptor.description
+    // MCP description：优先拼 dataFlow（与 UserNodeComponent 一致）
+    this.description = descriptor.dataFlow
+      ? `${descriptor.description || descriptor.name}。${descriptor.dataFlow}`
+      : descriptor.description
     this.category = descriptor.category ?? 'custom'
   }
 
