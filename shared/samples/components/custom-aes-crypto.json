@@ -1,0 +1,34 @@
+{
+  "key": "custom-aes-crypto",
+  "name": "AES 加密",
+  "description": "AES 加密/解密（hex 输入→hex 输出）。依赖沙箱 aesEncrypt/aesDecrypt，PKCS7 padding。",
+  "category": "transform",
+  "inputs": [
+    { "key": "in", "socket": "dataSocket", "label": "输入（hex 字符串）" }
+  ],
+  "outputs": [
+    { "key": "out", "socket": "dataSocket", "label": "输出（hex 字符串）" }
+  ],
+  "controls": [
+    {
+      "key": "mode",
+      "label": "模式",
+      "type": "select",
+      "options": ["encrypt", "decrypt"]
+    },
+    {
+      "key": "key",
+      "label": "密钥（hex，16 字节）",
+      "type": "text",
+      "default": "000102030405060708090A0B0C0D0E0F"
+    },
+    {
+      "key": "iv",
+      "label": "IV（hex，16 字节）",
+      "type": "text",
+      "default": "101112131415161718191A1B1C1D1E1F"
+    }
+  ],
+  "sandboxApis": ["aesEncrypt", "aesDecrypt"],
+  "emit": "var input = helpers.getInputVar(ctx, node);\nvar mode = helpers.data(node).mode || 'encrypt';\nvar key = helpers.jsString(helpers.valueAsString(helpers.data(node).key, '000102030405060708090A0B0C0D0E0F'));\nvar iv = helpers.jsString(helpers.valueAsString(helpers.data(node).iv, '101112131415161718191A1B1C1D1E1F'));\nvar out = helpers.outVar(node);\nvar fn = mode === 'decrypt' ? 'aesDecrypt' : 'aesEncrypt';\nreturn indent + 'var ' + out + ' = ' + fn + '(' + input + ', ' + key + ', ' + iv + ');\\n';"
+}

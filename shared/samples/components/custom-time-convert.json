@@ -1,0 +1,28 @@
+{
+  "key": "custom-time-convert",
+  "name": "转时间",
+  "description": "时间戳与字符串互转：epoch↔ISO、epoch→自定义格式。纯 Date 实现，无需沙箱 API。",
+  "category": "transform",
+  "inputs": [
+    { "key": "in", "socket": "dataSocket", "label": "输入（epoch 毫秒/时间字符串）" }
+  ],
+  "outputs": [
+    { "key": "out", "socket": "dataSocket", "label": "转换结果（字符串）" }
+  ],
+  "controls": [
+    {
+      "key": "mode",
+      "label": "转换模式",
+      "type": "select",
+      "options": ["epoch-to-iso", "iso-to-epoch", "epoch-to-fmt"]
+    },
+    {
+      "key": "fmt",
+      "label": "格式串（epoch-to-fmt 用，如 YYYY-MM-DD HH:mm:ss）",
+      "type": "text",
+      "default": "YYYY-MM-DD HH:mm:ss"
+    }
+  ],
+  "sandboxApis": [],
+  "emit": "var input = helpers.getInputVar(ctx, node);\nvar mode = helpers.data(node).mode || 'epoch-to-iso';\nvar fmt = helpers.jsString(helpers.valueAsString(helpers.data(node).fmt, 'YYYY-MM-DD HH:mm:ss'));\nvar out = helpers.outVar(node);\nvar m = helpers.jsString(mode);\nreturn indent + 'var ' + out + ' = (function(v, mode, fmt){\\n' +\n  indent + '  if (mode === \"iso-to-epoch\") {\\n' +\n  indent + '    return String(new Date(String(v)).getTime());\\n' +\n  indent + '  }\\n' +\n  indent + '  var ms = typeof v === \"number\" ? v : parseInt(String(v).replace(/[^0-9-]/g, \"\"), 10);\\n' +\n  indent + '  var d = new Date(ms);\\n' +\n  indent + '  if (isNaN(d.getTime())) return \"INVALID_DATE\";\\n' +\n  indent + '  if (mode === \"epoch-to-iso\") return d.toISOString();\\n' +\n  indent + '  var pad = function(n, w){ n = String(n); while (n.length < (w || 2)) n = \"0\" + n; return n; };\\n' +\n  indent + '  var tz = d.getTimezoneOffset();\\n' +\n  indent + '  var local = new Date(ms - tz * 60000);\\n' +\n  indent + '  return fmt\\n' +\n  indent + '    .replace(\"YYYY\", String(local.getFullYear()))\\n' +\n  indent + '    .replace(\"MM\", pad(local.getMonth() + 1))\\n' +\n  indent + '    .replace(\"DD\", pad(local.getDate()))\\n' +\n  indent + '    .replace(\"HH\", pad(local.getHours()))\\n' +\n  indent + '    .replace(\"mm\", pad(local.getMinutes()))\\n' +\n  indent + '    .replace(\"ss\", pad(local.getSeconds()));\\n' +\n  indent + '})(' + input + ', ' + m + ', ' + fmt + ');\\n';"
+}

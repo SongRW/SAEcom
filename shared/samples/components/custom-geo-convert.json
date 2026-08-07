@@ -1,0 +1,28 @@
+{
+  "key": "custom-geo-convert",
+  "name": "转经纬度",
+  "description": "十进制与度分秒互转（纬度 lat / 经度 lon）。纯 Math 实现，无需沙箱 API。dms-to-dec 输入约定 DDDMMSS.ss 紧凑格式（lat 度占 2 位、lon 度占 3 位）。",
+  "category": "transform",
+  "inputs": [
+    { "key": "in", "socket": "dataSocket", "label": "输入（十进制或 DDDMMSS.ss 紧凑格式）" }
+  ],
+  "outputs": [
+    { "key": "out", "socket": "dataSocket", "label": "转换结果（字符串）" }
+  ],
+  "controls": [
+    {
+      "key": "mode",
+      "label": "转换模式",
+      "type": "select",
+      "options": ["dec-to-dms", "dms-to-dec"]
+    },
+    {
+      "key": "axis",
+      "label": "经纬轴",
+      "type": "select",
+      "options": ["lat", "lon"]
+    }
+  ],
+  "sandboxApis": [],
+  "emit": "var input = helpers.getInputVar(ctx, node);\nvar mode = helpers.data(node).mode || 'dec-to-dms';\nvar axis = helpers.data(node).axis || 'lat';\nvar out = helpers.outVar(node);\nvar m = helpers.jsString(mode);\nvar a = helpers.jsString(axis);\nreturn indent + 'var ' + out + ' = (function(v, mode, axis){\\n' +\n  indent + '  var pad = function(n, w){ n = String(n); while (n.length < (w || 2)) n = \"0\" + n; return n; };\\n' +\n  indent + '  var hemi = function(val, isLat){\\n' +\n  indent + '    if (isLat) return val >= 0 ? \"N\" : \"S\";\\n' +\n  indent + '    return val >= 0 ? \"E\" : \"W\";\\n' +\n  indent + '  };\\n' +\n  indent + '  if (mode === \"dms-to-dec\") {\\n' +\n  indent + '    var raw = String(v).replace(/[^0-9.\\-NSEW]/gi, \"\").toUpperCase();\\n' +\n  indent + '    var neg = /S|W/.test(raw);\\n' +\n  indent + '    raw = raw.replace(/[NSEW\\-]/g, \"\");\\n' +\n  indent + '    var dot = raw.indexOf(\".\");\\n' +\n  indent + '    var intPart = dot >= 0 ? raw.slice(0, dot) : raw;\\n' +\n  indent + '    var fracPart = dot >= 0 ? raw.slice(dot) : \"\";\\n' +\n  indent + '    var degW = axis === \"lat\" ? 2 : 3;\\n' +\n  indent + '    while (intPart.length < degW + 4) intPart = \"0\" + intPart;\\n' +\n  indent + '    var d = parseInt(intPart.substr(0, degW), 10) || 0;\\n' +\n  indent + '    var mi = parseInt(intPart.substr(degW, 2), 10) || 0;\\n' +\n  indent + '    var se = parseFloat(intPart.substr(degW + 2, 2) + fracPart) || 0;\\n' +\n  indent + '    var dec = d + mi / 60 + se / 3600;\\n' +\n  indent + '    return String((neg ? -dec : dec).toFixed(6));\\n' +\n  indent + '  }\\n' +\n  indent + '  var dec = typeof v === \"number\" ? v : parseFloat(String(v).replace(/[^0-9.\\-]/g, \"\"));\\n' +\n  indent + '  if (isNaN(dec)) return \"INVALID_GEO\";\\n' +\n  indent + '  var abs = Math.abs(dec);\\n' +\n  indent + '  var d = Math.floor(abs);\\n' +\n  indent + '  var minFloat = (abs - d) * 60;\\n' +\n  indent + '  var mi = Math.floor(minFloat);\\n' +\n  indent + '  var se = (minFloat - mi) * 60;\\n' +\n  indent + '  var degW = axis === \"lat\" ? 2 : 3;\\n' +\n  indent + '  return pad(d, degW) + \"\\u00b0\" + pad(mi) + \"\\u2032\" + pad(se, 2).split(\".\")[0] + \"\\u2033\" + hemi(dec, axis === \"lat\");\\n' +\n  indent + '})(' + input + ', ' + m + ', ' + a + ');\\n';"
+}
