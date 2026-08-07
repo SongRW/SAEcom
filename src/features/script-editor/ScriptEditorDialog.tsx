@@ -219,6 +219,10 @@ export function ScriptEditorDialog({
       setZoom(1)
       setUiState(createScriptEditorUiState())
       setScriptError(null)
+      // 自定义组件编辑器覆盖层重开不残留（customEditorOpen 优先级最高，
+      // 不重置会盖在脚本画布之上）
+      setCustomEditorOpen(false)
+      setCustomActiveFileName(null)
       // 搜索框是瞬态 UI，重开不残留（回归：上次 Ctrl+F 打开的搜索框跨会话残留）
       setSearchOpen(false)
     }
@@ -421,6 +425,10 @@ export function ScriptEditorDialog({
     const parsed = parseScriptFile(content)
     setActiveScriptName(name)
     setSelectedNodeIds([])
+    // 切脚本时关闭自定义组件编辑器：避免其覆盖层（customEditorOpen 优先级最高）
+    // 残留在脚本画布之上，用户必须先关组件编辑器才能看到脚本内容。
+    setCustomEditorOpen(false)
+    setCustomActiveFileName(null)
     // 切脚本重置视图模式到 auto：按新内容自动决定显示源码还是画布。
     setUiState((current) => setViewMode(closeConfig(current), 'auto'))
     setScriptError(null)
@@ -756,6 +764,9 @@ export function ScriptEditorDialog({
     replaceGraph(emptyGraph)
     setLegacyCode('')
     setSelectedNodeIds([])
+    // 新建脚本同样关闭自定义组件编辑器（与 selectScript 一致，防覆盖层残留）
+    setCustomEditorOpen(false)
+    setCustomActiveFileName(null)
     setUiState(closeConfig)
     await refreshScripts()
     toast.success(`已新建：${name}`)
