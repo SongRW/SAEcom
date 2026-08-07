@@ -252,8 +252,8 @@ export function CustomComponentEditor({
     setForm((current) => ({ ...current, controls: current.controls.filter((_, i) => i !== index) }))
   }
 
-  // sandboxApis：逗号分隔 → 数组
-  const sandboxApisText = form.sandboxApis.join(', ')
+  // sandboxApis：逗号分隔 → 数组（防御：composite 等无此字段时为 undefined，兜底空数组）
+  const sandboxApisText = (form.sandboxApis ?? []).join(', ')
   function updateSandboxApis(text: string) {
     const arr = text
       .split(',')

@@ -623,7 +623,27 @@ export function ScriptEditorDialog({
     }
     try {
       const raw = await getIPC().customComponents.read(item.fileName)
-      const descriptor = JSON.parse(raw) as UserComponentDescriptor
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      // Composite（含 subgraph）与 JS 组件（含 emit）字段集不同；CustomComponentEditor
+      // 内部按 kind 分流。但解析结果可能缺 JS 组件必备字段（如 composite 无 sandboxApis/emit），
+      // 直接传给 editor 会在访问 form.sandboxApis.join 等处崩溃（整屏空白）。
+      // 这里补齐 JS 组件字段默认值，让 editor 的 JS 分支不因 undefined 崩溃；
+      // composite 字段（subgraph/bindings）保持原样，editor 的 composite 分支照常读取。
+      const descriptor = {
+        key: typeof parsed.key === 'string' ? parsed.key : '',
+        name: typeof parsed.name === 'string' ? parsed.name : '',
+        description: typeof parsed.description === 'string' ? parsed.description : undefined,
+        category: parsed.category,
+        inputs: Array.isArray(parsed.inputs) ? parsed.inputs : [],
+        outputs: Array.isArray(parsed.outputs) ? parsed.outputs : [],
+        controls: Array.isArray(parsed.controls) ? parsed.controls : [],
+        sandboxApis: Array.isArray(parsed.sandboxApis) ? parsed.sandboxApis : [],
+        emit: typeof parsed.emit === 'string' ? parsed.emit : '',
+        // composite 字段透传（JS 组件为 undefined，editor 按有无 subgraph 判 kind）
+        subgraph: parsed.subgraph,
+        inputBindings: parsed.inputBindings,
+        outputBindings: parsed.outputBindings
+      } as UserComponentDescriptor
       setCustomActiveFileName(item.fileName)
       setCustomEditTarget({ fileName: item.fileName, descriptor })
       setCustomEditorOpen(true)
