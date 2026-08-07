@@ -138,7 +138,7 @@ export class InputFileNode extends AbstractNodeComponent {
   readonly key = 'input-file'
   readonly category = 'input' as const
   readonly name = '读取文件'
-  readonly description = '从文件读取内容'
+  readonly description = '从文件读取内容，输出文本（按 data.encoding 解码）。无输入端口，out=文件文本'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return { inputs: [], outputs: [b.dataOut()] }

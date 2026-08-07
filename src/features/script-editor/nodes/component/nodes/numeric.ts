@@ -15,7 +15,7 @@ abstract class NumericBase extends AbstractNodeComponent {
 export class NumericBaseNode extends NumericBase {
   readonly key = 'numeric-base'
   readonly name = '进制转换'
-  readonly description = '数值进制转换'
+  readonly description = '数值进制转换：输入字符串按 from 进制解析，输出 to 进制字符串。输入 in(data)，输出 out(data)'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return { inputs: [b.dataIn()], outputs: [b.dataOut()] }
@@ -57,7 +57,7 @@ export class NumericJoinNode extends NumericBase {
 export class NumericCalcNode extends NumericBase {
   readonly key = 'numeric-calc'
   readonly name = '计算'
-  readonly description = '二元数值运算'
+  readonly description = '二元数值运算：left op right（加/减/乘/除/取余/异或/与/或），operand2 可作常量。输入 left/right(data)，输出 out(data)'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return {

@@ -23,7 +23,7 @@ abstract class LogicalBase extends AbstractNodeComponent {
 export class LogicalAndNode extends LogicalBase {
   readonly key = 'logical-and'
   readonly name = '与'
-  readonly description = '布尔与运算'
+  readonly description = '布尔与运算：两个 bool 输入全为 true 时输出 true。输入 left/right(boolSocket)，输出 result(boolSocket)'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return {
@@ -36,7 +36,7 @@ export class LogicalAndNode extends LogicalBase {
 export class LogicalOrNode extends LogicalBase {
   readonly key = 'logical-or'
   readonly name = '或'
-  readonly description = '布尔或运算'
+  readonly description = '布尔或运算：两个 bool 输入任一为 true 时输出 true。输入 left/right(boolSocket)，输出 result(boolSocket)'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return {
@@ -49,7 +49,7 @@ export class LogicalOrNode extends LogicalBase {
 export class LogicalNotNode extends LogicalBase {
   readonly key = 'logical-not'
   readonly name = '非'
-  readonly description = '布尔非运算'
+  readonly description = '布尔非运算：输入 bool 取反。输入 in(boolSocket)，输出 result(boolSocket)'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return {

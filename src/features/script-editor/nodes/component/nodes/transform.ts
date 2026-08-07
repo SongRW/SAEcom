@@ -55,7 +55,7 @@ export class TransformBase64Node extends TransformBase {
 export class TransformEncodingNode extends TransformBase {
   readonly key = 'transform-encoding'
   readonly name = '编码转换'
-  readonly description = '字符编码转换'
+  readonly description = '字符编码转换：将输入从 data.from 编码转为 data.to 编码的字节容器。输入 in(data)，输出 out(data)'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return { inputs: [b.dataIn()], outputs: [b.dataOut()] }

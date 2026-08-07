@@ -37,7 +37,7 @@ export class SplitDelimiterNode extends SplitBase {
 export class SplitLengthNode extends SplitBase {
   readonly key = 'split-length'
   readonly name = '按长度拆分'
-  readonly description = '按固定长度拆分'
+  readonly description = '按固定长度拆分：将输入字符串按 data.length 切分为数组（或取指定索引元素）。输入 in(data)，输出 out(data)'
 
   controls(): ControlSpec[] {
     return [b.numberControl('length', '每段长度', 2)]

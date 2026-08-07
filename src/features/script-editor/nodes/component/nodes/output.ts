@@ -15,7 +15,7 @@ abstract class OutputBase extends AbstractNodeComponent {
 export class OutputSerialNode extends OutputBase {
   readonly key = 'output-serial'
   readonly name = '发送串口'
-  readonly description = '向串口发送数据'
+  readonly description = '向串口发送数据：将输入按 data.mode(text/hex) 写入指定串口。输入 in(data)，无输出'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return { inputs: [b.dataIn()], outputs: [] }
@@ -102,7 +102,7 @@ export class OutputTcpServerNode extends OutputBase {
 export class OutputFileNode extends OutputBase {
   readonly key = 'output-file'
   readonly name = '写入文件'
-  readonly description = '将数据写入文件'
+  readonly description = '将数据写入文件：输入内容按 data.mode(追加/覆盖) 写入 data.path。输入 in(data)，无输出'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
     return { inputs: [b.dataIn()], outputs: [] }
