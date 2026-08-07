@@ -446,7 +446,7 @@ export function CustomComponentEditor({
   return (
     <section
       className="custom-component-editor"
-      aria-label={isEditMode ? `编辑组件：${editFileName}` : '新建 JS 组件'}
+      aria-label={isEditMode ? `编辑组件：${form.name || editFileName}` : '新建 JS 组件'}
       data-testid="custom-component-editor"
     >
       {/* 上下文条：返回画布 / 标题 / 未保存点 / 试编译 / 保存 */}
@@ -456,7 +456,8 @@ export function CustomComponentEditor({
           返回画布
         </Button>
         <span className="custom-component-editor__ctx-title">
-          {isEditMode ? `编辑组件：${editFileName}` : '新建 JS 组件'}
+          {/* 编辑模式显示组件名（form.name，如「转时间」），而非磁盘文件名 xxx.json */}
+          {isEditMode ? `编辑组件：${form.name || editFileName}` : '新建 JS 组件'}
         </span>
         <span className="custom-component-editor__ctx-badge">{form.key}</span>
         <span className="custom-component-editor__ctx-unsaved">
