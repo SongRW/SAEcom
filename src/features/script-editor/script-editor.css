@@ -1018,7 +1018,18 @@
   height: auto;
 }
 
+/* 第一行：组件名（左）+ 类型徽标（右），横向排列 */
+.script-editor-custom-panel__item-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .script-editor-custom-panel__item-name {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   /* 名字允许换行，避免窄宽度下被 overflow:hidden 整体裁成不可见。
      长名字折行显示比消失更友好。 */
@@ -1034,14 +1045,20 @@
   white-space: nowrap;
 }
 
-/* 组合组件徽标（C 层） */
+/* 类型徽标：组合组件（绿色）/ JS 组件（蓝色），所有类型都有 */
 .script-editor-custom-panel__item-kind {
   flex-shrink: 0;
   font-size: 10px;
+  line-height: 1.4;
   padding: 1px 6px;
   border-radius: 999px;
   background: color-mix(in oklch, var(--success) 14%, transparent);
   color: var(--success);
+}
+
+.script-editor-custom-panel__item-kind--js {
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
 }
 
 /* 组合模式端口绑定行（drawer 内，每个子图节点一组输入/输出下拉） */

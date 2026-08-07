@@ -145,12 +145,19 @@ export function CustomComponentPanel({
                   onClick={() => onSelect(item)}
                   disabled={Boolean(item.parseError)}
                 >
-                  <span className="script-editor-custom-panel__item-name">
-                    <HighlightedText text={item.name} query={query} />
-                  </span>
-                  {item.kind === 'composite' ? (
-                    <span className="script-editor-custom-panel__item-kind" title="组合组件（子图）">组合</span>
-                  ) : null}
+                  {/* 第一行：组件名（左）+ 类型徽标（右，所有类型都有） */}
+                  <div className="script-editor-custom-panel__item-row">
+                    <span className="script-editor-custom-panel__item-name">
+                      <HighlightedText text={item.name} query={query} />
+                    </span>
+                    <span
+                      className={`script-editor-custom-panel__item-kind${item.kind === 'js' ? ' script-editor-custom-panel__item-kind--js' : ''}`}
+                      title={item.kind === 'composite' ? '组合组件（子图）' : 'JS 组件（emit 源码）'}
+                    >
+                      {item.kind === 'composite' ? '组合' : 'JS'}
+                    </span>
+                  </div>
+                  {/* 第二行：英文调用名（key） */}
                   {item.key ? (
                     <span className="script-editor-custom-panel__item-key">{item.key}</span>
                   ) : null}
