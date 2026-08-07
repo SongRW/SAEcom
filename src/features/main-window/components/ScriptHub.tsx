@@ -11,6 +11,10 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { getIPC } from '@/shared/ipc'
 import { nodeRegistry } from '@/features/script-editor/nodes/definitions'
+import {
+  fetchCustomComponentList,
+  type CustomComponentListItem
+} from '@/features/script-editor/components/CustomComponentPanel'
 import type { ScriptEditorSidePanel } from '@/features/script-editor/uiState'
 
 /**
@@ -35,22 +39,23 @@ export function ScriptHub({ onOpenEditor, refreshKey = 0 }: ScriptHubProps) {
   const { t } = useTranslation()
   const ipc = getIPC()
   const [scripts, setScripts] = useState<string[]>([])
-  const [components, setComponents] = useState<string[]>([])
+  const [components, setComponents] = useState<CustomComponentListItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 拉取脚本与自定义组件文件名列表。主页是概览，不做 CRUD，仅展示 + 计数。
+  // 拉取脚本文件名 + 自定义组件列表（解析出 descriptor.name 用于展示，
+  // 而非裸 .json 文件名——与 CustomComponentPanel 同路径 readListItem）。
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
       try {
-        const [scriptNames, componentNames] = await Promise.all([
+        const [scriptNames, componentItems] = await Promise.all([
           ipc.scripts.list().catch(() => [] as string[]),
-          ipc.customComponents.list().catch(() => [] as string[])
+          fetchCustomComponentList().catch(() => [] as CustomComponentListItem[])
         ])
         if (cancelled) return
         setScripts(scriptNames)
-        setComponents(componentNames)
+        setComponents(componentItems)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -162,15 +167,18 @@ export function ScriptHub({ onOpenEditor, refreshKey = 0 }: ScriptHubProps) {
               </div>
             ) : (
               <ul className="script-hub__list">
-                {components.map((name) => (
-                  <li key={name}>
+                {components.map((item) => (
+                  <li key={item.fileName}>
                     <Button
                       variant="ghost"
                       className="script-hub__list-item"
                       onClick={() => onOpenEditor({ initialSidePanel: 'custom' })}
+                      title={item.description || item.key || item.fileName}
                     >
                       <PuzzlePiece className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{name}</span>
+                      {/* 显示 descriptor.name（如「转时间」），而非 .json 文件名；
+                          readListItem 已在解析失败时回退到文件名去后缀。 */}
+                      <span className="truncate">{item.name}</span>
                     </Button>
                   </li>
                 ))}

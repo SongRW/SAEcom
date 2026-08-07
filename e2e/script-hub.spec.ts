@@ -91,7 +91,8 @@ test.describe('主页脚本功能区 (ScriptHub)', () => {
     await openNavPage(page, NAV.pageScript)
     const hub = page.locator('.script-hub')
     await expect(hub).toBeVisible()
-    await clickReady(page, hub.getByRole('button', { name: 'custom-e2e-hub.json' }))
+    // 组件库列表项显示 descriptor.name（「E2E主页组件」），而非 .json 文件名
+    await clickReady(page, hub.getByRole('button', { name: 'E2E主页组件' }))
 
     const editor = page.getByRole('dialog', { name: '脚本编辑器' })
     await expect(editor).toBeVisible()
