@@ -19,6 +19,9 @@ export type ProtocolField =
   | LengthPrefixField
   | CrcField
   | CustomField
+  | TlvField
+  | RepeatBlockField
+  | OptionalField
 
 /** 常量字段（magic/version 等固定字节）→ protocol-const */
 export interface ConstField {
@@ -113,12 +116,73 @@ export interface LoopConfig {
 export interface ProtocolDsl {
   /** 协议名（生成脚本/节点 label 前缀） */
   name: string
-  /** 组包字段（按顺序拼成帧） */
-  fields: ProtocolField[]
+  /** 组包字段（简单协议：按顺序拼成帧）。
+   *  复杂协议用 messages 替代 fields（多消息类型）。两者互斥。 */
+  fields?: ProtocolField[]
+  /** 多消息类型（复杂协议：REQ/ACK/EVENT/NACK 等，每种不同字段集） */
+  messages?: MessageSpec[]
+  /** 交互流（多轮：发送→等ACK→条件分支） */
+  interactions?: InteractionStep[]
   /** 传输层（不填则纯本地数据流，无 TCP） */
   transport?: Transport
   /** 循环（不填则单次执行） */
   loop?: LoopConfig
   /** 是否在接收侧做拆包校验（默认 true，有 transport 时生效） */
   verifyOnRecv?: boolean
+}
+
+// ═══════════════════════════════════════════════════════════
+// 横向复杂度：多消息类型 + 嵌套结构 + 交互流
+// ═══════════════════════════════════════════════════════════
+
+/** 消息类型定义（复杂协议的每种帧结构） */
+export interface MessageSpec {
+  /** 消息类型标识（如 'REQ', 'ACK', 'EVENT'） */
+  msgType: string
+  /** 该消息类型的字段集（不含帧头公共字段，转换器自动加 magic/msgType/seq） */
+  fields: ProtocolField[]
+  /** 消息类型标识值（帧头 msgType 字段的数值，如 0x01=REQ, 0x02=ACK） */
+  typeId?: number
+}
+
+/** 嵌套字段类型（在 ProtocolField 联合中扩展） */
+export interface TlvField {
+  kind: 'tlv'
+  name: string
+  /** TLV 条目：每个生成 type(u8) + length(u8) + value 三段 */
+  entries: Array<{ type: number; value: string; mode?: 'hex' | 'text' }>
+}
+
+export interface RepeatBlockField {
+  kind: 'repeat-block'
+  name: string
+  /** 决定重复次数的字段名（引用前序 parse 出的 count 值；组包侧用 count 固定值） */
+  countField?: string
+  /** 组包侧固定重复次数（不依赖前序字段） */
+  count?: number
+  /** 每个重复块的内部字段 */
+  blockFields: ProtocolField[]
+}
+
+export interface OptionalField {
+  kind: 'optional'
+  name: string
+  /** flags 中的哪一位控制此字段是否出现（0-7） */
+  flagBit: number
+  /** 实际字段（仅当 flagBit 为 1 时拼入） */
+  field: ProtocolField
+}
+
+/** 交互步骤（多轮交互流） */
+export interface InteractionStep {
+  /** 发送的消息类型（引用 MessageSpec.msgType） */
+  send: string
+  /** 期望收到的 ACK 消息类型（不填=不等，单向发送） */
+  expectAck?: string
+  /** 收到 ACK 后的动作 */
+  onAck?: 'continue' | 'retry' | 'abort'
+  /** 重试次数（onAck=retry 时） */
+  retryCount?: number
+  /** 超时（ms，默认 5000） */
+  timeout?: number
 }

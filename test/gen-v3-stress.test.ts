@@ -83,7 +83,7 @@ function buildLargeDsl(): ProtocolDsl {
   return {
     name: '复杂协议v3',
     fields,
-    transport: { mode: 'tcp-loopback', port: 18930 },
+    transport: { mode: 'tcp-loopback', port: 39189 },
     loop: { count: 100 }
   }
 }
@@ -95,7 +95,7 @@ describe('v3 可视化压测脚本生成器', () => {
     const nodeCount = (graph.nodes as any[]).length
     const connCount = (graph.connections as any[]).length
     console.log(`\n=== v3 压测脚本生成 ===`)
-    console.log(`DSL 字段数: ${dsl.fields.length}`)
+    console.log(`DSL 字段数: ${dsl.fields?.length ?? dsl.messages?.[0]?.fields?.length ?? 0}`)
     console.log(`graph 节点数: ${nodeCount}`)
     console.log(`graph 连线数: ${connCount}`)
 

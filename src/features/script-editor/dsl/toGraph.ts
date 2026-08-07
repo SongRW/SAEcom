@@ -109,10 +109,13 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
   const ctx = createBuildCtx()
   const namePrefix = dsl.name || '协议'
 
+  // 简单协议用 fields；复杂协议用 messages（多消息类型），取第一个消息的 fields 作组帧。
+  // 两者互斥，fields 优先（向后兼容）。
+  const effectiveFields = dsl.fields ?? (dsl.messages?.[0]?.fields ?? [])
   // 分离特殊字段（crc/length-prefix 在 concat 后处理）
-  const normalFields = dsl.fields.filter(f => f.kind !== 'crc' && f.kind !== 'length-prefix')
-  const crcFields = dsl.fields.filter(f => f.kind === 'crc')
-  const lenFields = dsl.fields.filter(f => f.kind === 'length-prefix')
+  const normalFields = effectiveFields.filter(f => f.kind !== 'crc' && f.kind !== 'length-prefix')
+  const crcFields = effectiveFields.filter(f => f.kind === 'crc')
+  const lenFields = effectiveFields.filter(f => f.kind === 'length-prefix')
 
   // 组包链 + 记录字段字节偏移（供接收侧拆包用）
   const fieldOutputs: Array<{ id: string; outputPort: string }> = []
