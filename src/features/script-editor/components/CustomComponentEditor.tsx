@@ -106,8 +106,12 @@ export function CustomComponentEditor({
   /** 沙箱 API 文档面板展开/收起 + 搜索。 */
   const [apiDocsOpen, setApiDocsOpen] = useState(false)
   const [apiDocSearch, setApiDocSearch] = useState('')
-  /** 实现方式：emit 源码 | 组合连线（子画布，复用 GraphCanvas）。 */
-  const [implMode, setImplMode] = useState<'emit' | 'compose'>('emit')
+  /** 实现方式：emit 源码 | 组合连线（子画布，复用 GraphCanvas）。
+   *  初始值从 initialDescriptor 派生：组合组件（有 subgraph）→ compose，否则 emit。
+   *  此前写死 'emit'，导致打开组合组件时停在代码模式，看不到子图画布。 */
+  const [implMode, setImplMode] = useState<'emit' | 'compose'>(
+    initialDescriptor && (initialDescriptor as { subgraph?: unknown }).subgraph ? 'compose' : 'emit'
+  )
   /** 组合模式：独立的子图状态（本质就是个脚本，复用 useGraphHistory）。
    *  子图节点的添加/删除/连线/缩略图全部复用 GraphCanvas（画布逻辑零重复实现）。 */
   const subGraphHistory = useGraphHistory(createEmptyGraphState())

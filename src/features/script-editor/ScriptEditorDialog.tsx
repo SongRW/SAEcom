@@ -1176,6 +1176,10 @@ export function ScriptEditorDialog({
                 返回画布/保存后关闭（onOpenChange(false)）。与 ScriptCodePanel 同模式。 */}
             {customEditorOpen ? (
               <CustomComponentEditor
+                /* key 按编辑目标 fileName 隔离：切换不同组件时强制 remount，
+                   确保 implMode/subGraphHistory 等 state 按新 descriptor 重新初始化，
+                   避免 state 残留导致组合组件画布不显示节点。新建模式 fileName=null → 固定 key。 */
+                key={customEditTarget?.fileName ?? '__new__'}
                 editFileName={customEditTarget?.fileName ?? null}
                 existingFileNames={customItems.map((it) => it.fileName)}
                 initialDescriptor={customEditTarget?.descriptor ?? emptyDescriptorRef.current}
