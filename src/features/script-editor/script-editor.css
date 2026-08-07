@@ -1217,6 +1217,15 @@
   box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
 }
 
+/* 已保存组件实现方式锁定：disabled 按钮（非 active 的那个）置灰不可点 */
+.custom-component-editor__seg button:disabled:not(.is-active) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.custom-component-editor__seg button:disabled:not(.is-active):hover {
+  color: var(--muted-foreground);
+}
+
 /* 组合连线：组件库侧栏 + GraphCanvas 并排（复用画布逻辑，无自定义添加 UI） */
 .custom-component-editor__compose {
   flex: 1;

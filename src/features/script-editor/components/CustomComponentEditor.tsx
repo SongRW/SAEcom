@@ -514,14 +514,20 @@ export function CustomComponentEditor({
 
       <div className="custom-component-editor__body">
         {/* 主区：Monaco 编辑器 + 诊断（flex:1） */}
-        <div className="custom-component-editor__code">
+          <div className="custom-component-editor__code">
           <div className="custom-component-editor__code-header">
-            {/* 实现方式切换：emit 源码 | 组合连线（子画布） */}
+            {/* 实现方式切换：emit 源码 | 组合连线（子画布）。
+                实现方式一旦确定（编辑已有组件）就锁定——中途切换会导致状态冲突：
+                JS→组合会丢弃 emit 代码；组合→JS 会丢弃子图；且画布上已引用该组件
+                的节点 codegen 路径会变（emit 产出 vs 子图展开），端口可能失配。
+                仅新建时可选一次。 */}
             <div className="custom-component-editor__seg" data-testid="cc-impl-seg">
               <button
                 type="button"
                 className={implMode === 'emit' ? 'is-active' : ''}
                 onClick={() => setImplMode('emit')}
+                disabled={isEditMode}
+                title={isEditMode ? '实现方式创建后不可更改（切换会导致状态冲突）' : undefined}
                 data-testid="cc-mode-emit"
               >
                 emit 源码
@@ -530,6 +536,8 @@ export function CustomComponentEditor({
                 type="button"
                 className={implMode === 'compose' ? 'is-active' : ''}
                 onClick={() => setImplMode('compose')}
+                disabled={isEditMode}
+                title={isEditMode ? '实现方式创建后不可更改（切换会导致状态冲突）' : undefined}
                 data-testid="cc-mode-compose"
               >
                 组合连线
