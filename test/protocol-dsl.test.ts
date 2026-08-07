@@ -36,7 +36,9 @@ const fullDsl: ProtocolDsl = {
 
 describe('dslToGraph 转换器', () => {
   describe('简单协议（无 transport）', () => {
-    const graph = dslToGraph(simpleDsl)
+    // dslToGraph 返回 ReteGraphExport（nodes/connections 为数组|Record 联合类型），
+    // 转换器产出的一定是数组，断言为具体类型便于 .map/.find 调用。
+    const graph = dslToGraph(simpleDsl) as { nodes: any[]; connections: any[] }
 
     it('产出合法 ReteGraphExport（nodes + connections 数组）', () => {
       expect(graph.nodes).toBeInstanceOf(Array)
@@ -75,7 +77,7 @@ describe('dslToGraph 转换器', () => {
   })
 
   describe('完整协议（transport + loop）', () => {
-    const graph = dslToGraph(fullDsl)
+    const graph = dslToGraph(fullDsl) as { nodes: any[]; connections: any[] }
 
     it('含 TCP 收发节点 + control-loop', () => {
       const keys = graph.nodes.map(n => n.key)
@@ -106,7 +108,7 @@ describe('dslToGraph 转换器', () => {
 
   describe('protocol-concat 动态端口', () => {
     it('3 字段 → concat ports=3，连线用 a/b/c', () => {
-      const graph = dslToGraph(simpleDsl)
+      const graph = dslToGraph(simpleDsl) as { nodes: any[]; connections: any[] }
       const concat = graph.nodes.find(n => n.key === 'protocol-concat')
       expect(concat?.data?.ports).toBe(2) // magic + seq = 2 字段（crc 在 concat 后单独处理）
       // 连线的 targetInput 应含 a/b（concat 的动态端口）
@@ -127,8 +129,9 @@ describe('dslToGraph 转换器', () => {
           { kind: 'crc', name: 'crc', append: true }
         ]
       }
-      const graph = dslToGraph(dsl)
-      const customNode = graph.nodes.find(n => n.key === 'custom-aes-crypto')
+      const graph = dslToGraph(dsl) as { nodes: any[]; connections: any[] }
+      const nodes = graph.nodes
+      const customNode = nodes.find((n: any) => n.key === 'custom-aes-crypto')
       expect(customNode, '应有 custom-aes-crypto 节点').toBeDefined()
       expect(customNode?.data?.mode).toBe('encrypt')
     })
