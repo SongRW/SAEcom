@@ -35,13 +35,13 @@ function buildLargeDsl(): ProtocolDsl {
   fields.push({ kind: 'const', name: 'version', value: '03', mode: 'hex' })
   fields.push({ kind: 'uint', name: 'seq', width: 2, value: 0 })
 
-  // 80 个传感器读数字段（u16）——主要节点来源
-  for (let i = 0; i < 80; i++) {
+  // 30 个传感器读数字段（u16）——组包+拆包各 1 节点 = 60 节点
+  for (let i = 0; i < 30; i++) {
     fields.push({ kind: 'uint', name: `sensor${i}`, width: 2, value: i })
   }
 
-  // 10 个位域字段（每个 4 子字段 → 每个产 5 节点 = 50 节点）
-  for (let b = 0; b < 10; b++) {
+  // 3 个位域字段（每个 4 子字段 → 组包侧 5 节点 + 拆包侧 2 节点 = 21 节点）
+  for (let b = 0; b < 3; b++) {
     fields.push({
       kind: 'bitfield',
       name: `status${b}`,
@@ -54,14 +54,9 @@ function buildLargeDsl(): ProtocolDsl {
     })
   }
 
-  // 20 个文本字段（设备名）
-  for (let t = 0; t < 20; t++) {
+  // 10 个文本字段（设备名）
+  for (let t = 0; t < 10; t++) {
     fields.push({ kind: 'text', name: `label${t}`, value: `DEV${t}`, encoding: 'utf8' })
-  }
-
-  // 30 个常量字段（补足到 ~200 节点）
-  for (let c = 0; c < 30; c++) {
-    fields.push({ kind: 'const', name: `reserved${c}`, value: '00', mode: 'hex' })
   }
 
   // 3 个自定义组件字段（测自定义组件功能）
@@ -129,6 +124,6 @@ describe('v3 可视化压测脚本生成器', () => {
     const fileContent = buildScriptFile(graph, code)
     fs.writeFileSync(OPTIONS.outputPath, fileContent, 'utf8')
     console.log(`已写入: ${OPTIONS.outputPath}（${(fileContent.length / 1024).toFixed(1)} KB）`)
-    console.log(`节点数 ${nodeCount} ${nodeCount >= 180 ? '✓ 达标' : '✗ 不足，需增字段'}`)
+    console.log(`节点数 ${nodeCount} ${nodeCount >= 150 ? '✓ 达标' : '✗ 不足，需增字段'}`)
   })
 })

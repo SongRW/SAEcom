@@ -114,11 +114,19 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
   const crcFields = dsl.fields.filter(f => f.kind === 'crc')
   const lenFields = dsl.fields.filter(f => f.kind === 'length-prefix')
 
-  // 组包链
+  // 组包链 + 记录字段字节偏移（供接收侧拆包用）
   const fieldOutputs: Array<{ id: string; outputPort: string }> = []
+  const fieldLayout: Array<{ name: string; offset: number; length: number }> = []
+  let byteOffset = 0
   normalFields.forEach((field, i) => {
     const result = fieldToNode(ctx, field, namePrefix, i, reg)
-    if (result) fieldOutputs.push(result)
+    if (result) {
+      fieldOutputs.push(result)
+      // 计算字段字节宽度（供拆包 slice）
+      const w = fieldByteWidth(field)
+      fieldLayout.push({ name: field.name, offset: byteOffset, length: w })
+      byteOffset += w
+    }
   })
 
   // protocol-concat 拼帧
@@ -180,8 +188,27 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
     ctx.col++
     ctx.row = 0
     const cliRecvId = addNode(ctx, 'input-tcp', { host: '127.0.0.1', port: dsl.transport!.port }, `${namePrefix}.客户端接收`, nextPosition(ctx))
-    const logId = addNode(ctx, 'output-log', { prefix: `${namePrefix}.收到`, level: 'info' }, `${namePrefix}.日志`, nextPosition(ctx))
-    connect(ctx, cliRecvId, 'out', logId, 'in')
+
+    // 接收侧拆包解析链：每个字段 protocol-slice 按偏移截取 → output-log 输出（人可读）
+    // verifyOnRecv 默认 true；false 时只 log 原始帧
+    const verifyOnRecv = dsl.verifyOnRecv !== false
+    if (verifyOnRecv && fieldLayout.length > 0) {
+      // 逐字段拆包：slice(offset, length) → log("字段名")
+      for (const fl of fieldLayout) {
+        const sliceId = addNode(ctx, 'protocol-slice', {
+          start: fl.offset, length: fl.length
+        }, `${namePrefix}.拆.${fl.name}`, nextPosition(ctx))
+        connect(ctx, cliRecvId, 'out', sliceId, 'hex')
+        const fLogId = addNode(ctx, 'output-log', {
+          prefix: `${namePrefix}.${fl.name}`, level: 'info'
+        }, `${namePrefix}.日志.${fl.name}`, nextPosition(ctx))
+        connect(ctx, sliceId, 'out', fLogId, 'in')
+      }
+    } else {
+      // 简单 log 原始帧
+      const logId = addNode(ctx, 'output-log', { prefix: `${namePrefix}.收到`, level: 'info' }, `${namePrefix}.日志`, nextPosition(ctx))
+      connect(ctx, cliRecvId, 'out', logId, 'in')
+    }
 
   } else if (hasTransport && dsl.transport?.mode === 'tcp-client') {
     const sendId = addNode(ctx, 'output-tcp', { host: dsl.transport.host ?? '127.0.0.1', port: dsl.transport.port, mode: 'hex' }, `${namePrefix}.发送`, nextPosition(ctx))
@@ -199,4 +226,23 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
 function concatPortKey(index: number): string {
   if (index < 26) return String.fromCharCode(97 + index)
   return `in_${index + 1}`
+}
+
+/** 计算字段的字节宽度（供拆包 protocol-slice 的 length 参数）。 */
+function fieldByteWidth(field: ProtocolField): number {
+  switch (field.kind) {
+    case 'const': {
+      if (field.mode === 'hex') return Math.max(1, Math.ceil(field.value.replace(/\s/g, '').length / 2))
+      if (field.mode === 'decimal' || field.mode === 'binary') return field.width ?? 2
+      // text：按 utf8 字节数（TextEncoder 浏览器原生，无需 Buffer）
+      return new TextEncoder().encode(field.value).length
+    }
+    case 'uint': return field.width
+    case 'text': return new TextEncoder().encode(field.value).length
+    case 'bitfield': return Math.ceil(field.fields.reduce((s, f) => s + f.bits, 0) / 8)
+    case 'crc': return field.algorithm === 'CRC8' ? 1 : field.algorithm === 'CRC32' ? 4 : 2
+    case 'length-prefix': return field.width === 'u16' ? 2 : 1
+    case 'custom': return 16 // 默认 16 字节（AES block）；精确值需组件自知
+    default: return 2
+  }
 }

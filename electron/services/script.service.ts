@@ -158,7 +158,9 @@ export class ScriptService implements ScriptWatcherHost {
 
         sock.on('data', (buf) => {
           const dataBuffer = Buffer.isBuffer(buf) ? buf : Buffer.from(String(buf), 'utf8')
-          const dataText = dataBuffer.toString('utf8')
+          // latin1：每字节无损映射到 charCode 0-255（与 listenTcpPackets 客户端侧一致）。
+          // 此前用 utf8 导致二进制协议数据（0xAA 等）损坏成乱码。
+          const dataText = dataBuffer.toString('latin1')
           this.tcpService.pushTcpServerData(serverId, dataText)
           this.tcpService.notifyTcpServerWatchers(serverId, dataText)
         })
