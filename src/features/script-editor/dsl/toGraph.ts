@@ -174,6 +174,7 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
   ctx.col++
   ctx.row = 0
   const hasTransport = Boolean(dsl.transport)
+  const verifyOnRecv = dsl.verifyOnRecv !== false
 
   if (hasTransport && dsl.transport?.mode === 'tcp-loopback') {
     if (dsl.loop) {
@@ -193,8 +194,6 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
     const cliRecvId = addNode(ctx, 'input-tcp', { host: '127.0.0.1', port: dsl.transport!.port }, `${namePrefix}.客户端接收`, nextPosition(ctx))
 
     // 接收侧拆包解析链：每个字段 protocol-slice 按偏移截取 → output-log 输出（人可读）
-    // verifyOnRecv 默认 true；false 时只 log 原始帧
-    const verifyOnRecv = dsl.verifyOnRecv !== false
     if (verifyOnRecv && fieldLayout.length > 0) {
       // 逐字段拆包：slice(offset, length) → log("字段名")
       for (const fl of fieldLayout) {
@@ -214,8 +213,30 @@ export function dslToGraph(dsl: ProtocolDsl, registry?: AdapterRegistry): ReteGr
     }
 
   } else if (hasTransport && dsl.transport?.mode === 'tcp-client') {
-    const sendId = addNode(ctx, 'output-tcp', { host: dsl.transport.host ?? '127.0.0.1', port: dsl.transport.port, mode: 'hex' }, `${namePrefix}.发送`, nextPosition(ctx))
+    const tport = dsl.transport.port
+    const thost = dsl.transport.host ?? '127.0.0.1'
+    // 发送侧：组帧 → output-tcp 发到外部服务端（用户手动开的 TCP 服务器面板）
+    if (dsl.loop) {
+      addNode(ctx, 'control-loop', { count: dsl.loop.count, type: '次数循环' }, `${namePrefix}.循环`, nextPosition(ctx))
+    }
+    const sendId = addNode(ctx, 'output-tcp', { host: thost, port: tport, mode: 'hex' }, `${namePrefix}.发送`, nextPosition(ctx))
     connect(ctx, frameNodeId, frameOutputPort, sendId, 'in')
+
+    // 接收侧：input-tcp 连同一服务端收包 → 拆包解析
+    ctx.col++
+    ctx.row = 0
+    const cliRecvId = addNode(ctx, 'input-tcp', { host: thost, port: tport }, `${namePrefix}.接收`, nextPosition(ctx))
+    if (verifyOnRecv && fieldLayout.length > 0) {
+      for (const fl of fieldLayout) {
+        const sliceId = addNode(ctx, 'protocol-slice', { start: fl.offset, length: fl.length }, `${namePrefix}.拆.${fl.name}`, nextPosition(ctx))
+        connect(ctx, cliRecvId, 'out', sliceId, 'hex')
+        const fLogId = addNode(ctx, 'output-log', { prefix: `${namePrefix}.${fl.name}`, level: 'info' }, `${namePrefix}.日志.${fl.name}`, nextPosition(ctx))
+        connect(ctx, sliceId, 'out', fLogId, 'in')
+      }
+    } else {
+      const logId = addNode(ctx, 'output-log', { prefix: `${namePrefix}.收到`, level: 'info' }, `${namePrefix}.日志`, nextPosition(ctx))
+      connect(ctx, cliRecvId, 'out', logId, 'in')
+    }
 
   } else {
     const logId = addNode(ctx, 'output-log', { prefix: `${namePrefix}.帧`, level: 'info' }, `${namePrefix}.日志`, nextPosition(ctx))

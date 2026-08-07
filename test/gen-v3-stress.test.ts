@@ -83,7 +83,7 @@ function buildLargeDsl(): ProtocolDsl {
   return {
     name: '复杂协议v3',
     fields,
-    transport: { mode: 'tcp-loopback', port: 39189 },
+    transport: { mode: 'tcp-client', port: 39189, host: '127.0.0.1' },
     loop: { count: 100 }
   }
 }

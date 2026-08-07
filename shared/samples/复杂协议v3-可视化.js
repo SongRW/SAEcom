@@ -1005,54 +1005,29 @@
       },
       "data": {
         "host": "127.0.0.1",
-        "port": 18930,
+        "port": 39189,
         "mode": "hex"
       }
     },
     {
       "id": "67",
-      "key": "input-tcp-server",
-      "label": "复杂协议v3.服务端接收",
-      "position": {
-        "x": 1400,
-        "y": 40
-      },
-      "data": {
-        "port": 18930
-      }
-    },
-    {
-      "id": "68",
-      "key": "output-tcp-server",
-      "label": "复杂协议v3.服务端回包",
-      "position": {
-        "x": 1400,
-        "y": 140
-      },
-      "data": {
-        "port": 18930,
-        "mode": "hex"
-      }
-    },
-    {
-      "id": "69",
       "key": "input-tcp",
-      "label": "复杂协议v3.客户端接收",
+      "label": "复杂协议v3.接收",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 40
       },
       "data": {
         "host": "127.0.0.1",
-        "port": 18930
+        "port": 39189
       }
     },
     {
-      "id": "70",
+      "id": "68",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.magic",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 140
       },
       "data": {
@@ -1061,11 +1036,11 @@
       }
     },
     {
-      "id": "71",
+      "id": "69",
       "key": "output-log",
       "label": "复杂协议v3.日志.magic",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 240
       },
       "data": {
@@ -1074,11 +1049,11 @@
       }
     },
     {
-      "id": "72",
+      "id": "70",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.version",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 340
       },
       "data": {
@@ -1087,11 +1062,11 @@
       }
     },
     {
-      "id": "73",
+      "id": "71",
       "key": "output-log",
       "label": "复杂协议v3.日志.version",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 440
       },
       "data": {
@@ -1100,11 +1075,11 @@
       }
     },
     {
-      "id": "74",
+      "id": "72",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.seq",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 540
       },
       "data": {
@@ -1113,11 +1088,11 @@
       }
     },
     {
-      "id": "75",
+      "id": "73",
       "key": "output-log",
       "label": "复杂协议v3.日志.seq",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 640
       },
       "data": {
@@ -1126,11 +1101,11 @@
       }
     },
     {
-      "id": "76",
+      "id": "74",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor0",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 740
       },
       "data": {
@@ -1139,11 +1114,11 @@
       }
     },
     {
-      "id": "77",
+      "id": "75",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor0",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 840
       },
       "data": {
@@ -1152,11 +1127,11 @@
       }
     },
     {
-      "id": "78",
+      "id": "76",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor1",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 940
       },
       "data": {
@@ -1165,11 +1140,11 @@
       }
     },
     {
-      "id": "79",
+      "id": "77",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor1",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1040
       },
       "data": {
@@ -1178,11 +1153,11 @@
       }
     },
     {
-      "id": "80",
+      "id": "78",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor2",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1140
       },
       "data": {
@@ -1191,11 +1166,11 @@
       }
     },
     {
-      "id": "81",
+      "id": "79",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor2",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1240
       },
       "data": {
@@ -1204,11 +1179,11 @@
       }
     },
     {
-      "id": "82",
+      "id": "80",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor3",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1340
       },
       "data": {
@@ -1217,11 +1192,11 @@
       }
     },
     {
-      "id": "83",
+      "id": "81",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor3",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1440
       },
       "data": {
@@ -1230,11 +1205,11 @@
       }
     },
     {
-      "id": "84",
+      "id": "82",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor4",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1540
       },
       "data": {
@@ -1243,11 +1218,11 @@
       }
     },
     {
-      "id": "85",
+      "id": "83",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor4",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1640
       },
       "data": {
@@ -1256,11 +1231,11 @@
       }
     },
     {
-      "id": "86",
+      "id": "84",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor5",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1740
       },
       "data": {
@@ -1269,11 +1244,11 @@
       }
     },
     {
-      "id": "87",
+      "id": "85",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor5",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1840
       },
       "data": {
@@ -1282,11 +1257,11 @@
       }
     },
     {
-      "id": "88",
+      "id": "86",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor6",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 1940
       },
       "data": {
@@ -1295,11 +1270,11 @@
       }
     },
     {
-      "id": "89",
+      "id": "87",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor6",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2040
       },
       "data": {
@@ -1308,11 +1283,11 @@
       }
     },
     {
-      "id": "90",
+      "id": "88",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor7",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2140
       },
       "data": {
@@ -1321,11 +1296,11 @@
       }
     },
     {
-      "id": "91",
+      "id": "89",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor7",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2240
       },
       "data": {
@@ -1334,11 +1309,11 @@
       }
     },
     {
-      "id": "92",
+      "id": "90",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor8",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2340
       },
       "data": {
@@ -1347,11 +1322,11 @@
       }
     },
     {
-      "id": "93",
+      "id": "91",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor8",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2440
       },
       "data": {
@@ -1360,11 +1335,11 @@
       }
     },
     {
-      "id": "94",
+      "id": "92",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor9",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2540
       },
       "data": {
@@ -1373,11 +1348,11 @@
       }
     },
     {
-      "id": "95",
+      "id": "93",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor9",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2640
       },
       "data": {
@@ -1386,11 +1361,11 @@
       }
     },
     {
-      "id": "96",
+      "id": "94",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor10",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2740
       },
       "data": {
@@ -1399,11 +1374,11 @@
       }
     },
     {
-      "id": "97",
+      "id": "95",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor10",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2840
       },
       "data": {
@@ -1412,11 +1387,11 @@
       }
     },
     {
-      "id": "98",
+      "id": "96",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor11",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 2940
       },
       "data": {
@@ -1425,11 +1400,11 @@
       }
     },
     {
-      "id": "99",
+      "id": "97",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor11",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3040
       },
       "data": {
@@ -1438,11 +1413,11 @@
       }
     },
     {
-      "id": "100",
+      "id": "98",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor12",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3140
       },
       "data": {
@@ -1451,11 +1426,11 @@
       }
     },
     {
-      "id": "101",
+      "id": "99",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor12",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3240
       },
       "data": {
@@ -1464,11 +1439,11 @@
       }
     },
     {
-      "id": "102",
+      "id": "100",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor13",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3340
       },
       "data": {
@@ -1477,11 +1452,11 @@
       }
     },
     {
-      "id": "103",
+      "id": "101",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor13",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3440
       },
       "data": {
@@ -1490,11 +1465,11 @@
       }
     },
     {
-      "id": "104",
+      "id": "102",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor14",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3540
       },
       "data": {
@@ -1503,11 +1478,11 @@
       }
     },
     {
-      "id": "105",
+      "id": "103",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor14",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3640
       },
       "data": {
@@ -1516,11 +1491,11 @@
       }
     },
     {
-      "id": "106",
+      "id": "104",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor15",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3740
       },
       "data": {
@@ -1529,11 +1504,11 @@
       }
     },
     {
-      "id": "107",
+      "id": "105",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor15",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3840
       },
       "data": {
@@ -1542,11 +1517,11 @@
       }
     },
     {
-      "id": "108",
+      "id": "106",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor16",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 3940
       },
       "data": {
@@ -1555,11 +1530,11 @@
       }
     },
     {
-      "id": "109",
+      "id": "107",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor16",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4040
       },
       "data": {
@@ -1568,11 +1543,11 @@
       }
     },
     {
-      "id": "110",
+      "id": "108",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor17",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4140
       },
       "data": {
@@ -1581,11 +1556,11 @@
       }
     },
     {
-      "id": "111",
+      "id": "109",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor17",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4240
       },
       "data": {
@@ -1594,11 +1569,11 @@
       }
     },
     {
-      "id": "112",
+      "id": "110",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor18",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4340
       },
       "data": {
@@ -1607,11 +1582,11 @@
       }
     },
     {
-      "id": "113",
+      "id": "111",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor18",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4440
       },
       "data": {
@@ -1620,11 +1595,11 @@
       }
     },
     {
-      "id": "114",
+      "id": "112",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor19",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4540
       },
       "data": {
@@ -1633,11 +1608,11 @@
       }
     },
     {
-      "id": "115",
+      "id": "113",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor19",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4640
       },
       "data": {
@@ -1646,11 +1621,11 @@
       }
     },
     {
-      "id": "116",
+      "id": "114",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor20",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4740
       },
       "data": {
@@ -1659,11 +1634,11 @@
       }
     },
     {
-      "id": "117",
+      "id": "115",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor20",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4840
       },
       "data": {
@@ -1672,11 +1647,11 @@
       }
     },
     {
-      "id": "118",
+      "id": "116",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor21",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 4940
       },
       "data": {
@@ -1685,11 +1660,11 @@
       }
     },
     {
-      "id": "119",
+      "id": "117",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor21",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5040
       },
       "data": {
@@ -1698,11 +1673,11 @@
       }
     },
     {
-      "id": "120",
+      "id": "118",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor22",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5140
       },
       "data": {
@@ -1711,11 +1686,11 @@
       }
     },
     {
-      "id": "121",
+      "id": "119",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor22",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5240
       },
       "data": {
@@ -1724,11 +1699,11 @@
       }
     },
     {
-      "id": "122",
+      "id": "120",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor23",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5340
       },
       "data": {
@@ -1737,11 +1712,11 @@
       }
     },
     {
-      "id": "123",
+      "id": "121",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor23",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5440
       },
       "data": {
@@ -1750,11 +1725,11 @@
       }
     },
     {
-      "id": "124",
+      "id": "122",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor24",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5540
       },
       "data": {
@@ -1763,11 +1738,11 @@
       }
     },
     {
-      "id": "125",
+      "id": "123",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor24",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5640
       },
       "data": {
@@ -1776,11 +1751,11 @@
       }
     },
     {
-      "id": "126",
+      "id": "124",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor25",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5740
       },
       "data": {
@@ -1789,11 +1764,11 @@
       }
     },
     {
-      "id": "127",
+      "id": "125",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor25",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5840
       },
       "data": {
@@ -1802,11 +1777,11 @@
       }
     },
     {
-      "id": "128",
+      "id": "126",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor26",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 5940
       },
       "data": {
@@ -1815,11 +1790,11 @@
       }
     },
     {
-      "id": "129",
+      "id": "127",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor26",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6040
       },
       "data": {
@@ -1828,11 +1803,11 @@
       }
     },
     {
-      "id": "130",
+      "id": "128",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor27",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6140
       },
       "data": {
@@ -1841,11 +1816,11 @@
       }
     },
     {
-      "id": "131",
+      "id": "129",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor27",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6240
       },
       "data": {
@@ -1854,11 +1829,11 @@
       }
     },
     {
-      "id": "132",
+      "id": "130",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor28",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6340
       },
       "data": {
@@ -1867,11 +1842,11 @@
       }
     },
     {
-      "id": "133",
+      "id": "131",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor28",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6440
       },
       "data": {
@@ -1880,11 +1855,11 @@
       }
     },
     {
-      "id": "134",
+      "id": "132",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.sensor29",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6540
       },
       "data": {
@@ -1893,11 +1868,11 @@
       }
     },
     {
-      "id": "135",
+      "id": "133",
       "key": "output-log",
       "label": "复杂协议v3.日志.sensor29",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6640
       },
       "data": {
@@ -1906,11 +1881,11 @@
       }
     },
     {
-      "id": "136",
+      "id": "134",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.status0",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6740
       },
       "data": {
@@ -1919,11 +1894,11 @@
       }
     },
     {
-      "id": "137",
+      "id": "135",
       "key": "output-log",
       "label": "复杂协议v3.日志.status0",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6840
       },
       "data": {
@@ -1932,11 +1907,11 @@
       }
     },
     {
-      "id": "138",
+      "id": "136",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.status1",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 6940
       },
       "data": {
@@ -1945,11 +1920,11 @@
       }
     },
     {
-      "id": "139",
+      "id": "137",
       "key": "output-log",
       "label": "复杂协议v3.日志.status1",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7040
       },
       "data": {
@@ -1958,11 +1933,11 @@
       }
     },
     {
-      "id": "140",
+      "id": "138",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.status2",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7140
       },
       "data": {
@@ -1971,11 +1946,11 @@
       }
     },
     {
-      "id": "141",
+      "id": "139",
       "key": "output-log",
       "label": "复杂协议v3.日志.status2",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7240
       },
       "data": {
@@ -1984,11 +1959,11 @@
       }
     },
     {
-      "id": "142",
+      "id": "140",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label0",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7340
       },
       "data": {
@@ -1997,11 +1972,11 @@
       }
     },
     {
-      "id": "143",
+      "id": "141",
       "key": "output-log",
       "label": "复杂协议v3.日志.label0",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7440
       },
       "data": {
@@ -2010,11 +1985,11 @@
       }
     },
     {
-      "id": "144",
+      "id": "142",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label1",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7540
       },
       "data": {
@@ -2023,11 +1998,11 @@
       }
     },
     {
-      "id": "145",
+      "id": "143",
       "key": "output-log",
       "label": "复杂协议v3.日志.label1",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7640
       },
       "data": {
@@ -2036,11 +2011,11 @@
       }
     },
     {
-      "id": "146",
+      "id": "144",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label2",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7740
       },
       "data": {
@@ -2049,11 +2024,11 @@
       }
     },
     {
-      "id": "147",
+      "id": "145",
       "key": "output-log",
       "label": "复杂协议v3.日志.label2",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7840
       },
       "data": {
@@ -2062,11 +2037,11 @@
       }
     },
     {
-      "id": "148",
+      "id": "146",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label3",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 7940
       },
       "data": {
@@ -2075,11 +2050,11 @@
       }
     },
     {
-      "id": "149",
+      "id": "147",
       "key": "output-log",
       "label": "复杂协议v3.日志.label3",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8040
       },
       "data": {
@@ -2088,11 +2063,11 @@
       }
     },
     {
-      "id": "150",
+      "id": "148",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label4",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8140
       },
       "data": {
@@ -2101,11 +2076,11 @@
       }
     },
     {
-      "id": "151",
+      "id": "149",
       "key": "output-log",
       "label": "复杂协议v3.日志.label4",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8240
       },
       "data": {
@@ -2114,11 +2089,11 @@
       }
     },
     {
-      "id": "152",
+      "id": "150",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label5",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8340
       },
       "data": {
@@ -2127,11 +2102,11 @@
       }
     },
     {
-      "id": "153",
+      "id": "151",
       "key": "output-log",
       "label": "复杂协议v3.日志.label5",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8440
       },
       "data": {
@@ -2140,11 +2115,11 @@
       }
     },
     {
-      "id": "154",
+      "id": "152",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label6",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8540
       },
       "data": {
@@ -2153,11 +2128,11 @@
       }
     },
     {
-      "id": "155",
+      "id": "153",
       "key": "output-log",
       "label": "复杂协议v3.日志.label6",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8640
       },
       "data": {
@@ -2166,11 +2141,11 @@
       }
     },
     {
-      "id": "156",
+      "id": "154",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label7",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8740
       },
       "data": {
@@ -2179,11 +2154,11 @@
       }
     },
     {
-      "id": "157",
+      "id": "155",
       "key": "output-log",
       "label": "复杂协议v3.日志.label7",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8840
       },
       "data": {
@@ -2192,11 +2167,11 @@
       }
     },
     {
-      "id": "158",
+      "id": "156",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label8",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 8940
       },
       "data": {
@@ -2205,11 +2180,11 @@
       }
     },
     {
-      "id": "159",
+      "id": "157",
       "key": "output-log",
       "label": "复杂协议v3.日志.label8",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9040
       },
       "data": {
@@ -2218,11 +2193,11 @@
       }
     },
     {
-      "id": "160",
+      "id": "158",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.label9",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9140
       },
       "data": {
@@ -2231,11 +2206,11 @@
       }
     },
     {
-      "id": "161",
+      "id": "159",
       "key": "output-log",
       "label": "复杂协议v3.日志.label9",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9240
       },
       "data": {
@@ -2244,11 +2219,11 @@
       }
     },
     {
-      "id": "162",
+      "id": "160",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.时间戳",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9340
       },
       "data": {
@@ -2257,11 +2232,11 @@
       }
     },
     {
-      "id": "163",
+      "id": "161",
       "key": "output-log",
       "label": "复杂协议v3.日志.时间戳",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9440
       },
       "data": {
@@ -2270,11 +2245,11 @@
       }
     },
     {
-      "id": "164",
+      "id": "162",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.位置",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9540
       },
       "data": {
@@ -2283,11 +2258,11 @@
       }
     },
     {
-      "id": "165",
+      "id": "163",
       "key": "output-log",
       "label": "复杂协议v3.日志.位置",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9640
       },
       "data": {
@@ -2296,11 +2271,11 @@
       }
     },
     {
-      "id": "166",
+      "id": "164",
       "key": "protocol-slice",
       "label": "复杂协议v3.拆.载荷加密",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9740
       },
       "data": {
@@ -2309,11 +2284,11 @@
       }
     },
     {
-      "id": "167",
+      "id": "165",
       "key": "output-log",
       "label": "复杂协议v3.日志.载荷加密",
       "position": {
-        "x": 1680,
+        "x": 1400,
         "y": 9840
       },
       "data": {
@@ -2711,10 +2686,16 @@
       "source": "67",
       "sourceOutput": "out",
       "target": "68",
+      "targetInput": "hex"
+    },
+    {
+      "source": "68",
+      "sourceOutput": "out",
+      "target": "69",
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "70",
       "targetInput": "hex"
@@ -2726,7 +2707,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "72",
       "targetInput": "hex"
@@ -2738,7 +2719,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "74",
       "targetInput": "hex"
@@ -2750,7 +2731,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "76",
       "targetInput": "hex"
@@ -2762,7 +2743,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "78",
       "targetInput": "hex"
@@ -2774,7 +2755,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "80",
       "targetInput": "hex"
@@ -2786,7 +2767,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "82",
       "targetInput": "hex"
@@ -2798,7 +2779,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "84",
       "targetInput": "hex"
@@ -2810,7 +2791,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "86",
       "targetInput": "hex"
@@ -2822,7 +2803,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "88",
       "targetInput": "hex"
@@ -2834,7 +2815,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "90",
       "targetInput": "hex"
@@ -2846,7 +2827,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "92",
       "targetInput": "hex"
@@ -2858,7 +2839,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "94",
       "targetInput": "hex"
@@ -2870,7 +2851,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "96",
       "targetInput": "hex"
@@ -2882,7 +2863,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "98",
       "targetInput": "hex"
@@ -2894,7 +2875,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "100",
       "targetInput": "hex"
@@ -2906,7 +2887,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "102",
       "targetInput": "hex"
@@ -2918,7 +2899,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "104",
       "targetInput": "hex"
@@ -2930,7 +2911,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "106",
       "targetInput": "hex"
@@ -2942,7 +2923,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "108",
       "targetInput": "hex"
@@ -2954,7 +2935,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "110",
       "targetInput": "hex"
@@ -2966,7 +2947,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "112",
       "targetInput": "hex"
@@ -2978,7 +2959,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "114",
       "targetInput": "hex"
@@ -2990,7 +2971,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "116",
       "targetInput": "hex"
@@ -3002,7 +2983,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "118",
       "targetInput": "hex"
@@ -3014,7 +2995,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "120",
       "targetInput": "hex"
@@ -3026,7 +3007,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "122",
       "targetInput": "hex"
@@ -3038,7 +3019,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "124",
       "targetInput": "hex"
@@ -3050,7 +3031,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "126",
       "targetInput": "hex"
@@ -3062,7 +3043,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "128",
       "targetInput": "hex"
@@ -3074,7 +3055,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "130",
       "targetInput": "hex"
@@ -3086,7 +3067,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "132",
       "targetInput": "hex"
@@ -3098,7 +3079,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "134",
       "targetInput": "hex"
@@ -3110,7 +3091,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "136",
       "targetInput": "hex"
@@ -3122,7 +3103,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "138",
       "targetInput": "hex"
@@ -3134,7 +3115,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "140",
       "targetInput": "hex"
@@ -3146,7 +3127,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "142",
       "targetInput": "hex"
@@ -3158,7 +3139,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "144",
       "targetInput": "hex"
@@ -3170,7 +3151,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "146",
       "targetInput": "hex"
@@ -3182,7 +3163,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "148",
       "targetInput": "hex"
@@ -3194,7 +3175,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "150",
       "targetInput": "hex"
@@ -3206,7 +3187,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "152",
       "targetInput": "hex"
@@ -3218,7 +3199,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "154",
       "targetInput": "hex"
@@ -3230,7 +3211,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "156",
       "targetInput": "hex"
@@ -3242,7 +3223,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "158",
       "targetInput": "hex"
@@ -3254,7 +3235,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "160",
       "targetInput": "hex"
@@ -3266,7 +3247,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "162",
       "targetInput": "hex"
@@ -3278,7 +3259,7 @@
       "targetInput": "in"
     },
     {
-      "source": "69",
+      "source": "67",
       "sourceOutput": "out",
       "target": "164",
       "targetInput": "hex"
@@ -3287,18 +3268,6 @@
       "source": "164",
       "sourceOutput": "out",
       "target": "165",
-      "targetInput": "in"
-    },
-    {
-      "source": "69",
-      "sourceOutput": "out",
-      "target": "166",
-      "targetInput": "hex"
-    },
-    {
-      "source": "166",
-      "sourceOutput": "out",
-      "target": "167",
       "targetInput": "in"
     }
   ]
@@ -3396,454 +3365,449 @@ try {
   // [节点 custom-time-convert 未注册，已跳过（组件可能已被删除）]
   // [节点 custom-geo-convert 未注册，已跳过（组件可能已被删除）]
   // [节点 custom-aes-crypto 未注册，已跳过（组件可能已被删除）]
-  _listeners.push(listenTcpServerPackets(18930)(async (_out_67) => {
+  _listeners.push(listenTcpPackets("127.0.0.1", 39189)(async (_out_67) => {
     if (await checkStop()) return;
     if (await checkStop()) return;
-    await broadcastTcpServer(18930, _out_67, "hex");
-  }));
-  _listeners.push(listenTcpPackets("127.0.0.1", 18930)(async (_out_69) => {
-    if (await checkStop()) return;
-    if (await checkStop()) return;
-    var _out_70 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_68 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(0) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.magic] " + _out_70);
+    console.log("[复杂协议v3.magic] " + _out_68);
     if (await checkStop()) return;
-    var _out_72 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_70 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(2) || 0) * 2;
   var _l = Math.max(0, parseInt(1) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.version] " + _out_72);
+    console.log("[复杂协议v3.version] " + _out_70);
     if (await checkStop()) return;
-    var _out_74 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_72 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(3) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.seq] " + _out_74);
+    console.log("[复杂协议v3.seq] " + _out_72);
     if (await checkStop()) return;
-    var _out_76 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_74 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(5) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor0] " + _out_76);
+    console.log("[复杂协议v3.sensor0] " + _out_74);
     if (await checkStop()) return;
-    var _out_78 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_76 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(7) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor1] " + _out_78);
+    console.log("[复杂协议v3.sensor1] " + _out_76);
     if (await checkStop()) return;
-    var _out_80 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_78 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(9) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor2] " + _out_80);
+    console.log("[复杂协议v3.sensor2] " + _out_78);
     if (await checkStop()) return;
-    var _out_82 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_80 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(11) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor3] " + _out_82);
+    console.log("[复杂协议v3.sensor3] " + _out_80);
     if (await checkStop()) return;
-    var _out_84 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_82 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(13) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor4] " + _out_84);
+    console.log("[复杂协议v3.sensor4] " + _out_82);
     if (await checkStop()) return;
-    var _out_86 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_84 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(15) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor5] " + _out_86);
+    console.log("[复杂协议v3.sensor5] " + _out_84);
     if (await checkStop()) return;
-    var _out_88 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_86 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(17) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor6] " + _out_88);
+    console.log("[复杂协议v3.sensor6] " + _out_86);
     if (await checkStop()) return;
-    var _out_90 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_88 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(19) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor7] " + _out_90);
+    console.log("[复杂协议v3.sensor7] " + _out_88);
     if (await checkStop()) return;
-    var _out_92 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_90 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(21) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor8] " + _out_92);
+    console.log("[复杂协议v3.sensor8] " + _out_90);
     if (await checkStop()) return;
-    var _out_94 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_92 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(23) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor9] " + _out_94);
+    console.log("[复杂协议v3.sensor9] " + _out_92);
     if (await checkStop()) return;
-    var _out_96 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_94 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(25) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor10] " + _out_96);
+    console.log("[复杂协议v3.sensor10] " + _out_94);
     if (await checkStop()) return;
-    var _out_98 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_96 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(27) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor11] " + _out_98);
+    console.log("[复杂协议v3.sensor11] " + _out_96);
     if (await checkStop()) return;
-    var _out_100 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_98 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(29) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor12] " + _out_100);
+    console.log("[复杂协议v3.sensor12] " + _out_98);
     if (await checkStop()) return;
-    var _out_102 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_100 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(31) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor13] " + _out_102);
+    console.log("[复杂协议v3.sensor13] " + _out_100);
     if (await checkStop()) return;
-    var _out_104 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_102 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(33) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor14] " + _out_104);
+    console.log("[复杂协议v3.sensor14] " + _out_102);
     if (await checkStop()) return;
-    var _out_106 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_104 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(35) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor15] " + _out_106);
+    console.log("[复杂协议v3.sensor15] " + _out_104);
     if (await checkStop()) return;
-    var _out_108 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_106 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(37) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor16] " + _out_108);
+    console.log("[复杂协议v3.sensor16] " + _out_106);
     if (await checkStop()) return;
-    var _out_110 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_108 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(39) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor17] " + _out_110);
+    console.log("[复杂协议v3.sensor17] " + _out_108);
     if (await checkStop()) return;
-    var _out_112 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_110 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(41) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor18] " + _out_112);
+    console.log("[复杂协议v3.sensor18] " + _out_110);
     if (await checkStop()) return;
-    var _out_114 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_112 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(43) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor19] " + _out_114);
+    console.log("[复杂协议v3.sensor19] " + _out_112);
     if (await checkStop()) return;
-    var _out_116 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_114 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(45) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor20] " + _out_116);
+    console.log("[复杂协议v3.sensor20] " + _out_114);
     if (await checkStop()) return;
-    var _out_118 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_116 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(47) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor21] " + _out_118);
+    console.log("[复杂协议v3.sensor21] " + _out_116);
     if (await checkStop()) return;
-    var _out_120 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_118 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(49) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor22] " + _out_120);
+    console.log("[复杂协议v3.sensor22] " + _out_118);
     if (await checkStop()) return;
-    var _out_122 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_120 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(51) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor23] " + _out_122);
+    console.log("[复杂协议v3.sensor23] " + _out_120);
     if (await checkStop()) return;
-    var _out_124 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_122 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(53) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor24] " + _out_124);
+    console.log("[复杂协议v3.sensor24] " + _out_122);
     if (await checkStop()) return;
-    var _out_126 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_124 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(55) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor25] " + _out_126);
+    console.log("[复杂协议v3.sensor25] " + _out_124);
     if (await checkStop()) return;
-    var _out_128 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_126 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(57) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor26] " + _out_128);
+    console.log("[复杂协议v3.sensor26] " + _out_126);
     if (await checkStop()) return;
-    var _out_130 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_128 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(59) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor27] " + _out_130);
+    console.log("[复杂协议v3.sensor27] " + _out_128);
     if (await checkStop()) return;
-    var _out_132 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_130 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(61) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor28] " + _out_132);
+    console.log("[复杂协议v3.sensor28] " + _out_130);
     if (await checkStop()) return;
-    var _out_134 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_132 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(63) || 0) * 2;
   var _l = Math.max(0, parseInt(2) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.sensor29] " + _out_134);
+    console.log("[复杂协议v3.sensor29] " + _out_132);
     if (await checkStop()) return;
-    var _out_136 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_134 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(65) || 0) * 2;
   var _l = Math.max(0, parseInt(3) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.status0] " + _out_136);
+    console.log("[复杂协议v3.status0] " + _out_134);
     if (await checkStop()) return;
-    var _out_138 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_136 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(68) || 0) * 2;
   var _l = Math.max(0, parseInt(3) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.status1] " + _out_138);
+    console.log("[复杂协议v3.status1] " + _out_136);
     if (await checkStop()) return;
-    var _out_140 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_138 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(71) || 0) * 2;
   var _l = Math.max(0, parseInt(3) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.status2] " + _out_140);
+    console.log("[复杂协议v3.status2] " + _out_138);
     if (await checkStop()) return;
-    var _out_142 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_140 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(74) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label0] " + _out_142);
+    console.log("[复杂协议v3.label0] " + _out_140);
     if (await checkStop()) return;
-    var _out_144 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_142 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(78) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label1] " + _out_144);
+    console.log("[复杂协议v3.label1] " + _out_142);
     if (await checkStop()) return;
-    var _out_146 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_144 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(82) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label2] " + _out_146);
+    console.log("[复杂协议v3.label2] " + _out_144);
     if (await checkStop()) return;
-    var _out_148 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_146 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(86) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label3] " + _out_148);
+    console.log("[复杂协议v3.label3] " + _out_146);
     if (await checkStop()) return;
-    var _out_150 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_148 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(90) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label4] " + _out_150);
+    console.log("[复杂协议v3.label4] " + _out_148);
     if (await checkStop()) return;
-    var _out_152 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_150 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(94) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label5] " + _out_152);
+    console.log("[复杂协议v3.label5] " + _out_150);
     if (await checkStop()) return;
-    var _out_154 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_152 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(98) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label6] " + _out_154);
+    console.log("[复杂协议v3.label6] " + _out_152);
     if (await checkStop()) return;
-    var _out_156 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_154 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(102) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label7] " + _out_156);
+    console.log("[复杂协议v3.label7] " + _out_154);
     if (await checkStop()) return;
-    var _out_158 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_156 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(106) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label8] " + _out_158);
+    console.log("[复杂协议v3.label8] " + _out_156);
     if (await checkStop()) return;
-    var _out_160 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_158 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(110) || 0) * 2;
   var _l = Math.max(0, parseInt(4) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.label9] " + _out_160);
+    console.log("[复杂协议v3.label9] " + _out_158);
     if (await checkStop()) return;
-    var _out_162 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_160 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(114) || 0) * 2;
   var _l = Math.max(0, parseInt(16) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.时间戳] " + _out_162);
+    console.log("[复杂协议v3.时间戳] " + _out_160);
     if (await checkStop()) return;
-    var _out_164 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_162 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(130) || 0) * 2;
   var _l = Math.max(0, parseInt(16) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.位置] " + _out_164);
+    console.log("[复杂协议v3.位置] " + _out_162);
     if (await checkStop()) return;
-    var _out_166 = (() => {
-  var _h = (() => { var _s = String(_out_69||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
+    var _out_164 = (() => {
+  var _h = (() => { var _s = String(_out_67||''); if (_s.indexOf('[测试')===0||_s.indexOf('[超时')===0) return ''; var _c = _s.replace(/[\s,]/g,''); if (_c.length && _c.length%2===0 && /^[0-9a-f]+$/i.test(_c)) return _c.toUpperCase(); return textToHex(_s).toUpperCase(); })();
   var _s = Math.max(0, parseInt(146) || 0) * 2;
   var _l = Math.max(0, parseInt(16) || 0) * 2;
   return _h.substr(_s, _l);
 })();
     if (await checkStop()) return;
-    console.log("[复杂协议v3.载荷加密] " + _out_166);
+    console.log("[复杂协议v3.载荷加密] " + _out_164);
   }));
   if (await checkStop()) return;
   var _out_34 = "0";
@@ -3914,7 +3878,7 @@ try {
     var _out_65 = _i + 1;
   }
   if (await checkStop()) return;
-  await sendTCP("127.0.0.1", 18930, _out_64, "hex");
+  await sendTCP("127.0.0.1", 39189, _out_64, "hex");
   await Promise.all(_listeners);
 } catch (e) {
   if (e.message !== 'ABORTED') console.log('Error: ' + e.message);
