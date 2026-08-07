@@ -227,11 +227,44 @@ export interface JsonSchema {
 /**
  * 节点导出的 MCP Tool 描述（描述层；不绑定传输/Server）。
  * name 使用节点 key，便于 AI 与图结构对齐。
+ *
+ * ports（端口契约）让 AI 知道节点有哪些输入/输出端口、怎么连线：
+ * - inputs/outputs：静态端口的 key + socket 类型（连线时 sourceOutput/targetInput 须匹配）
+ * - dynamic：动态端口节点（concat/bitfield/keys）的派生规则说明
+ * - socketCompat：全局连线兼容规则（AI 连线须遵守，否则连接被静默丢弃）
  */
+export interface McpPortInfo {
+  /** 端口 key（连线时用，如 'in'/'out'/'a'/'field_f1'） */
+  key: string
+  /** socket 类型（决定能连什么；详见 socketCompat） */
+  socket: SocketKind
+  /** 端口显示名 */
+  label?: string
+}
+
+/** 动态端口派生规则（AI 据此设置 data 产生正确端口） */
+export interface McpDynamicPorts {
+  /** 动态类型 */
+  kind: 'concat' | 'bitfield' | 'keys'
+  /** 规则说明（人类可读，AI 可理解） */
+  description: string
+}
+
+export interface McpPortContract {
+  /** 静态输入端口 */
+  inputs: McpPortInfo[]
+  /** 静态输出端口 */
+  outputs: McpPortInfo[]
+  /** 动态端口说明（仅 concat/bitfield/keys 类节点） */
+  dynamic?: McpDynamicPorts
+}
+
 export interface McpToolDescriptor {
   name: string
   description: string
   inputSchema: JsonSchema
+  /** 端口契约：AI 拼装 graph 时连线所需的端口信息 */
+  ports?: McpPortContract
   annotations?: {
     category: NodeCategory
     sandboxApis: string[]

@@ -60,7 +60,8 @@ export abstract class AbstractNodeComponent {
     }
   }
 
-  /** 导出 MCP Tool 描述（描述层，不绑定传输） */
+  /** 导出 MCP Tool 描述（描述层，不绑定传输）。
+   *  含端口契约（inputs/outputs + 动态端口规则），让 AI 能正确连线。 */
   toMcpTool(): McpToolDescriptor {
     return buildMcpToolDescriptor({
       key: this.key,
@@ -68,7 +69,9 @@ export abstract class AbstractNodeComponent {
       description: this.description,
       category: this.category,
       controls: this.controls(),
-      sandboxApis: this.sandboxApis()
+      sandboxApis: this.sandboxApis(),
+      ports: this.ports(),
+      isDynamic: this.dynamicPorts
     })
   }
 
