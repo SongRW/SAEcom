@@ -228,6 +228,34 @@ export const SANDBOX_API_DOCS: SandboxApiDoc[] = [
     signature: 'checksum(input: string | Uint8Array): string'
   },
   {
+    name: 'aesEncrypt',
+    category: '编码与校验',
+    summary: 'AES 加密（hex 输入 → 密文 hex；PKCS7 padding）',
+    signature: "aesEncrypt(data: string, keyHex: string, ivHex: string, mode?: string): string",
+    params: [
+      { name: 'data', desc: '待加密内容（hex 字符串；非 hex 视为 utf8）' },
+      { name: 'keyHex', desc: '密钥（hex；aes-128→16 字节、aes-192→24、aes-256→32）' },
+      { name: 'ivHex', desc: 'IV（hex；CBC/CFB/OFB 需 16 字节；ECB 忽略）' },
+      { name: 'mode', desc: "算法名，默认 'aes-128-cbc'" }
+    ],
+    returns: '密文 hex 字符串（大写）',
+    example: "aesEncrypt('AABB', '000102...0F', '101112...1F')  // → 密文 hex"
+  },
+  {
+    name: 'aesDecrypt',
+    category: '编码与校验',
+    summary: 'AES 解密（aesEncrypt 的逆；密文 hex → 明文 hex）',
+    signature: "aesDecrypt(data: string, keyHex: string, ivHex: string, mode?: string): string",
+    params: [
+      { name: 'data', desc: '密文（hex 字符串）' },
+      { name: 'keyHex', desc: '密钥（须与加密一致）' },
+      { name: 'ivHex', desc: 'IV（须与加密一致）' },
+      { name: 'mode', desc: "算法名，默认 'aes-128-cbc'" }
+    ],
+    returns: '明文 hex 字符串（大写）；若原文是 utf8 文本，用 hexToText 还原',
+    example: "aesDecrypt(cipher, '000102...0F', '101112...1F')  // → 明文 hex"
+  },
+  {
     name: 'btoa',
     category: '工具',
     summary: 'Base64 编码',

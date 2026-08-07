@@ -151,6 +151,45 @@ export function crc32(data: unknown): string {
   return toHex((crc ^ 0xffffffff) >>> 0, 8)
 }
 
+/**
+ * AES 加密（hex 输入 → hex 输出，对齐 codec 风格）。
+ *
+ * @param data 待加密内容（hex 字符串；非 hex 视为 utf8 文本）
+ * @param keyHex 密钥（hex；长度须匹配算法：aes-128→16 字节、aes-192→24、aes-256→32）
+ * @param ivHex IV（hex；CBC/CFB/OFB 需 16 字节；ECB 忽略）
+ * @param mode 算法名，默认 'aes-128-cbc'（与 Node crypto cipher 名一致）
+ * @returns 密文 hex 字符串
+ *
+ * PKCS7 padding（crypto.createCipheriv 默认）。密钥/IV 长度非法抛错（crypto 原生校验）。
+ */
+export function aesEncrypt(data: unknown, keyHex: unknown, ivHex: unknown, mode = 'aes-128-cbc'): string {
+  const crypto = require('node:crypto')
+  const algorithm = String(mode || 'aes-128-cbc')
+  const key = toBuffer(keyHex)
+  const iv = ivHex === undefined || ivHex === null || ivHex === '' ? null : toBuffer(ivHex)
+  const cipher = crypto.createCipheriv(algorithm, key, iv)
+  const plaintext = toBuffer(data)
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()])
+  return encrypted.toString('hex').toUpperCase()
+}
+
+/**
+ * AES 解密（aesEncrypt 的逆操作；hex 输入 → hex 输出）。
+ * @param data 密文（hex 字符串）
+ * @returns 明文 hex 字符串（注意：若原文是 utf8 文本，解密后为对应字节的 hex，
+ *   脚本侧可用 hexToText 还原为文本）
+ */
+export function aesDecrypt(data: unknown, keyHex: unknown, ivHex: unknown, mode = 'aes-128-cbc'): string {
+  const crypto = require('node:crypto')
+  const algorithm = String(mode || 'aes-128-cbc')
+  const key = toBuffer(keyHex)
+  const iv = ivHex === undefined || ivHex === null || ivHex === '' ? null : toBuffer(ivHex)
+  const decipher = crypto.createDecipheriv(algorithm, key, iv)
+  const ciphertext = toBuffer(data)
+  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()])
+  return decrypted.toString('hex').toUpperCase()
+}
+
 function normalizeEncoding(encoding: string): string {
   const lowered = String(encoding || 'utf8').toLowerCase().replace(/-/g, '')
   if (lowered === 'utf8' || lowered === 'utf8mb4') return 'utf8'

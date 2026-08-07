@@ -8,7 +8,9 @@ import {
   crc16,
   crc16ccitt,
   crc32,
-  swapBytes
+  swapBytes,
+  aesEncrypt,
+  aesDecrypt
 } from '../scriptSandbox'
 
 /**
@@ -17,7 +19,8 @@ import {
  * 对照搬移自 main.ts sandbox 对象字面量中以下 key：
  *   textToHex / hexToText / btoa / atob（原为沙箱内联实现，保留内联，零变化）/
  *   convertEncoding / swapBytes / chunkString / bytesToNumber（来自 scriptSandbox）/
- *   convertBase（内联）/ crc8 / crc16 / crc16ccitt / crc32 / checksum（来自 scriptSandbox）
+ *   convertBase（内联）/ crc8 / crc16 / crc16ccitt / crc32 / checksum（来自 scriptSandbox）/
+ *   aesEncrypt / aesDecrypt（来自 scriptSandbox，基于 node:crypto）
  *
  * 纯函数、无 rc/IO 依赖（apis 忽略 rc）。行为逐行对照搬移，零变化。
  */
@@ -52,6 +55,8 @@ export class CodecCapabilityProvider implements CapabilityProvider {
       crc16ccitt,
       crc32,
       checksum,
+      aesEncrypt,
+      aesDecrypt,
 
       convertBase: (value: string, from: string, to: string) => {
         const baseMap: Record<string, number> = { '二进制': 2, '八进制': 8, '十进制': 10, '十六进制': 16 }

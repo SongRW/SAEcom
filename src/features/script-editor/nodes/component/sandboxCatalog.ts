@@ -49,7 +49,9 @@ export const SANDBOX_API_CATALOG = [
   'crc16',
   'crc16ccitt',
   'crc32',
-  'checksum'
+  'checksum',
+  'aesEncrypt',
+  'aesDecrypt'
 ] as const
 
 /** 内置 API 名联合类型（编译期可静态收窄）。插件扩展 API 类型层面为 string。 */
