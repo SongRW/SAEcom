@@ -48,8 +48,10 @@
     ],
     "connections": [
       {
-        "from": { "nodeId": "node-utf8-latin1", "portKey": "out" },
-        "to": { "nodeId": "node-latin1-gbk", "portKey": "in" }
+        "source": "node-utf8-latin1",
+        "sourceOutput": "out",
+        "target": "node-latin1-gbk",
+        "targetInput": "in"
       }
     ]
   },
