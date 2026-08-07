@@ -1323,6 +1323,27 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-scrollbar, color-mix(in oklch, var(--muted-foreground) 30%, transparent)) transparent;
+}
+
+/* 现代细滚动条（与 changelog 窗口同款），替代系统默认粗滚动条 */
+.custom-component-editor__drawer-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-component-editor__drawer-body::-webkit-scrollbar-thumb {
+  background: var(--c-scrollbar, color-mix(in oklch, var(--muted-foreground) 30%, transparent));
+  border-radius: var(--radius, 6px);
+}
+
+.custom-component-editor__drawer-body::-webkit-scrollbar-thumb:hover {
+  background: var(--c-scrollbar-hover, color-mix(in oklch, var(--muted-foreground) 50%, transparent));
+}
+
+.custom-component-editor__drawer-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* 底部试编译面板（替代 Dialog） */
