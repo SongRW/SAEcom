@@ -24,7 +24,7 @@ import { NodePalette } from '@/features/script-editor/components/NodePalette'
 import { ScriptEditorSidePanel } from '@/features/script-editor/components/ScriptEditorSidePanel'
 import { groupNodesForPalette, getNextCanvasNodePosition, getNextPaletteNodePosition } from '@/features/script-editor/viewModel'
 import { useGraphHistory } from '@/features/script-editor/useGraphHistory'
-import { createEmptyGraphState, exportGraphState } from '@/features/script-editor/rete/graphState'
+import { createEmptyGraphState, exportGraphState, importGraphState } from '@/features/script-editor/rete/graphState'
 import { addGraphNode } from '@/features/script-editor/rete/graphState'
 import type {
   CompositeComponentDescriptor,
@@ -146,11 +146,42 @@ export function CustomComponentEditor({
 
   useEffect(() => {
     if (shouldResetForm(open, wasOpenRef.current, editFileName, prevEditFileNameRef.current)) {
-      setForm(initialDescriptor ? cloneDescriptor(initialDescriptor) : createEmptyDescriptor())
+      const desc = initialDescriptor ? cloneDescriptor(initialDescriptor) : createEmptyDescriptor()
+      setForm(desc)
     }
     wasOpenRef.current = open
     prevEditFileNameRef.current = editFileName
     // initialDescriptor 仅在重置瞬间读取；不参与依赖，避免身份抖动触发重置。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editFileName])
+
+  // 同步 implMode + 子画布 + bindings：当编辑目标变化（editFileName）或编辑器（重）打开时，
+  // 按 descriptor 是否含 subgraph 切换 compose/emit 模式，并加载子图节点。
+  // 与上方表单重置 effect 解耦——shouldResetForm 在某些时序下不返回 true（如编辑器
+  // 已 open 时切换目标），但子图仍需重新加载，否则组合组件画布看不到节点。
+  useEffect(() => {
+    if (!open) return
+    const sub = (initialDescriptor as { subgraph?: ReteGraphExport } | null)?.subgraph
+    if (sub && Array.isArray(sub.nodes) && sub.nodes.length > 0) {
+      setImplMode('compose')
+      subGraphHistory.setGraphCommit(() => importGraphState(sub))
+      setSubGraphRevision((r) => r + 1)
+      const inBinds = ((initialDescriptor as { inputBindings?: PortBinding[] })?.inputBindings) ?? []
+      const outBinds = ((initialDescriptor as { outputBindings?: PortBinding[] })?.outputBindings) ?? []
+      const inMap: Record<string, PortBinding | undefined> = {}
+      const outMap: Record<string, PortBinding | undefined> = {}
+      for (const b of inBinds) inMap[b.nodeId] = b
+      for (const b of outBinds) outMap[b.nodeId] = b
+      setNodeInputBindings(inMap)
+      setNodeOutputBindings(outMap)
+    } else {
+      setImplMode('emit')
+      subGraphHistory.setGraphCommit(() => createEmptyGraphState())
+      setSubGraphRevision((r) => r + 1)
+      setNodeInputBindings({})
+      setNodeOutputBindings({})
+    }
+    // initialDescriptor 随 editFileName/open 变化而更新；不列入依赖避免身份抖动。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editFileName])
 
