@@ -140,7 +140,7 @@
       "scriptsCount": "脚本数量",
       "componentsCount": "节点组件（内置 + 自定义）",
       "scriptsList": "脚本列表",
-      "componentsLibrary": "组件库",
+      "componentsLibrary": "自定义组件",
       "noScripts": "还没有脚本，打开编辑器新建",
       "noCustomComponents": "还没有自定义组件，打开编辑器创建",
       "createComponent": "创建自定义组件",

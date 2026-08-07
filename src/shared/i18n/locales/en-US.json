@@ -140,7 +140,7 @@
       "scriptsCount": "Scripts",
       "componentsCount": "Node components (built-in + custom)",
       "scriptsList": "Scripts",
-      "componentsLibrary": "Components",
+      "componentsLibrary": "Custom Components",
       "noScripts": "No scripts yet — open the editor to create one",
       "noCustomComponents": "No custom components yet — open the editor to create one",
       "createComponent": "Create custom component",
