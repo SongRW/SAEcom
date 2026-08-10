@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import type { CapabilityProvider, RunContext } from '../core/capability-registry'
 import type { SerialService } from '../services/serial.service'
 import type { TcpService } from '../services/tcp.service'
@@ -130,6 +131,9 @@ export class CoreCapabilityProvider implements CapabilityProvider {
         }
 
         try {
+          // 父目录不存在时自动创建（压测日志 script-logs/ 等场景）
+          const dir = path.dirname(filePath)
+          if (dir && dir !== '.' && dir !== '') fs.mkdirSync(dir, { recursive: true })
           if (mode === 'overwrite') {
             fs.writeFileSync(filePath, String(content ?? ''), 'utf-8')
           } else {

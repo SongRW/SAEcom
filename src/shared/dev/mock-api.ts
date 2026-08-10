@@ -172,9 +172,33 @@ import type { WindowAPI } from '@shared/types'
       request: noop,
       onLoad: () => emptyUnsubscribe
     },
+    settings: {
+      open: noop
+    },
     theme: {
       set: (dark: boolean) => document.documentElement.classList.toggle('theme-dark', !!dark),
       onApply: () => emptyUnsubscribe
+    },
+    agent: {
+      // 浏览器预览：无主进程解析能力。.txt/.md 等文本在向导侧经 file.text() 兜底读取；
+      // 二进制文档（docx/xlsx/pdf）在 mock 下返回明确错误，不静默造假。
+      parseDocument: async (filePath: string) => {
+        if (/\.(docx|xlsx|pdf)$/i.test(filePath)) {
+          return { ok: false, error: '浏览器预览不支持 docx/xlsx/pdf，请在 Electron 中使用' }
+        }
+        return { ok: false, error: '浏览器预览中请直接粘贴文本' }
+      },
+      writeKnowledge: async () => ({ ok: true, featId: 'FEAT-PROTOCOL-MOCK', goldId: 'GOLD-PROTOCOL-MOCK', traceId: 'mock-trace' }),
+      chat: async () => ({ ok: false, error: '浏览器预览无 LLM 后端' }),
+      chatAbort: noop,
+      onChunk: () => emptyUnsubscribe,
+      getLlmSettings: async () => ({ ok: true, settings: { currentId: null, providers: [] } }),
+      saveLlmProvider: async () => ({ ok: true, settings: { currentId: null, providers: [] } }),
+      deleteLlmProvider: async () => ({ ok: true, settings: { currentId: null, providers: [] } }),
+      setCurrentLlmProvider: async () => ({ ok: true, settings: { currentId: null, providers: [] } }),
+      testLlmProvider: async () => ({ ok: false, error: '浏览器预览不支持测试连接' }),
+      probeModels: async () => ({ ok: false, error: '浏览器预览不支持探查模型' }),
+      importFromCcSwitch: async () => ({ ok: false, error: '浏览器预览不支持导入 CC Switch' })
     }
   } as unknown as WindowAPI
 })()

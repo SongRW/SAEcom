@@ -62,7 +62,8 @@ export class OutputTcpNode extends OutputBase {
   readonly description = '向 TCP 主机发送数据'
 
   ports(): { inputs: SocketSpec[]; outputs: SocketSpec[] } {
-    return { inputs: [b.dataIn()], outputs: [] }
+    // port 输入：可接「端口常量」节点联动（如脚本级端口配置，只改一处）
+    return { inputs: [b.dataIn(), b.dataIn('port', '端口(可接输入)')], outputs: [] }
   }
 
   controls(): ControlSpec[] {

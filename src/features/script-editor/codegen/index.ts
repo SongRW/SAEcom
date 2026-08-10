@@ -91,7 +91,7 @@ export function generateCodeFromRete(
       ctx.branchAvailable = previousAvailable
       ctx.inListenerClosure = previousClosure
     }
-    code += `  _listeners.push(${continuousListenExpression(node)}(async (${variable}) => {\n`
+    code += `  _listeners.push(${continuousListenExpression(ctx, node)}(async (${variable}) => {\n`
     code += '    if (await checkStop()) return;\n'
     code += body
     code += '  }));\n'
@@ -113,7 +113,67 @@ export function generateCodeFromRete(
   }
 
   code += `} catch (e) {\n  if (e.message !== 'ABORTED') console.log('Error: ' + e.message);\n}\n`
+
+  // 静默丢节点告警：检测「本该 emit 却被吞」的节点。
+  // 这类问题最危险——graph 看起来正常，codegen 不报错，但生成的代码缺关键逻辑
+  // （如 output-tcp 被丢 → sendTCP=0，脚本不发数据）。
+  // 终端副作用节点（output-*）被丢一定是 bug；其他 blocked 节点按需报告。
+  warnOnDroppedNodes(graph, ctx)
+
   return code
+}
+
+/**
+ * 静默丢节点告警。
+ *
+ * 检测两类问题：
+ * 1. blocked 的终端副作用节点（output-tcp/output-log/output-file 等）—— 这些节点
+ *    被丢意味着脚本缺关键输出（发送/日志），一定是 bug。
+ * 2. 未 processed 且非 root/常量的孤儿节点（有 incoming 但来源全被 blocked）——
+ *    说明组包/拆包链断裂。
+ *
+ * 告警走 console.warn（开发可见），不抛错（避免阻塞生成）。测试环境可通过
+ * captureConsoleWarnings 选项（未来）捕获断言。当前先保证生产可见。
+ */
+function warnOnDroppedNodes(graph: ReturnType<typeof normalizeReteGraph>, ctx: EmitContext): void {
+  // 终端副作用节点 key：被丢一定是 bug
+  const TERMINAL_KEYS = new Set(['output-tcp', 'output-tcp-server', 'output-log', 'output-file', 'output-panel'])
+  const droppedTerminal: Array<{ id: string; key: string; label?: string }> = []
+  const droppedOther: Array<{ id: string; key: string; label?: string }> = []
+
+  for (const node of graph.nodes) {
+    const id = nodeId(node.id)
+    if (ctx.processedNodes.has(id)) continue // 已正常 emit
+    // continuousRoot 自身已在 listener 注册，不算丢
+    if (ctx.varMap.has(id) && (isContinuousRootKey(node.key) || isContinuousInputNode(node.key))) continue
+    if (ctx.blockedNodes.has(id)) {
+      if (TERMINAL_KEYS.has(node.key)) {
+        droppedTerminal.push({ id, key: node.key, label: node.label })
+      } else {
+        droppedOther.push({ id, key: node.key, label: node.label })
+      }
+    }
+  }
+
+  if (droppedTerminal.length > 0) {
+    const detail = droppedTerminal
+      .map((n) => `${n.key}(${n.id}${n.label ? `,${n.label}` : ''})`)
+      .join(', ')
+    // 终端节点丢失是严重 bug，console.warn 让开发者立即发现
+    console.warn(
+      `[codegen] 警告：${droppedTerminal.length} 个终端副作用节点被丢弃（生成的脚本缺关键输出）: ${detail}\n` +
+        `  常见原因：节点的上游数据源被 blocked（listener 闭包边界 / control-loop 循环体引用了闭包外常量）。`
+    )
+  }
+  // 其他 blocked 节点数量过多时也提醒（可能是连线断链）
+  if (droppedOther.length > 5) {
+    console.warn(
+      `[codegen] 警告：${droppedOther.length} 个非终端节点被丢弃（可能是断链）。前 5 个: ${droppedOther
+        .slice(0, 5)
+        .map((n) => `${n.key}(${n.id})`)
+        .join(', ')}`
+    )
+  }
 }
 
 function emitNode(ctx: EmitContext, node: ReteGraphNode, indent = '  '): string {

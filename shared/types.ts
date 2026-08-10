@@ -588,6 +588,119 @@ export interface ThemeAPI {
   onApply: (cb: (p: { dark: boolean }) => void) => () => void
 }
 
+// ============ 协议生成向导后端域（agent） ============
+
+export type ParseDocumentResult =
+  | { ok: true; text: string }
+  | { ok: false; error: string }
+
+export interface WriteKnowledgeResult {
+  ok: boolean
+  featId?: string
+  goldId?: string
+  traceId?: string
+  error?: string
+}
+
+/** 协议知识写入入参（向导 ready 后收集；字段表/示例帧/期望值来自往返验证） */
+export interface ProtocolKnowledgeWritePayload {
+  name: string
+  title?: string
+  fieldTableMarkdown: string
+  sampleFrameHex: string
+  expectedValues: Record<string, string | number>
+  roundTripSummary: string
+  dsl: unknown
+  createdFrom: string
+  createdAt: string
+}
+
+export interface AgentAPI {
+  /** 按扩展名提取文档文本（docx/xlsx/pdf/txt/md/csv/json） */
+  parseDocument: (filePath: string) => Promise<ParseDocumentResult>
+  /** 写入 FEAT+GOLD 协议知识（本地知识库 CLI，仅开发仓库可用） */
+  writeKnowledge: (payload: ProtocolKnowledgeWritePayload) => Promise<WriteKnowledgeResult>
+  /** OpenAI 兼容流式 chat（主进程持有 Key；逐 delta 经 agent:chunk 推送；用当前 provider） */
+  chat: (req: AgentChatRequest) => Promise<AgentChatResult>
+  /** 中止进行中的 chat（send，火忘） */
+  chatAbort: (id: string) => void
+  /** 订阅流式增量（agent:chunk 推送） */
+  onChunk: (cb: (chunk: AgentChatChunk) => void) => () => void
+  /** 读 LLM 设置（provider 列表 + 当前；Key 解密） */
+  getLlmSettings: () => Promise<AgentLlmSettingsResult>
+  /** 保存 provider（upsert 按 id；Key 加密落盘） */
+  saveLlmProvider: (provider: AgentLlmProvider) => Promise<AgentLlmSettingsResult>
+  /** 删除 provider */
+  deleteLlmProvider: (id: string) => Promise<AgentLlmSettingsResult>
+  /** 设为当前 provider */
+  setCurrentLlmProvider: (id: string) => Promise<AgentLlmSettingsResult>
+  /** 用显式 provider 做最小 chat（设置页「测试连接」，不落盘） */
+  testLlmProvider: (provider: AgentLlmProvider) => Promise<AgentChatResult>
+  /** 探查端点可用模型列表（GET /models，CC Switch 式自动获取模型） */
+  probeModels: (provider: AgentLlmProvider) => Promise<AgentProbeModelsResult>
+  /** 从 CC Switch（~/.cc-switch/cc-switch.db 或 config.json）导入 OpenAI 兼容 provider */
+  importFromCcSwitch: () => Promise<AgentCcSwitchImportResult>
+}
+
+/** 思考强度等级（OpenAI 兼容 reasoning_effort 完整刻度；max=极高，部分模型/中转支持） */
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'max'
+
+/** LLM provider（OpenAI 兼容端点，配置页形态对齐 CC Switch）。 */
+export interface AgentLlmProvider {
+  id: string
+  name: string
+  baseUrl: string
+  apiKey: string
+  model: string
+  enabled: boolean
+  /** 思考强度（OpenAI 兼容 reasoning_effort；对齐 CC Switch model_reasoning_effort） */
+  reasoningEffort?: ReasoningEffort
+  /** 上下文窗口（K tokens，0/缺省 = 不限制；对齐 CC Switch context_window） */
+  contextWindow?: number
+}
+
+/** LLM 设置：provider 列表 + 当前生效 provider。 */
+export interface AgentLlmSettings {
+  currentId: string | null
+  providers: AgentLlmProvider[]
+}
+
+export interface AgentChatRequest {
+  id: string
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+  model?: string
+}
+
+export interface AgentChatResult {
+  ok: boolean
+  text?: string
+  error?: string
+}
+
+export interface AgentChatChunk {
+  id: string
+  delta: string
+}
+
+export interface AgentLlmSettingsResult {
+  ok: boolean
+  settings?: AgentLlmSettings
+  error?: string
+}
+
+export interface AgentCcSwitchImportResult {
+  ok: boolean
+  provider?: AgentLlmProvider
+  source?: string
+  error?: string
+}
+
+export interface AgentProbeModelsResult {
+  ok: boolean
+  models?: string[]
+  error?: string
+}
+
 // ============ 完整 window.api 类型 ============
 
 export interface WindowAPI {
@@ -611,6 +724,7 @@ export interface WindowAPI {
   changelog: ChangelogAPI
   about: AboutAPI
   theme: ThemeAPI
+  agent: AgentAPI
 }
 
 declare global {

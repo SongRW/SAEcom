@@ -1,6 +1,7 @@
 import type { ReteGraphNode } from '@shared/types'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
-import { configRef, data, jsObjectLiteral, jsString, outVar, valueAsNumber, valueAsString } from '@/features/script-editor/codegen/emit/shared'
+import { incomingForInput, nodeId } from '@/features/script-editor/codegen/graph'
+import { configRef, data, getInputVar, jsObjectLiteral, jsString, outVar, valueAsNumber, valueAsString } from '@/features/script-editor/codegen/emit/shared'
 
 const BASE_SERIAL_OPTIONS = {
   baudRate: 115200,
@@ -13,7 +14,26 @@ export function isContinuousInputNode(key: string): boolean {
   return key === 'input-panel' || key === 'input-serial' || key === 'input-tcp' || key === 'input-tcp-server'
 }
 
-export function continuousListenExpression(node: ReteGraphNode): string {
+/**
+ * TCP 端口表达式：优先取 port 输入连线（端口常量联动），无连线用控件值。
+ * listener 注册时端口常量（input-manual）尚未 emit，直接引用变量会 ReferenceError，
+ * 因此对 input-manual 常量内联其 content 字面量；其他来源（计算链）用变量引用。
+ */
+function tcpPortExpr(ctx: EmitContext, node: ReteGraphNode, fallback: number): string {
+  const conn = incomingForInput(ctx.graph, node, 'port')[0]
+  if (!conn) return String(fallback)
+  const srcNode = ctx.graph.nodeMap.get(nodeId(conn.source))
+  if (srcNode?.key === 'input-manual') {
+    const content = String(srcNode.data?.content ?? '').trim()
+    const parsed = Number(content)
+    if (Number.isFinite(parsed)) return String(parsed)
+  }
+  const connected = getInputVar(ctx, node, 'port', '')
+  if (connected) return `Number(${connected})`
+  return String(fallback)
+}
+
+export function continuousListenExpression(ctx: EmitContext, node: ReteGraphNode): string {
   const config = data(node)
   const ref = configRef(config)
 
@@ -36,11 +56,12 @@ export function continuousListenExpression(node: ReteGraphNode): string {
     case 'input-tcp': {
       const host = ref.kind === 'tcp-endpoint' ? ref.host : config.host
       const port = ref.kind === 'tcp-endpoint' ? ref.port : config.port
-      return `listenTcpPackets(${jsString(valueAsString(host, '127.0.0.1'))}, ${valueAsNumber(port, 8080)})`
+      // 端口常量联动：port 输入有连线时用连线值（渲染期动态决定）
+      return `listenTcpPackets(${jsString(valueAsString(host, '127.0.0.1'))}, ${tcpPortExpr(ctx, node, valueAsNumber(port, 8080))})`
     }
     case 'input-tcp-server': {
       const port = ref.kind === 'tcp-server' ? ref.port : config.port
-      return `listenTcpServerPackets(${valueAsNumber(port, 9000)})`
+      return `listenTcpServerPackets(${tcpPortExpr(ctx, node, valueAsNumber(port, 9000))})`
     }
     default:
       return 'listenCurrentPackets()'

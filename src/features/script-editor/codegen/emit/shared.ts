@@ -122,6 +122,8 @@ export function emitBranch(ctx: EmitContext, node: ReteGraphNode, outputKey: str
  * 就地 emit child 的未 processed 纯叶子来源（仅非 listener 闭包）。
  * 解决：分支/循环内引用循环外的 input-manual 等纯叶子时，
  * 叶子的 var 声明需就地生成在当前作用域，而非 top-level（否则引用未声明变量）。
+ * 扩展支持「叶子链」：所有来源都是纯叶子的节点（如 bitfield ← input-manual preNodes、
+ * TLV len-prefix ← protocol-const value）也可就地 emit，循环体内可包含位域打包/TLV 组包等结构。
  */
 function emitLeafSources(ctx: EmitContext, child: ReteGraphNode, indent: string): string {
   if (ctx.inListenerClosure) return ''
@@ -133,13 +135,34 @@ function emitLeafSources(ctx: EmitContext, child: ReteGraphNode, indent: string)
     if (ctx.processedNodes.has(sid)) continue
     const srcNode = ctx.graph.nodeMap.get(sid)
     if (!srcNode) continue
-    const srcIncoming = ctx.graph.incomingByNode.get(sid) || []
-    // 纯叶子（无 incoming 且非根节点）才就地 emit
-    if (srcIncoming.length !== 0) continue
-    if (isRootSourceKey(srcNode.key)) continue
+    if (!isLeafChainEligible(ctx, srcNode)) continue
+    // 先就地 emit 其叶子来源（如 bitfield 的 preNodes、TLV len-prefix 的 value const），再 emit 本节点
+    code += emitLeafSources(ctx, srcNode, indent)
     code += ctx.emitNode(srcNode, indent)
   }
   return code
+}
+
+/**
+ * 是否为可就地 emit 的「叶子链」节点：
+ * - 无 incoming 的纯叶子（且非持续监听根）
+ * - 或所有 incoming 来源都是纯叶子/已 processed（如 bitfield ← input-manual preNodes、
+ *   TLV len-prefix ← protocol-const value）
+ * 仅用于非 listener 作用域（分支/循环体内）。
+ */
+function isLeafChainEligible(ctx: EmitContext, node: ReteGraphNode): boolean {
+  if (isRootSourceKey(node.key)) return false
+  const incoming = ctx.graph.incomingByNode.get(nodeId(node.id)) || []
+  if (incoming.length === 0) return true
+  return incoming.every((conn) => {
+    const sid = nodeId(conn.source)
+    if (ctx.processedNodes.has(sid)) return true
+    const srcNode = ctx.graph.nodeMap.get(sid)
+    if (!srcNode) return false
+    if (isRootSourceKey(srcNode.key)) return false
+    const srcIncoming = ctx.graph.incomingByNode.get(sid) || []
+    return srcIncoming.length === 0
+  })
 }
 
 export function jsObjectLiteral(value: unknown): string {
@@ -164,12 +187,11 @@ function allIncomingSourcesAvailable(ctx: EmitContext, node: ReteGraphNode, avai
     if (!ctx.inListenerClosure && ctx.processedNodes.has(sourceId)) return true
     // 非 listener 闭包时：来源是纯叶子（无 incoming 且非根节点）可就地求值
     // （control-if 分支内的 input-manual 等纯输入，分支作用域可就地 emit）
+    // 扩展：叶子链（如 bitfield ← input-manual preNodes、TLV len-prefix ← protocol-const）
+    // 同样可就地求值，循环体内可包含位域打包/TLV 组包等结构。
     if (!ctx.inListenerClosure) {
       const sourceNode = ctx.graph.nodeMap.get(sourceId)
-      if (sourceNode) {
-        const sourceIncoming = ctx.graph.incomingByNode.get(sourceId) || []
-        if (sourceIncoming.length === 0 && !isRootSourceKey(sourceNode.key)) return true
-      }
+      if (sourceNode && isLeafChainEligible(ctx, sourceNode)) return true
     }
     return false
   })

@@ -5,6 +5,7 @@ import type { TcpService } from '../services/tcp.service'
 import type { ModbusService } from '../services/modbus.service'
 import type { WindowService } from '../services/window.service'
 import type { ScriptService } from '../services/script.service'
+import type { AgentService } from '../services/agent.service'
 import type { ScriptsRepository } from '../repositories/scripts.repository'
 import type { CustomComponentsRepository } from '../repositories/custom-components.repository'
 
@@ -36,6 +37,7 @@ export interface RuntimeServices {
   modbus: ModbusService
   window: WindowService
   script: ScriptService
+  agent: AgentService
 }
 
 export interface RuntimeRepositories {

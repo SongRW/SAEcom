@@ -45,7 +45,8 @@
       "appearance": "Appearance",
       "serial": "Serial",
       "shortcuts": "Shortcuts",
-      "about": "About"
+      "about": "About",
+      "agent": "AI & Agent"
     },
     "general": {
       "title": "General",
@@ -108,6 +109,42 @@
     "language": {
       "zh-CN": "简体中文",
       "en-US": "English"
+    },
+    "agent": {
+      "title": "AI & Agent",
+      "subtitle": "LLM provider management (OpenAI-compatible endpoints; shared by wizard deep mode and future agent features)",
+      "add": "Add",
+      "importCc": "Import from CC Switch",
+      "emptyList": "No providers yet. Add one or import from CC Switch.",
+      "emptyForm": "Select a provider on the left to edit, or add one.",
+      "name": "Name",
+      "baseUrl": "Base URL",
+      "apiKey": "API Key",
+      "model": "Model",
+      "enabled": "Enabled (used by deep mode)",
+      "current": "Current",
+      "setCurrent": "Set current",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this provider?",
+      "test": "Test",
+      "testing": "Testing…",
+      "save": "Save",
+      "testOk": "Connected",
+      "importedFrom": "Imported from {source} (saved on save)",
+      "unknown": "Unnamed",
+      "probe": "Probe models",
+      "probing": "Probing…",
+      "probeFail": "Probe failed",
+      "pickModel": "Select a model…",
+      "effort": "Reasoning effort",
+      "effortNone": "Default",
+      "effortLow": "Low",
+      "effortMedium": "Medium",
+      "effortHigh": "High",
+      "context": "Context (K)",
+      "contextHint": "0 = unlimited (no truncation); >0 truncates long input",
+      "effortMinimal": "Minimal",
+      "effortMax": "Max"
     }
   },
   "titlebar": {
@@ -128,8 +165,10 @@
       "page": {
         "serial": "Serial",
         "commands": "Commands",
-        "script": "Script"
-      }
+        "script": "Script",
+        "settings": "Settings"
+      },
+      "agentSettings": "AI & Agent"
     },
     "bottomNav": {
       "scriptEditor": "Script editor",

@@ -6,6 +6,8 @@ import { TitleBarChrome, ConnectionBadge } from '@/features/titlebar'
 import { Sidebar } from '@/features/main-window/components/Sidebar'
 import { Workspace } from '@/features/main-window/components/Workspace'
 import { BottomNav } from '@/features/main-window/components/BottomNav'
+import { SettingsPage } from '@/features/settings/SettingsPage'
+import { useAppShell } from '@/shared/store/appShell'
 import { installActiveBridge } from '@/features/serial-panel/activeBridge'
 import { useSettingsStore } from '@/shared/store/settings'
 import { useCommandsStore } from '@/features/commands/store'
@@ -17,6 +19,9 @@ import './main-window.css'
  * React 主窗口（双轨并行可视）。
  * 顶部 TitleBarChrome 横跨全窗（品牌/标题 + 连接徽章 + 原生窗口按钮），
  * 下方 SidebarProvider 包裹 Sidebar + SidebarInset（上下分栏工作区/内容面板）。
+ *
+ * 设置页例外：activeTab='settings' 时整个 SidebarInset 只渲染 SettingsPage，
+ * 完整覆盖工作区（zcode 式），不保留串口工作区/底部面板。
  *
  * TooltipProvider 必须在根：SidebarMenuButton 的 tooltip、以及后续 Tooltip 用法都依赖它。
  * activeBridge：把 getSerialPanelSummaries 挂到 window 供脚本编辑器跨轨读取。
@@ -84,6 +89,9 @@ export default function MainWindow() {
     document.documentElement.style.setProperty('--font-size-base', `${fontSize}px`)
   }, [fontSize])
 
+  // 设置页完整覆盖工作区：settings 标签下不渲染串口工作区/底部面板（zcode 式整页）
+  const activeTab = useAppShell((s) => s.activeTab)
+
   return (
     <TooltipProvider>
       <div className="flex h-screen flex-col overflow-hidden">
@@ -91,15 +99,19 @@ export default function MainWindow() {
         <SidebarProvider style={{ minHeight: 0 }} className="flex-1 min-h-0">
           <Sidebar />
           <SidebarInset className="min-w-0 flex-1 overflow-hidden">
-            <PanelGroup orientation="vertical" className="h-full">
-              <Panel defaultSize={62} minSize={20}>
-                <Workspace />
-              </Panel>
-              <PanelResizeHandle className="h-1.5 w-full cursor-row-resize bg-border transition-colors hover:bg-primary/40" />
-              <Panel defaultSize={38} minSize={12}>
-                <BottomNav />
-              </Panel>
-            </PanelGroup>
+            {activeTab === 'settings' ? (
+              <SettingsPage />
+            ) : (
+              <PanelGroup orientation="vertical" className="h-full">
+                <Panel defaultSize={62} minSize={20}>
+                  <Workspace />
+                </Panel>
+                <PanelResizeHandle className="h-1.5 w-full cursor-row-resize bg-border transition-colors hover:bg-primary/40" />
+                <Panel defaultSize={38} minSize={12}>
+                  <BottomNav />
+                </Panel>
+              </PanelGroup>
+            )}
           </SidebarInset>
         </SidebarProvider>
       </div>

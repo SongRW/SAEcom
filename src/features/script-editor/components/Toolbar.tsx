@@ -10,6 +10,7 @@ import {
   PencilSimple,
   Play,
   PushPin,
+  Sparkle,
   Stop as Square,
   Trash as Trash2,
   X,
@@ -46,6 +47,8 @@ interface ToolbarProps {
   onPopout: () => void
   onDock: () => void
   onClose: () => void
+  /** 打开协议生成向导（pi agent 式会话）。 */
+  onOpenProtocolGen: () => void
 }
 
 export function Toolbar({
@@ -71,7 +74,8 @@ export function Toolbar({
   onMinimize,
   onPopout,
   onDock,
-  onClose
+  onClose,
+  onOpenProtocolGen
 }: ToolbarProps) {
   return (
     <div className="script-editor-toolbar">
@@ -103,6 +107,10 @@ export function Toolbar({
         <Button size="sm" variant="outline" title="删除" onClick={onDelete} disabled={!activeScriptName}>
           <Trash2 data-icon="inline-start" />
           删除
+        </Button>
+        <Button size="sm" variant="outline" title="AI 生成协议（向导式会话）" onClick={onOpenProtocolGen} data-testid="toolbar-protocol-gen">
+          <Sparkle data-icon="inline-start" />
+          AI 生成协议
         </Button>
         <span className="script-editor-separator" />
         <Button size="sm" title="运行" onClick={onRun} disabled={running}>

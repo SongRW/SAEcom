@@ -34,7 +34,7 @@ describe('script editor graph state', () => {
         configRef: { kind: 'tcp-endpoint', host: '127.0.0.1', port: 8080 }
       }
     })
-    expect(node.inputs).toEqual({})
+    expect(node.inputs).toEqual({ port: expect.objectContaining({ key: 'port', socket: 'dataSocket' }) })
     expect(node.outputs).toHaveProperty('out')
   })
 

@@ -45,7 +45,8 @@
       "appearance": "外观",
       "serial": "串口",
       "shortcuts": "快捷键",
-      "about": "关于"
+      "about": "关于",
+      "agent": "AI 与 Agent"
     },
     "general": {
       "title": "通用",
@@ -108,6 +109,42 @@
     "language": {
       "zh-CN": "简体中文",
       "en-US": "English"
+    },
+    "agent": {
+      "title": "AI 与 Agent",
+      "subtitle": "模型 provider 管理（OpenAI 兼容端点；向导深度模式等 agent 功能共用）",
+      "add": "新增",
+      "importCc": "从 CC Switch 导入",
+      "emptyList": "还没有 provider，点「新增」或「从 CC Switch 导入」",
+      "emptyForm": "选择左侧 provider 编辑，或「新增」",
+      "name": "名称",
+      "baseUrl": "Base URL",
+      "apiKey": "API Key",
+      "model": "模型",
+      "enabled": "启用（深度模式调用此 provider）",
+      "current": "当前",
+      "setCurrent": "设为当前",
+      "delete": "删除",
+      "deleteConfirm": "删除该 provider？",
+      "test": "测试连接",
+      "testing": "测试中…",
+      "save": "保存",
+      "testOk": "连接成功",
+      "importedFrom": "已从 {source} 导入端点与 Key（保存后生效）",
+      "unknown": "未命名",
+      "probe": "探查模型",
+      "probing": "探查中…",
+      "probeFail": "探查失败",
+      "pickModel": "选择模型…",
+      "effort": "思考强度",
+      "effortNone": "不设置",
+      "effortLow": "低",
+      "effortMedium": "中",
+      "effortHigh": "高",
+      "context": "上下文 (K)",
+      "contextHint": "0 = 不限制（不截断）；填大于 0 时超长输入自动截断",
+      "effortMinimal": "最低",
+      "effortMax": "极高"
     }
   },
   "titlebar": {
@@ -128,8 +165,10 @@
       "page": {
         "serial": "串口",
         "commands": "命令",
-        "script": "脚本"
-      }
+        "script": "脚本",
+        "settings": "设置"
+      },
+      "agentSettings": "AI 与 Agent"
     },
     "bottomNav": {
       "scriptEditor": "脚本编辑器",

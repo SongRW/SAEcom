@@ -61,6 +61,9 @@ import { NodePalette } from '@/features/script-editor/components/NodePalette'
 import {
   CustomComponentEditor
 } from '@/features/script-editor/components/CustomComponentEditor'
+import { ProtocolGenWizard } from '@/features/script-editor/components/ProtocolGenWizard'
+import { dslToGraph } from '@/features/script-editor/dsl/toGraph'
+import type { ProtocolDsl } from '@shared/protocol-dsl'
 import {
   CustomComponentPanel,
   type CustomComponentListItem,
@@ -187,6 +190,8 @@ export function ScriptEditorDialog({
   const [customEditTarget, setCustomEditTarget] = useState<{ fileName: string; descriptor: UserComponentDescriptor } | null>(null)
   const [customRenameTarget, setCustomRenameTarget] = useState<CustomComponentListItem | null>(null)
   const [customDeleteTarget, setCustomDeleteTarget] = useState<CustomComponentListItem | null>(null)
+  // 协议生成向导（pi agent 式会话）：画布壳最高优先级分支
+  const [protocolGenOpen, setProtocolGenOpen] = useState(false)
   // 本地 echo 模拟服务：null=未启动；启动后存 { id, port }，便于停止
   const [simulator, setSimulator] = useState<{ id: string; port: number } | null>(null)
   const serialPanelOptions = useMemo(() => buildSerialPanelOptions(serialPanels), [serialPanels])
@@ -420,6 +425,58 @@ export function ScriptEditorDialog({
     setGraphReplace(next)
   }
 
+  /** 协议生成向导确认应用：dsl → graph → 灌进画布 + 自动落盘。
+   *  向导与 GraphCanvas 互斥（向导开时画布卸载），所以先关向导让 GraphCanvas 挂载，
+   *  再在双 rAF 里 replaceGraph（此时 GraphCanvas 的 sync effect 在监听，graphRevision
+   *  变化能被捕获）。应用后自动落盘，否则退出重开从磁盘读到旧脚本。 */
+  function handleProtocolApplied(dsl: ProtocolDsl) {
+    // 立即关向导（下一行 onOpenChange 由 wizard 的 handleApply 调，这里只准备 graph）
+    let graphExport: ReturnType<typeof dslToGraph> | null = null
+    let next: ReturnType<typeof importGraphState> | null = null
+    try {
+      graphExport = dslToGraph(dsl)
+      next = importGraphState(graphExport)
+    } catch (e) {
+      toast.error(`协议生成出错：${(e as Error).message}`)
+      return
+    }
+    if (next.nodes.length === 0) {
+      toast.error('协议生成失败：转换出的图无节点')
+      return
+    }
+    // 闭包捕获：落盘用 graphExport（不依赖 replaceGraph 的 state 时序）
+    const generatedCode = generateCodeFromRete(graphExport)
+    const scriptContent = buildScriptFile(graphExport, generatedCode)
+    const nodeName = activeScriptName
+    const nodeCount = next.nodes.length
+
+    // 延迟到双 rAF 后 replaceGraph：向导先关（GraphCanvas 挂载），再灌图。
+    // 第一帧：向导关闭、GraphCanvas 挂载、Rete 实例创建。
+    // 第二帧：sync effect 就绪，replaceGraph 的 graphRevision 变化被捕获。
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        replaceGraph(next!)
+        setSelectedNodeIds([])
+        // 落盘（不等 state 更新，直接从 graphExport 导出）
+        if (nodeName) {
+          void getIPC().scripts.write(nodeName, scriptContent).then((result) => {
+            if (result.ok) {
+              setLegacyCode(generatedCode)
+              toast.success(`已应用协议：${dsl.name}（${nodeCount} 个节点），已保存到「${nodeName}」`)
+            } else {
+              toast.success(`已应用协议：${dsl.name}（${nodeCount} 个节点）`)
+              toast.error(`自动保存失败：${result.error || '未知错误'}，请手动保存`)
+            }
+          })
+        } else {
+          toast.success(`已应用协议：${dsl.name}（${nodeCount} 个节点）。点击「保存」落盘，否则退出后丢失`)
+        }
+        // 再一帧让 sync 队列把节点加成 view 后 fitView
+        window.requestAnimationFrame(() => graphCanvasRef.current?.fitView())
+      })
+    })
+  }
+
   async function selectScript(name: string) {
     const content = await getIPC().scripts.read(name)
     const parsed = parseScriptFile(content)
@@ -429,6 +486,8 @@ export function ScriptEditorDialog({
     // 残留在脚本画布之上，用户必须先关组件编辑器才能看到脚本内容。
     setCustomEditorOpen(false)
     setCustomActiveFileName(null)
+    // 同理关闭协议生成向导（protocolGenOpen 优先级最高）
+    setProtocolGenOpen(false)
     // 切脚本重置视图模式到 auto：按新内容自动决定显示源码还是画布。
     setUiState((current) => setViewMode(closeConfig(current), 'auto'))
     setScriptError(null)
@@ -1120,6 +1179,7 @@ export function ScriptEditorDialog({
           onPopout={handlePopout}
           onDock={handleDock}
           onClose={onClose}
+          onOpenProtocolGen={() => setProtocolGenOpen(true)}
         />
         <div className="script-editor-workspace">
           <ScriptEditorRail
@@ -1172,9 +1232,16 @@ export function ScriptEditorDialog({
             </ScriptEditorSidePanel>
           ) : null}
           <div className="script-editor-canvas-shell">
-            {/* 自定义组件编辑器：画布壳内嵌视图（替代 Dialog）。打开时占满画布壳，
-                返回画布/保存后关闭（onOpenChange(false)）。与 ScriptCodePanel 同模式。 */}
-            {customEditorOpen ? (
+            {/* 协议生成向导：互斥分支（同 CustomComponentEditor）。
+                应用时先关向导（让 GraphCanvas 挂载），再在 rAF 里 replaceGraph + 落盘，
+                避免 GraphCanvas 卸载态下 replaceGraph 的 graphRevision 变化被漏掉。 */}
+            {protocolGenOpen ? (
+              <ProtocolGenWizard
+                open={protocolGenOpen}
+                onOpenChange={setProtocolGenOpen}
+                onApplied={handleProtocolApplied}
+              />
+            ) : customEditorOpen ? (
               <CustomComponentEditor
                 /* key 按编辑目标 fileName 隔离：切换不同组件时强制 remount，
                    确保 implMode/subGraphHistory 等 state 按新 descriptor 重新初始化，

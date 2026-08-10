@@ -1,5 +1,6 @@
 import type { ReteGraphNode } from '@shared/types'
 import type { EmitContext } from '@/features/script-editor/codegen/context'
+import { incomingForInput, nodeId } from '@/features/script-editor/codegen/graph'
 import { configRef, data, getInputVar, jsObjectLiteral, jsString, valueAsNumber, valueAsString } from '@/features/script-editor/codegen/emit/shared'
 
 const BASE_SERIAL_OPTIONS = {
@@ -16,6 +17,22 @@ function appendMode(value: unknown): string {
   if (mode.toUpperCase() === 'CR') return 'CR'
   if (mode.toUpperCase() === 'LF') return 'LF'
   return mode
+}
+
+/** TCP 端口：优先取 port 输入连线（端口常量联动），无连线用控件值。
+ *  input-manual 常量内联 content（避免作用域/声明顺序问题）。 */
+function tcpPortExpr(ctx: EmitContext, node: ReteGraphNode, fallback: number): string {
+  const conn = incomingForInput(ctx.graph, node, 'port')[0]
+  if (!conn) return String(fallback)
+  const srcNode = ctx.graph.nodeMap.get(nodeId(conn.source))
+  if (srcNode?.key === 'input-manual') {
+    const content = String(srcNode.data?.content ?? '').trim()
+    const parsed = Number(content)
+    if (Number.isFinite(parsed)) return String(parsed)
+  }
+  const connected = getInputVar(ctx, node, 'port', '')
+  if (connected) return `Number(${connected})`
+  return String(fallback)
 }
 
 export function emitOutput(ctx: EmitContext, node: ReteGraphNode, indent: string): string {
@@ -43,11 +60,11 @@ export function emitOutput(ctx: EmitContext, node: ReteGraphNode, indent: string
     case 'output-tcp': {
       const host = ref.kind === 'tcp-endpoint' ? ref.host : config.host
       const port = ref.kind === 'tcp-endpoint' ? ref.port : config.port
-      return `${indent}await sendTCP(${jsString(valueAsString(host, '127.0.0.1'))}, ${valueAsNumber(port, 8080)}, ${input}, ${jsString(valueAsString(config.mode, 'text'))});\n`
+      return `${indent}await sendTCP(${jsString(valueAsString(host, '127.0.0.1'))}, ${tcpPortExpr(ctx, node, valueAsNumber(port, 8080))}, ${input}, ${jsString(valueAsString(config.mode, 'text'))});\n`
     }
     case 'output-tcp-server': {
       const port = ref.kind === 'tcp-server' ? ref.port : config.port
-      return `${indent}await broadcastTcpServer(${valueAsNumber(port, 9000)}, ${input}, ${jsString(valueAsString(config.mode, 'text'))});\n`
+      return `${indent}await broadcastTcpServer(${tcpPortExpr(ctx, node, valueAsNumber(port, 9000))}, ${input}, ${jsString(valueAsString(config.mode, 'text'))});\n`
     }
     case 'output-file': {
       const path = ref.kind === 'file' && ref.path ? ref.path : config.path

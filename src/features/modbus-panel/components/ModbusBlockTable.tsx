@@ -44,6 +44,16 @@ const FLOAT32_FORMATS = ['float32', 'float32-swapped', 'float32-byte', 'float32-
 type Float32Format = typeof FLOAT32_FORMATS[number]
 type SingleFormat = 'signed' | 'unsigned' | 'hex' | 'binary'
 
+/**
+ * 稳定的空数组引用。选择器缺省分支必须返回它，而非内联 `[]`：
+ * 内联 `[]` 每次 getSnapshot 都是新引用 → useSyncExternalStore 判定 store
+ * 「已变更」→ 重渲染 → 再次返回新引用 → Maximum update depth exceeded。
+ * 这正是 modbus 面板 popout 弹出窗口崩溃的根因：popout 是独立窗口、
+ * usePanelsStore 为空 store（未 load），s.panels[panelId] 恒 undefined，
+ * `?? []` 每帧返回新数组 → 死循环。
+ */
+const EMPTY_BLOCKS: readonly ModbusBlock[] = []
+
 function isFloat32(f: ModbusBlock['displayFormat']): f is Float32Format {
   return f.startsWith('float32')
 }
@@ -63,7 +73,9 @@ export default function ModbusBlockTable({
   readOnly,
 }: ModbusBlockTableProps) {
   const ipc = useIPC()
-  const blocks = usePanelsStore((s) => s.panels[panelId]?.modbus?.blocks ?? [])
+  // readOnly（popout 只读窗口）下本地 store 没有该面板：返回稳定空数组，
+  // 避免每次渲染返回新引用触发 useSyncExternalStore 无限重渲染。
+  const blocks = usePanelsStore((s) => s.panels[panelId]?.modbus?.blocks ?? EMPTY_BLOCKS)
   const setModbusBlocks = usePanelsStore((s) => s.setModbusBlocks)
   const updateModbusBlockValue = usePanelsStore((s) => s.updateModbusBlockValue)
 

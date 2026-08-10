@@ -261,6 +261,24 @@ const api: WindowAPI = {
       ipcRenderer.on('theme:apply', listener)
       return () => ipcRenderer.off('theme:apply', listener)
     }
+  },
+  agent: {
+    parseDocument: (filePath) => ipcRenderer.invoke('agent:parseDocument', filePath),
+    writeKnowledge: (payload) => ipcRenderer.invoke('agent:writeKnowledge', payload),
+    chat: (req) => ipcRenderer.invoke('agent:chat', req),
+    chatAbort: (id) => ipcRenderer.send('agent:chatAbort', id),
+    onChunk: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, chunk: any) => cb(chunk)
+      ipcRenderer.on('agent:chunk', listener)
+      return () => ipcRenderer.off('agent:chunk', listener)
+    },
+    getLlmSettings: () => ipcRenderer.invoke('agent:getLlmSettings'),
+    saveLlmProvider: (provider) => ipcRenderer.invoke('agent:saveLlmProvider', provider),
+    deleteLlmProvider: (id) => ipcRenderer.invoke('agent:deleteLlmProvider', id),
+    setCurrentLlmProvider: (id) => ipcRenderer.invoke('agent:setCurrentLlmProvider', id),
+    testLlmProvider: (provider) => ipcRenderer.invoke('agent:testLlmProvider', provider),
+    probeModels: (provider) => ipcRenderer.invoke('agent:probeModels', provider),
+    importFromCcSwitch: () => ipcRenderer.invoke('agent:importFromCcSwitch')
   }
 }
 

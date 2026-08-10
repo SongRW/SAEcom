@@ -752,8 +752,18 @@ export function syncDynamicNodeSizeFromDom(
   // 但足以排除文本节点/注释节点，且不依赖浏览器全局，便于在 node 环境单测。
   if (root && typeof (root as { getBoundingClientRect?: unknown }).getBoundingClientRect === 'function') {
     const measured = Math.ceil((root as HTMLElement).getBoundingClientRect().height)
-    if (measured > 0 && Math.abs(measured - node.height) > 1) {
+    // 只接受 DOM 撑开后（大于等于公式估算）的高度：DOM 渲染完时比公式准（根治溢出）。
+    // DOM 测出偏小（React 组件还没完全渲染，如 import/向导应用后立即排版）时保留公式值做兜底，
+    // 避免 node.height 被缩成最小 → 连线端口悬空。
+    const spec = DYNAMIC_NODE_SPECS.find((s) => s.keys.has(node.key || ''))
+    const estimated = spec ? spec.height((node.data || {}) as Record<string, unknown>) : node.height
+    if (measured >= estimated && Math.abs(measured - node.height) > 1) {
       node.height = measured
+      return true
+    }
+    // DOM 偏小或未就绪：用公式值兜底（若 node.height 当前偏小则修正）
+    if (node.height < estimated) {
+      node.height = estimated
       return true
     }
     return false

@@ -114,8 +114,10 @@ export interface LoopConfig {
 
 /** 完整协议 DSL（AI 产出此对象） */
 export interface ProtocolDsl {
-  /** 协议名（生成脚本/节点 label 前缀） */
+  /** 协议名（生成脚本/节点 label 前缀；向导强制 ASCII，非 ASCII 名称会被拦截纠正） */
   name: string
+  /** 中文/自然语言标题（仅作展示与知识库 title；不影响脚本/节点命名） */
+  title?: string
   /** 组包字段（简单协议：按顺序拼成帧）。
    *  复杂协议用 messages 替代 fields（多消息类型）。两者互斥。 */
   fields?: ProtocolField[]
@@ -129,6 +131,17 @@ export interface ProtocolDsl {
   loop?: LoopConfig
   /** 是否在接收侧做拆包校验（默认 true，有 transport 时生效） */
   verifyOnRecv?: boolean
+  /** 接收侧日志模式（压测防刷屏）：
+   *  - 'console'（默认）：字段明细打到脚本控制台
+   *  - 'file'：字段明细 + msgType 摘要追加写入文件（receiveLogPath），
+   *    控制台仅保留循环内节流进度日志（每 progressEvery 帧一行）
+   *  - 'off'：不生成任何日志节点（最快）
+   */
+  receiveLog?: 'console' | 'file' | 'off'
+  /** 接收侧文件日志路径（receiveLog='file' 时生效；默认 'script-logs/<协议名>.log'） */
+  receiveLogPath?: string
+  /** 循环内进度日志节流（帧数；receiveLog='file' 且 loop 存在时生效，默认 10） */
+  progressEvery?: number
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -2600,3 +2600,556 @@
   font-size: 12px;
   color: var(--muted-foreground);
 }
+
+/* ═══════════════════════════════════════════════════════════
+ * 协议生成向导（ProtocolGenWizard）—— pi agent 式会话 UI
+ * 结构：ctxbar(上下文条) + body(main + sidebar)
+ *   main: input-section(输入区) + stream(叙述流) + steering(介入)
+ *   sidebar: branch-tree(分叉树) + current-branch(当前 DSL 预览)
+ * ═══════════════════════════════════════════════════════════ */
+
+.protocol-gen-wizard {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--background);
+  position: relative;
+}
+
+.protocol-gen-wizard__llm-streaming {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 64px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+}
+
+.protocol-gen-wizard__ctxbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+
+.protocol-gen-wizard__ctxbar button {
+  height: 30px;
+}
+
+.protocol-gen-wizard__ctx-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.protocol-gen-wizard__ctx-spacer {
+  flex: 1;
+}
+
+.protocol-gen-wizard__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.protocol-gen-wizard__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 输入区（idle 阶段） */
+.protocol-gen-wizard__input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.protocol-gen-wizard__doc-input {
+  width: 100%;
+  resize: vertical;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 120px;
+}
+
+.protocol-gen-wizard__doc-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.protocol-gen-wizard__templates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.protocol-gen-wizard__templates-label {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+/* 流式叙述区 */
+.protocol-gen-wizard__stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+/* 协议名纠正行（二期：ASCII 强制 + 中文仅作 title） */
+.protocol-gen-wizard__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.protocol-gen-wizard__name-input {
+  width: 220px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.protocol-gen-wizard__name-input:focus {
+  outline: none;
+  border-color: var(--ring);
+}
+
+.protocol-gen-wizard__empty {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.protocol-gen-wizard__narrative {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--foreground);
+  line-height: 1.5;
+  padding: 2px 0;
+}
+
+.protocol-gen-wizard__narrative svg {
+  margin-top: 3px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.protocol-gen-wizard__phase {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  padding: 2px 0;
+}
+
+.protocol-gen-wizard__field-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--secondary) 30%, transparent);
+  font-size: 12px;
+}
+
+.protocol-gen-wizard__field-summary {
+  font-family: ui-monospace, monospace;
+}
+
+/* 工具日志折叠 */
+.protocol-gen-wizard__tool-log {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.protocol-gen-wizard__tool-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+
+.protocol-gen-wizard__tool-header:hover {
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+
+.protocol-gen-wizard__tool-name {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+}
+
+.protocol-gen-wizard__tool-summary {
+  color: var(--muted-foreground);
+}
+
+.protocol-gen-wizard__tool-body {
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.protocol-gen-wizard__tool-body pre {
+  margin: 4px 0;
+  padding: 6px 8px;
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  border-radius: 4px;
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.protocol-gen-wizard__tool-label {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+/* 验证结果 */
+.protocol-gen-wizard__validation {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  flex-direction: column;
+}
+
+.protocol-gen-wizard__validation.is-ok {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.protocol-gen-wizard__validation.is-fail {
+  background: color-mix(in oklab, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+}
+
+.protocol-gen-wizard__mismatch-list {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  font-size: 11px;
+  color: var(--destructive);
+  list-style: disc;
+}
+
+.protocol-gen-wizard__mismatch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--destructive);
+}
+
+/* 歧义决策 */
+.protocol-gen-wizard__decision {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  background: color-mix(in oklab, #eab308 12%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.protocol-gen-wizard__decision-title {
+  font-weight: 600;
+}
+
+.protocol-gen-wizard__decision-reason {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.protocol-gen-wizard__branch-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: color-mix(in oklab, var(--secondary) 50%, transparent);
+  border-radius: 999px;
+  font-size: 11px;
+  align-self: flex-start;
+}
+
+.protocol-gen-wizard__artifact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--primary);
+}
+
+.protocol-gen-wizard__user-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  align-self: flex-end;
+  max-width: 80%;
+}
+
+.protocol-gen-wizard__user-msg.is-steer {
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+  color: var(--foreground);
+}
+
+.protocol-gen-wizard__user-msg.is-followup {
+  background: color-mix(in oklab, var(--secondary) 60%, transparent);
+  color: var(--foreground);
+}
+
+.protocol-gen-wizard__aborted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--destructive);
+}
+
+/* ready / 验证失败确认条（显著操作引导，避免用户不知道下一步） */
+.protocol-gen-wizard__ready-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  flex-shrink: 0;
+}
+
+.protocol-gen-wizard__ready-bar--fail {
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+}
+
+.protocol-gen-wizard__ready-bar--fail svg {
+  color: var(--destructive);
+}
+
+.protocol-gen-wizard__ready-bar > svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.protocol-gen-wizard__ready-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/* 介入输入区 */
+.protocol-gen-wizard__steering {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+
+.protocol-gen-wizard__steering-textarea {
+  width: 100%;
+  resize: none;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.protocol-gen-wizard__steering-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.protocol-gen-wizard__steering-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* 侧栏 */
+.protocol-gen-wizard__sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.protocol-gen-wizard__branch-tree {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.protocol-gen-wizard__branch-tree--empty {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-align: center;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 10px;
+}
+
+.protocol-gen-wizard__branch-tree-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.protocol-gen-wizard__branch-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.protocol-gen-wizard__branch-node:hover {
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+
+.protocol-gen-wizard__branch-node.is-active {
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+}
+
+.protocol-gen-wizard__branch-node.is-verified svg {
+  color: var(--primary);
+}
+
+.protocol-gen-wizard__branch-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.protocol-gen-wizard__branch-badge {
+  font-size: 10px;
+}
+
+.protocol-gen-wizard__current-branch {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 40%;
+  overflow: hidden;
+}
+
+.protocol-gen-wizard__sidebar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+}
+
+.protocol-gen-wizard__dsl-preview {
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  padding: 6px;
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 200px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}

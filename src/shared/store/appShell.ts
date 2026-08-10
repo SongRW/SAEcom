@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 /** 主窗口底部导航页签（关于已独立成单独窗口，不再在此） */
-export type MainTab = 'serial' | 'commands' | 'script'
+export type MainTab = 'serial' | 'commands' | 'script' | 'settings'
 
 interface AppShellState {
   /** 当前激活的底部页签 */

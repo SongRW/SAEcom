@@ -13,6 +13,7 @@ import { ScriptEditorDialog } from '@/features/script-editor/ScriptEditorDialog'
  * - serial：ActivePanelConfigPanel（当前选中面板的配置区，绑定 activeId）
  * - commands：CommandsPage
  * - script：ScriptHub（脚本功能区启动台 + 概览），点击其主操作打开 ScriptEditorDialog
+ * 注：settings 页由 MainWindow 顶层整区渲染（完整覆盖工作区），不在此面板内。
  * 「关于」已独立成单独窗口，不再在此。
  */
 export function BottomNav() {

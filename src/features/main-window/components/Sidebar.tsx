@@ -18,22 +18,22 @@ import {
 import { useAppShell, type MainTab } from '@/shared/store/appShell'
 import { useIPC } from '@/shared/ipc'
 import { useChangelogBadgeStore } from '@/shared/store/changelog'
-import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { useGlobalShortcuts } from '@/features/settings/shortcuts'
 import { PaneList } from '@/features/serial-panel/components/PaneList'
 import { NewPanelDialog } from '@/features/serial-panel/components/NewPanelDialog'
 
-/** 底部页面切换项：串口/命令/脚本（关于已独立成单独窗口） */
+/** 底部页面切换项：串口/命令/脚本/设置（关于已独立成单独窗口） */
 const PAGES: { tab: MainTab; icon: PhosphorIcon }[] = [
   { tab: 'serial', icon: Plugs },
   { tab: 'commands', icon: List },
-  { tab: 'script', icon: Code }
+  { tab: 'script', icon: Code },
+  { tab: 'settings', icon: Gear }
 ]
 
 /**
  * 左侧栏：基于 shadcn Sidebar 组件。
  * collapsible="icon" 可折叠为图标模式；Header 放品牌与 Trigger，Content 放操作菜单与面板列表，
- * Footer 放页面切换 + 关于(独立窗) + 设置。
+ * Footer 放页面切换（含设置，主界面功能区页面）+ 关于(独立窗)。
  */
 export function Sidebar() {
   const { t } = useTranslation()
@@ -45,8 +45,8 @@ export function Sidebar() {
   const newPanelDialogOpen = useAppShell((s) => s.newPanelDialogOpen)
   const setNewPanelDialogOpen = useAppShell((s) => s.setNewPanelDialogOpen)
   const hasUnreadChangelog = useChangelogBadgeStore((s) => s.hasUnread())
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  useGlobalShortcuts({ onOpenSettings: () => setSettingsOpen(true) })
+  // 设置是主界面功能区页面（appShell.activeTab='settings'），快捷键同样切页
+  useGlobalShortcuts({ onOpenSettings: () => setActiveTab('settings') })
 
   return (
     <UISidebar collapsible="icon" className="border-r">
@@ -113,15 +113,8 @@ export function Sidebar() {
               )}
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip={t('mainWindow.sidebar.settings')} onClick={() => setSettingsOpen(true)}>
-              <Gear />
-              <span>{t('mainWindow.sidebar.settings')}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <NewPanelDialog open={newPanelDialogOpen} onOpenChange={setNewPanelDialogOpen} />
     </UISidebar>
   )

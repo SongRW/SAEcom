@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, dialog, session } from 'electron'
+import { app, BrowserWindow, shell, dialog, session, safeStorage } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import https from 'node:https'
@@ -14,6 +14,7 @@ import { TcpService } from './services/tcp.service'
 import { ModbusService } from './services/modbus.service'
 import { WindowService } from './services/window.service'
 import { ScriptService } from './services/script.service'
+import { AgentService } from './services/agent.service'
 import { ScriptsRepository } from './repositories/scripts.repository'
 import { RuntimeContext } from './core/runtime-context'
 import { registerConfigRouter } from './routers/config.router'
@@ -25,6 +26,7 @@ import { registerWindowRouter } from './routers/window.router'
 import { registerScriptRouter } from './routers/script.router'
 import { CustomComponentsRepository } from './repositories/custom-components.repository'
 import { registerCustomComponentsRouter } from './routers/custom-components.router'
+import { registerAgentRouter } from './routers/agent.router'
 
 // iconv-lite 现由 core/buffer.ts 持有；此模块不再直接用 iconv（buildWriteBuffer 已抽离）。
 
@@ -87,6 +89,9 @@ const windowService = new WindowService({
 const scriptsRepository = new ScriptsRepository()
 const customComponentsRepository = new CustomComponentsRepository()
 const scriptService = new ScriptService(serialService, tcpService, modbusService)
+// agent 域：协议生成向导后端（文档解析 + 知识库写入 + LLM chat）。
+// rootDir = 项目根（定位本地 CLI）；userData 存 LLM 配置（key 经 safeStorage 加密）。
+const agentService = new AgentService(app.getAppPath(), app.getPath('userData'), safeStorage)
 // 登记到 DI 容器（之后消费者从 ctx 取，不再走散落的全局变量）。
 ctx.registerService('app', appService)
 ctx.registerService('config', configService)
@@ -95,6 +100,7 @@ ctx.registerService('tcp', tcpService)
 ctx.registerService('modbus', modbusService)
 ctx.registerService('window', windowService)
 ctx.registerService('script', scriptService)
+ctx.registerService('agent', agentService)
 ctx.registerRepository('scripts', scriptsRepository)
 ctx.registerRepository('customComponents', customComponentsRepository)
 // 脚本监听器广播：串口/TCP 数据到达 → ScriptService.notifyScriptWatchers
@@ -223,6 +229,7 @@ app.whenReady().then(() => {
   registerWindowRouter(ctx.service('window'))
   registerScriptRouter(ctx.service('script'), ctx.repository('scripts'))
   registerCustomComponentsRouter(ctx.repository('customComponents'))
+  registerAgentRouter(ctx.service('agent'))
   windowService.createMainWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) windowService.createMainWindow() })
 })
